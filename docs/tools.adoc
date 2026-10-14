@@ -1,0 +1,20 @@
+= Supported Tools Reference
+:toc: left
+
+`dogu` manages tool installations in `$DOGU_HOME/candidates/<tool>/<version>`.
+
+== Tools Overview
+
+|===
+| Tool | Flag | Environment Variables Set | Notes
+
+| Java | `--java` | `JAVA_<MAJOR>_HOME`, `JAVA_HOME` | Integrated with Foojay Disco API; supports vendor specs (`-zulu`, `-tem`)
+| Node.js | `--node` | `NODE_<MAJOR>_HOME`, `NODE_HOME` | Downloads official nodejs.org dist archives
+| Apache Maven | `--maven` | `MAVEN_<MAJOR>_HOME`, `MAVEN_HOME`, `M2_HOME` | Downloads Apache Maven releases
+| npm | `--npm` | `NPM_<MAJOR>_HOME`, `NPM_HOME` | Downloads npm release tarballs
+| Yarn | `--yarn` | `YARN_<MAJOR>_HOME`, `YARN_HOME` | Downloads Yarn v1 releases
+| pnpm | `--pnpm` | `PNPM_<MAJOR>_HOME`, `PNPM_HOME` | Downloads standalone pnpm binaries
+| Bun | `--bun` | `BUN_<MAJOR>_HOME`, `BUN_HOME` | Downloads Oven Bun release archives
+| Python | `--python` | `PYTHON_<MAJOR>_HOME`, `PYTHON_HOME`, `PYTHONHOME` | Standalone Python builds
+| UV | `--uv` | `UV_<MAJOR>_HOME`, `UV_HOME` | Downloads Astral UV releases
+|===

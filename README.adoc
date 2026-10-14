@@ -1,0 +1,66 @@
+= dogu: Multiplatform CLI Development Tool Version Manager
+:toc:
+:icons: font
+
+`dogu` is a multiplatform command-line tool written in Go that seamlessly provisions and configures developer toolchains (Java, Node, Maven, Bun, Python, UV, npm, yarn, pnpm) on the fly before running any command.
+
+== Features
+
+* **On-Demand Tool Provisioning:** Automatically downloads, unpacks, and registers candidate tool releases.
+* **Environment Variable Automation:** Sets version-specific environment variables (e.g. `JAVA_17_HOME`, `JAVA_21_HOME`, `JAVA_HOME`, `NODE_24_HOME`, `NODE_HOME`) and prepends `PATH`.
+* **Flexible Mirror Support:** Configure custom download mirror URLs in `.dogu.properties` files discovered hierarchically upwards.
+* **Multiplatform Support:** Works across Linux, macOS, and Windows.
+
+== Quick Usage
+
+Run any command prefixed with `dogu` and the desired tool flags:
+
+[source,bash]
+----
+dogu \
+  --java 17 \
+  --java 21-zulu \
+  --java 25.0.3.0+9-tem \
+  --node 24 \
+  --node 26.11.1 \
+  -- <SOME COMMAND>
+----
+
+=== Example
+
+[source,bash]
+----
+dogu --java 21 --node 24 -- mvn clean test
+----
+
+== Candidate Storage
+
+Candidate binaries are cached and unpacked at `$DOGU_HOME/candidates`.
+If `DOGU_HOME` is not set, `dogu` defaults to `$HOME/.dogu`.
+
+== Configuration (`.dogu.properties`)
+
+You can create a `.dogu.properties` file in your project or any parent directory to specify mirror URLs:
+
+[source,properties]
+----
+java.mirror=https://my-internal-mirror.company.com/java
+node.mirror=https://my-internal-mirror.company.com/node
+maven.mirror=https://my-internal-mirror.company.com/maven
+----
+
+== Supported Tools
+
+* `java` (Supports major versions, Disco API vendor suffixes like `-zulu`, `-tem`)
+* `node`
+* `maven`
+* `npm`
+* `yarn`
+* `pnpm`
+* `bun`
+* `python`
+* `uv`
+
+== Documentation Site
+
+Site documentation source files are available in the link:docs/[`docs/`] directory.

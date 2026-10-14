@@ -1,0 +1,26 @@
+= Configuration Guide
+:toc: left
+
+`dogu` supports overriding authoritative download URLs with mirror base URLs using `.dogu.properties`.
+
+== File Resolution
+
+`dogu` searches for `.dogu.properties` starting from the current working directory and traversing upwards to the root directory until a file is found.
+
+== Format
+
+Properties follow standard key-value formatting:
+
+[source,properties]
+----
+# Mirror configurations
+java.mirror=https://mirror.example.com/java
+node.mirror=https://mirror.example.com/node
+maven.mirror=https://mirror.example.com/maven
+npm.mirror=https://mirror.example.com/npm
+yarn.mirror=https://mirror.example.com/yarn
+pnpm.mirror=https://mirror.example.com/pnpm
+bun.mirror=https://mirror.example.com/bun
+python.mirror=https://mirror.example.com/python
+uv.mirror=https://mirror.example.com/uv
+----

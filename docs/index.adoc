@@ -1,0 +1,14 @@
+= dogu Documentation Site
+:toc: left
+:icons: font
+
+Welcome to the `dogu` documentation site.
+
+== Overview
+
+`dogu` is a multiplatform developer tool manager designed to simplify cross-version development and CI/CD pipelines.
+
+== Navigation
+
+* link:configuration.html[Configuration Guide (`.dogu.properties`)]
+* link:tools.html[Supported Tools & Version Specification]
