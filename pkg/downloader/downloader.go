@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ulikunitz/xz"
 )
@@ -37,31 +38,221 @@ func formatBytes(b int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
-type progressReader struct {
-	reader     io.Reader
+func isStderrTerminal() bool {
+	if os.Getenv("TERM") == "dumb" {
+		return false
+	}
+	fi, err := os.Stderr.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
+
+type downloadTask struct {
+	id         int
+	name       string
 	total      int64
 	current    int64
-	name       string
+	completed  bool
 	lastPct    int
 	lastReport int64
+}
+
+type progressManager struct {
+	mu            sync.Mutex
+	tasks         []*downloadTask
+	nextID        int
+	isTTY         bool
+	linesRendered int
+	ticker        *time.Ticker
+	doneChan      chan struct{}
+	spinnerIdx    int
+}
+
+var globalPM = newProgressManager()
+
+func newProgressManager() *progressManager {
+	return &progressManager{}
+}
+
+func (pm *progressManager) startTask(downloadURL string, total int64) *downloadTask {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	pm.isTTY = isStderrTerminal()
+
+	pm.nextID++
+	task := &downloadTask{
+		id:      pm.nextID,
+		name:    downloadURL,
+		total:   total,
+		current: 0,
+	}
+
+	if !pm.isTTY {
+		if total > 0 {
+			logProgress("Downloading %s (%s)...\n", downloadURL, formatBytes(total))
+		} else {
+			logProgress("Downloading %s...\n", downloadURL)
+		}
+	} else {
+		pm.tasks = append(pm.tasks, task)
+		if pm.ticker == nil {
+			pm.ticker = time.NewTicker(80 * time.Millisecond)
+			doneChan := make(chan struct{})
+			pm.doneChan = doneChan
+			go pm.renderLoop(pm.ticker, doneChan)
+		}
+	}
+
+	return task
+}
+
+func (pm *progressManager) updateTask(task *downloadTask, n int) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	task.current += int64(n)
+
+	if !pm.isTTY {
+		if task.total > 0 {
+			pct := int((task.current * 100) / task.total)
+			if pct >= task.lastPct+25 && pct < 100 {
+				task.lastPct = (pct / 25) * 25
+				logProgress("Downloading %s: %d%% (%s / %s)\n", task.name, task.lastPct, formatBytes(task.current), formatBytes(task.total))
+			}
+		} else {
+			if task.current-task.lastReport >= 5*1024*1024 {
+				task.lastReport = task.current
+				logProgress("Downloading %s: %s downloaded\n", task.name, formatBytes(task.current))
+			}
+		}
+	}
+}
+
+func (pm *progressManager) finishTask(task *downloadTask) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	if task.completed {
+		return
+	}
+	task.completed = true
+
+	if !pm.isTTY {
+		if task.total > 0 {
+			logProgress("Downloaded %s (100%% - %s)\n", task.name, formatBytes(task.total))
+		} else {
+			logProgress("Downloaded %s (%s)\n", task.name, formatBytes(task.current))
+		}
+		return
+	}
+
+	pm.clearLines()
+
+	if task.total > 0 {
+		fmt.Fprintf(os.Stderr, "Downloaded %s (100%% - %s)\n", task.name, formatBytes(task.total))
+	} else {
+		fmt.Fprintf(os.Stderr, "Downloaded %s (%s)\n", task.name, formatBytes(task.current))
+	}
+
+	newTasks := make([]*downloadTask, 0, len(pm.tasks))
+	for _, t := range pm.tasks {
+		if t.id != task.id {
+			newTasks = append(newTasks, t)
+		}
+	}
+	pm.tasks = newTasks
+
+	if len(pm.tasks) == 0 {
+		if pm.ticker != nil {
+			pm.ticker.Stop()
+			pm.ticker = nil
+			if pm.doneChan != nil {
+				close(pm.doneChan)
+				pm.doneChan = nil
+			}
+		}
+	} else {
+		pm.renderLocked()
+	}
+}
+
+func (pm *progressManager) renderLoop(ticker *time.Ticker, doneChan chan struct{}) {
+	for {
+		select {
+		case <-ticker.C:
+			pm.mu.Lock()
+			pm.renderLocked()
+			pm.mu.Unlock()
+		case <-doneChan:
+			return
+		}
+	}
+}
+
+var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+func (pm *progressManager) clearLines() {
+	if pm.linesRendered > 0 {
+		fmt.Fprintf(os.Stderr, "\033[%dA\033[J", pm.linesRendered)
+		pm.linesRendered = 0
+	}
+}
+
+func (pm *progressManager) renderLocked() {
+	if !pm.isTTY || len(pm.tasks) == 0 {
+		return
+	}
+
+	pm.clearLines()
+
+	pm.spinnerIdx = (pm.spinnerIdx + 1) % len(spinnerFrames)
+	spinner := spinnerFrames[pm.spinnerIdx]
+
+	for _, task := range pm.tasks {
+		displayName := truncateURL(task.name, 50)
+		var line string
+		if task.total > 0 {
+			pct := int((task.current * 100) / task.total)
+			if pct > 100 {
+				pct = 100
+			}
+			filled := (pct * 20) / 100
+			bar := strings.Repeat("█", filled) + strings.Repeat("░", 20-filled)
+			line = fmt.Sprintf("%s Downloading %s %d%% [%s] (%s / %s)",
+				spinner, displayName, pct, bar, formatBytes(task.current), formatBytes(task.total))
+		} else {
+			line = fmt.Sprintf("%s Downloading %s (%s downloaded)",
+				spinner, displayName, formatBytes(task.current))
+		}
+		fmt.Fprintf(os.Stderr, "%s\033[K\n", line)
+	}
+
+	pm.linesRendered = len(pm.tasks)
+}
+
+func truncateURL(u string, maxLen int) string {
+	if len(u) <= maxLen {
+		return u
+	}
+	if maxLen < 10 {
+		return u[:maxLen]
+	}
+	half := (maxLen - 3) / 2
+	return u[:half] + "..." + u[len(u)-half:]
+}
+
+type progressReader struct {
+	reader io.Reader
+	task   *downloadTask
 }
 
 func (pr *progressReader) Read(p []byte) (int, error) {
 	n, err := pr.reader.Read(p)
 	if n > 0 {
-		pr.current += int64(n)
-		if pr.total > 0 {
-			pct := int((pr.current * 100) / pr.total)
-			if pct >= pr.lastPct+25 && pct < 100 {
-				pr.lastPct = (pct / 25) * 25
-				logProgress("Downloading %s: %d%% (%s / %s)\n", pr.name, pr.lastPct, formatBytes(pr.current), formatBytes(pr.total))
-			}
-		} else {
-			if pr.current-pr.lastReport >= 5*1024*1024 {
-				pr.lastReport = pr.current
-				logProgress("Downloading %s: %s downloaded\n", pr.name, formatBytes(pr.current))
-			}
-		}
+		globalPM.updateTask(pr.task, n)
 	}
 	return n, err
 }
@@ -89,35 +280,27 @@ func downloadFile(ctx context.Context, downloadURL string, cacheFile string) err
 	}
 
 	total := resp.ContentLength
-	if total > 0 {
-		logProgress("Downloading %s (%s)...\n", downloadURL, formatBytes(total))
-	} else {
-		logProgress("Downloading %s...\n", downloadURL)
-	}
+	task := globalPM.startTask(downloadURL, total)
 
 	pr := &progressReader{
 		reader: resp.Body,
-		total:  total,
-		name:   downloadURL,
+		task:   task,
 	}
 
 	_, err = io.Copy(out, pr)
 	out.Close()
 	if err != nil {
 		os.Remove(tmpCache)
+		globalPM.finishTask(task)
 		return fmt.Errorf("failed to write download stream: %w", err)
 	}
 
 	if err := os.Rename(tmpCache, cacheFile); err != nil {
+		globalPM.finishTask(task)
 		return fmt.Errorf("failed to save cache file: %w", err)
 	}
 
-	if total > 0 {
-		logProgress("Downloaded %s (100%% - %s)\n", downloadURL, formatBytes(total))
-	} else {
-		logProgress("Downloaded %s (%s)\n", downloadURL, formatBytes(pr.current))
-	}
-
+	globalPM.finishTask(task)
 	return nil
 }
 
