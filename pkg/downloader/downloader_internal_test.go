@@ -72,6 +72,57 @@ func TestProgressManager_TTYRendering(t *testing.T) {
 	}
 }
 
+func TestProgressManager_RedirectTTYRendering(t *testing.T) {
+	pm := &progressManager{
+		isTTY: true,
+	}
+
+	task := &downloadTask{
+		id:          1,
+		name:        "https://api.foojay.io/disco/v3.0/ids/27f8a3bf93692e/redirect",
+		redirectURL: "https://cdn.foojay.io/downloads/jdk17.tar.gz",
+		total:       2000,
+		current:     820,
+	}
+
+	pm.tasks = append(pm.tasks, task)
+
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe error: %v", err)
+	}
+	os.Stderr = w
+
+	pm.mu.Lock()
+	pm.renderLocked()
+	pm.mu.Unlock()
+
+	w.Close()
+	os.Stderr = oldStderr
+
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	out := buf.String()
+
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 {
+		t.Fatalf("expected at least 2 lines of output for redirected download, got %d lines: %q", len(lines), out)
+	}
+
+	if !strings.Contains(lines[0], "27f8a3bf93692e/redirect") {
+		t.Errorf("expected line 1 to contain original URL, got: %q", lines[0])
+	}
+
+	if !strings.Contains(lines[1], "jdk17.tar.gz") {
+		t.Errorf("expected line 2 to contain redirected URL, got: %q", lines[1])
+	}
+
+	if !strings.Contains(lines[1], "41%") {
+		t.Errorf("expected line 2 to contain progress percentage 41%%, got: %q", lines[1])
+	}
+}
+
 func TestProgressManager_FinishTask(t *testing.T) {
 	pm := &progressManager{
 		isTTY: true,

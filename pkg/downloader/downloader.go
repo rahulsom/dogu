@@ -50,13 +50,14 @@ func isStderrTerminal() bool {
 }
 
 type downloadTask struct {
-	id         int
-	name       string
-	total      int64
-	current    int64
-	completed  bool
-	lastPct    int
-	lastReport int64
+	id          int
+	name        string
+	redirectURL string
+	total       int64
+	current     int64
+	completed   bool
+	lastPct     int
+	lastReport  int64
 }
 
 type progressManager struct {
@@ -76,7 +77,7 @@ func newProgressManager() *progressManager {
 	return &progressManager{}
 }
 
-func (pm *progressManager) startTask(downloadURL string, total int64) *downloadTask {
+func (pm *progressManager) startTask(downloadURL string, redirectURL string, total int64) *downloadTask {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
@@ -84,17 +85,27 @@ func (pm *progressManager) startTask(downloadURL string, total int64) *downloadT
 
 	pm.nextID++
 	task := &downloadTask{
-		id:      pm.nextID,
-		name:    downloadURL,
-		total:   total,
-		current: 0,
+		id:          pm.nextID,
+		name:        downloadURL,
+		redirectURL: redirectURL,
+		total:       total,
+		current:     0,
 	}
 
 	if !pm.isTTY {
-		if total > 0 {
-			logProgress("Downloading %s (%s)...\n", downloadURL, formatBytes(total))
+		if redirectURL != "" {
+			logProgress("Downloading %s\n", downloadURL)
+			if total > 0 {
+				logProgress("Downloading %s (%s)...\n", redirectURL, formatBytes(total))
+			} else {
+				logProgress("Downloading %s...\n", redirectURL)
+			}
 		} else {
-			logProgress("Downloading %s...\n", downloadURL)
+			if total > 0 {
+				logProgress("Downloading %s (%s)...\n", downloadURL, formatBytes(total))
+			} else {
+				logProgress("Downloading %s...\n", downloadURL)
+			}
 		}
 	} else {
 		pm.tasks = append(pm.tasks, task)
@@ -116,16 +127,20 @@ func (pm *progressManager) updateTask(task *downloadTask, n int) {
 	task.current += int64(n)
 
 	if !pm.isTTY {
+		targetName := task.name
+		if task.redirectURL != "" {
+			targetName = task.redirectURL
+		}
 		if task.total > 0 {
 			pct := int((task.current * 100) / task.total)
 			if pct >= task.lastPct+25 && pct < 100 {
 				task.lastPct = (pct / 25) * 25
-				logProgress("Downloading %s: %d%% (%s / %s)\n", task.name, task.lastPct, formatBytes(task.current), formatBytes(task.total))
+				logProgress("Downloading %s: %d%% (%s / %s)\n", targetName, task.lastPct, formatBytes(task.current), formatBytes(task.total))
 			}
 		} else {
 			if task.current-task.lastReport >= 5*1024*1024 {
 				task.lastReport = task.current
-				logProgress("Downloading %s: %s downloaded\n", task.name, formatBytes(task.current))
+				logProgress("Downloading %s: %s downloaded\n", targetName, formatBytes(task.current))
 			}
 		}
 	}
@@ -140,11 +155,16 @@ func (pm *progressManager) finishTask(task *downloadTask) {
 	}
 	task.completed = true
 
+	targetName := task.name
+	if task.redirectURL != "" {
+		targetName = task.redirectURL
+	}
+
 	if !pm.isTTY {
 		if task.total > 0 {
-			logProgress("Downloaded %s (100%% - %s)\n", task.name, formatBytes(task.total))
+			logProgress("Downloaded %s (100%% - %s)\n", targetName, formatBytes(task.total))
 		} else {
-			logProgress("Downloaded %s (%s)\n", task.name, formatBytes(task.current))
+			logProgress("Downloaded %s (%s)\n", targetName, formatBytes(task.current))
 		}
 		return
 	}
@@ -152,9 +172,9 @@ func (pm *progressManager) finishTask(task *downloadTask) {
 	pm.clearLines()
 
 	if task.total > 0 {
-		fmt.Fprintf(os.Stderr, "Downloaded %s (100%% - %s)\n", task.name, formatBytes(task.total))
+		fmt.Fprintf(os.Stderr, "Downloaded %s (100%% - %s)\n", targetName, formatBytes(task.total))
 	} else {
-		fmt.Fprintf(os.Stderr, "Downloaded %s (%s)\n", task.name, formatBytes(task.current))
+		fmt.Fprintf(os.Stderr, "Downloaded %s (%s)\n", targetName, formatBytes(task.current))
 	}
 
 	newTasks := make([]*downloadTask, 0, len(pm.tasks))
@@ -211,26 +231,52 @@ func (pm *progressManager) renderLocked() {
 	pm.spinnerIdx = (pm.spinnerIdx + 1) % len(spinnerFrames)
 	spinner := spinnerFrames[pm.spinnerIdx]
 
+	lines := 0
 	for _, task := range pm.tasks {
-		displayName := truncateURL(task.name, 50)
-		var line string
-		if task.total > 0 {
-			pct := int((task.current * 100) / task.total)
-			if pct > 100 {
-				pct = 100
+		if task.redirectURL != "" {
+			origName := truncateURL(task.name, 50)
+			fmt.Fprintf(os.Stderr, "%s Downloading %s\033[K\n", spinner, origName)
+			lines++
+
+			targetName := truncateURL(task.redirectURL, 50)
+			var line string
+			if task.total > 0 {
+				pct := int((task.current * 100) / task.total)
+				if pct > 100 {
+					pct = 100
+				}
+				filled := (pct * 20) / 100
+				bar := strings.Repeat("█", filled) + strings.Repeat("░", 20-filled)
+				line = fmt.Sprintf("%s Downloading %s %d%% [%s] (%s / %s)",
+					spinner, targetName, pct, bar, formatBytes(task.current), formatBytes(task.total))
+			} else {
+				line = fmt.Sprintf("%s Downloading %s (%s downloaded)",
+					spinner, targetName, formatBytes(task.current))
 			}
-			filled := (pct * 20) / 100
-			bar := strings.Repeat("█", filled) + strings.Repeat("░", 20-filled)
-			line = fmt.Sprintf("%s Downloading %s %d%% [%s] (%s / %s)",
-				spinner, displayName, pct, bar, formatBytes(task.current), formatBytes(task.total))
+			fmt.Fprintf(os.Stderr, "%s\033[K\n", line)
+			lines++
 		} else {
-			line = fmt.Sprintf("%s Downloading %s (%s downloaded)",
-				spinner, displayName, formatBytes(task.current))
+			displayName := truncateURL(task.name, 50)
+			var line string
+			if task.total > 0 {
+				pct := int((task.current * 100) / task.total)
+				if pct > 100 {
+					pct = 100
+				}
+				filled := (pct * 20) / 100
+				bar := strings.Repeat("█", filled) + strings.Repeat("░", 20-filled)
+				line = fmt.Sprintf("%s Downloading %s %d%% [%s] (%s / %s)",
+					spinner, displayName, pct, bar, formatBytes(task.current), formatBytes(task.total))
+			} else {
+				line = fmt.Sprintf("%s Downloading %s (%s downloaded)",
+					spinner, displayName, formatBytes(task.current))
+			}
+			fmt.Fprintf(os.Stderr, "%s\033[K\n", line)
+			lines++
 		}
-		fmt.Fprintf(os.Stderr, "%s\033[K\n", line)
 	}
 
-	pm.linesRendered = len(pm.tasks)
+	pm.linesRendered = lines
 }
 
 func truncateURL(u string, maxLen int) string {
@@ -280,7 +326,14 @@ func downloadFile(ctx context.Context, downloadURL string, cacheFile string) err
 	}
 
 	total := resp.ContentLength
-	task := globalPM.startTask(downloadURL, total)
+	var redirectURL string
+	if resp.Request != nil && resp.Request.URL != nil {
+		finalURL := resp.Request.URL.String()
+		if finalURL != "" && finalURL != downloadURL {
+			redirectURL = finalURL
+		}
+	}
+	task := globalPM.startTask(downloadURL, redirectURL, total)
 
 	pr := &progressReader{
 		reader: resp.Body,
