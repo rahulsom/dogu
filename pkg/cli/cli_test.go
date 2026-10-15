@@ -70,3 +70,48 @@ func TestCandidateReuseAndForce(t *testing.T) {
 		t.Errorf("expected reused v26.11.0 output, got: %s", string(out))
 	}
 }
+
+func TestParallelToolInstallation(t *testing.T) {
+	tempDir := t.TempDir()
+	doguBin := filepath.Join(tempDir, "dogu")
+
+	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("failed to build dogu binary: %v", err)
+	}
+
+	doguHome := filepath.Join(tempDir, "dogu_home")
+
+	// Set up pre-populated candidates for yarn and pnpm so no external network calls are needed
+	pnpmDir := filepath.Join(doguHome, "candidates", "pnpm", "8.15.1")
+	if err := os.MkdirAll(pnpmDir, 0755); err != nil {
+		t.Fatalf("failed to create pnpm dir: %v", err)
+	}
+	mockPnpmScript := []byte("#!/bin/sh\necho '8.15.1'\n")
+	if err := os.WriteFile(filepath.Join(pnpmDir, "pnpm"), mockPnpmScript, 0755); err != nil {
+		t.Fatalf("failed to write mock pnpm: %v", err)
+	}
+
+	yarnDir := filepath.Join(doguHome, "candidates", "yarn", "1.22.19", "bin")
+	if err := os.MkdirAll(yarnDir, 0755); err != nil {
+		t.Fatalf("failed to create yarn dir: %v", err)
+	}
+	mockYarnScript := []byte("#!/bin/sh\necho '1.22.19'\n")
+	if err := os.WriteFile(filepath.Join(yarnDir, "yarn"), mockYarnScript, 0755); err != nil {
+		t.Fatalf("failed to write mock yarn: %v", err)
+	}
+
+	// Request both tools in parallel: --pnpm 8.15.1 --yarn 1.22.19 -- sh -c "pnpm; yarn"
+	cmd := exec.Command(doguBin, "--pnpm", "8.15.1", "--yarn", "1.22.19", "--", "sh", "-c", "pnpm && yarn")
+	cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("dogu failed to execute parallel tools: %v, output: %s", err, string(out))
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "8.15.1") || !strings.Contains(output, "1.22.19") {
+		t.Errorf("expected output to contain both 8.15.1 and 1.22.19, got: %s", output)
+	}
+}
