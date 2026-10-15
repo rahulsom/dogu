@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/dogu-dev/dogu/pkg/config"
 	"github.com/dogu-dev/dogu/pkg/env"
@@ -77,21 +78,42 @@ func Run(args []string) error {
 	}
 
 	ctx := context.Background()
-	var binDirs []string
-	extraEnv := make(map[string]string)
 
-	for _, spec := range specs {
-		tool, err := tools.FindTool(spec.Name)
+	results := make([]*tools.InstallResult, len(specs))
+	errs := make([]error, len(specs))
+
+	var wg sync.WaitGroup
+	for i, spec := range specs {
+		wg.Add(1)
+		go func(idx int, s tools.Spec) {
+			defer wg.Done()
+			tool, err := tools.FindTool(s.Name)
+			if err != nil {
+				errs[idx] = err
+				return
+			}
+
+			mirrorURL := props.GetToolMirror(s.Name)
+			res, err := tool.Install(ctx, s.Version, doguHome, mirrorURL, force)
+			if err != nil {
+				errs[idx] = fmt.Errorf("failed to provision tool %s (%s): %w", s.Name, s.Version, err)
+				return
+			}
+			results[idx] = res
+		}(i, spec)
+	}
+	wg.Wait()
+
+	for _, err := range errs {
 		if err != nil {
 			return err
 		}
+	}
 
-		mirrorURL := props.GetToolMirror(spec.Name)
-		res, err := tool.Install(ctx, spec.Version, doguHome, mirrorURL, force)
-		if err != nil {
-			return fmt.Errorf("failed to provision tool %s (%s): %w", spec.Name, spec.Version, err)
-		}
+	var binDirs []string
+	extraEnv := make(map[string]string)
 
+	for _, res := range results {
 		// Prepend binDirs so the LAST requested tool version appears FIRST in PATH
 		binDirs = append(res.BinDirs, binDirs...)
 		for k, v := range res.EnvVars {

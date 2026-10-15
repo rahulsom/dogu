@@ -11,9 +11,115 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/ulikunitz/xz"
 )
+
+var stderrMu sync.Mutex
+
+func logProgress(format string, a ...any) {
+	stderrMu.Lock()
+	defer stderrMu.Unlock()
+	fmt.Fprintf(os.Stderr, format, a...)
+}
+
+func formatBytes(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
+}
+
+type progressReader struct {
+	reader     io.Reader
+	total      int64
+	current    int64
+	name       string
+	lastPct    int
+	lastReport int64
+}
+
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	if n > 0 {
+		pr.current += int64(n)
+		if pr.total > 0 {
+			pct := int((pr.current * 100) / pr.total)
+			if pct >= pr.lastPct+25 && pct < 100 {
+				pr.lastPct = (pct / 25) * 25
+				logProgress("Downloading %s: %d%% (%s / %s)\n", pr.name, pr.lastPct, formatBytes(pr.current), formatBytes(pr.total))
+			}
+		} else {
+			if pr.current-pr.lastReport >= 5*1024*1024 {
+				pr.lastReport = pr.current
+				logProgress("Downloading %s: %s downloaded\n", pr.name, formatBytes(pr.current))
+			}
+		}
+	}
+	return n, err
+}
+
+func downloadFile(ctx context.Context, downloadURL string, cacheFile string) error {
+	tmpCache := cacheFile + ".tmp"
+	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to download %s: %w", downloadURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download failed with status %s from %s", resp.Status, downloadURL)
+	}
+
+	out, err := os.Create(tmpCache)
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	total := resp.ContentLength
+	if total > 0 {
+		logProgress("Downloading %s (%s)...\n", downloadURL, formatBytes(total))
+	} else {
+		logProgress("Downloading %s...\n", downloadURL)
+	}
+
+	pr := &progressReader{
+		reader: resp.Body,
+		total:  total,
+		name:   downloadURL,
+	}
+
+	_, err = io.Copy(out, pr)
+	out.Close()
+	if err != nil {
+		os.Remove(tmpCache)
+		return fmt.Errorf("failed to write download stream: %w", err)
+	}
+
+	if err := os.Rename(tmpCache, cacheFile); err != nil {
+		return fmt.Errorf("failed to save cache file: %w", err)
+	}
+
+	if total > 0 {
+		logProgress("Downloaded %s (100%% - %s)\n", downloadURL, formatBytes(total))
+	} else {
+		logProgress("Downloaded %s (%s)\n", downloadURL, formatBytes(pr.current))
+	}
+
+	return nil
+}
 
 // DownloadAndExtract downloads archive from downloadURL (or checks cache) and extracts it into targetDir.
 func DownloadAndExtract(ctx context.Context, downloadURL string, cacheFile string, targetDir string) error {
@@ -28,36 +134,8 @@ func DownloadAndExtract(ctx context.Context, downloadURL string, cacheFile strin
 
 	// Download to cacheFile if not present
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
-		req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
-		if err != nil {
-			return fmt.Errorf("failed to create request: %w", err)
-		}
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed to download %s: %w", downloadURL, err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("download failed with status %s from %s", resp.Status, downloadURL)
-		}
-
-		tmpCache := cacheFile + ".tmp"
-		out, err := os.Create(tmpCache)
-		if err != nil {
-			return fmt.Errorf("failed to create temp file: %w", err)
-		}
-
-		_, err = io.Copy(out, resp.Body)
-		out.Close()
-		if err != nil {
-			os.Remove(tmpCache)
-			return fmt.Errorf("failed to write download stream: %w", err)
-		}
-
-		if err := os.Rename(tmpCache, cacheFile); err != nil {
-			return fmt.Errorf("failed to save cache file: %w", err)
+		if err := downloadFile(ctx, downloadURL, cacheFile); err != nil {
+			return err
 		}
 	}
 
@@ -96,28 +174,7 @@ func SaveSingleBinary(ctx context.Context, downloadURL string, cacheFile string,
 	}
 
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
-		req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
-		if err != nil {
-			return err
-		}
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("download failed status %s", resp.Status)
-		}
-
-		out, err := os.Create(cacheFile)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(out, resp.Body)
-		out.Close()
-		if err != nil {
+		if err := downloadFile(ctx, downloadURL, cacheFile); err != nil {
 			return err
 		}
 	}
