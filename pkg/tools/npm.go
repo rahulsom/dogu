@@ -32,12 +32,12 @@ func (n *NPMTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		}
 	}
 
-	normVer := strings.TrimPrefix(versionSpec, "v")
-
 	baseURL := "https://registry.npmjs.org/npm/-"
 	if mirrorBaseURL != "" {
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
+
+	normVer := resolveNPMToolVersion(ctx, "npm", versionSpec, mirrorBaseURL)
 
 	filename := fmt.Sprintf("npm-%s.tgz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
@@ -68,6 +68,15 @@ func (n *NPMTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		BinDirs:       []string{binDir},
 		EnvVars:       envVars,
 	}, nil
+}
+
+func resolveNPMToolVersion(ctx context.Context, pkgName string, versionSpec string, mirrorBaseURL string) string {
+	if versions, err := FetchNPMVersions(ctx, pkgName, mirrorBaseURL); err == nil && len(versions) > 0 {
+		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+			return CleanVersion(best)
+		}
+	}
+	return CleanVersion(versionSpec)
 }
 
 func ensureNPMWrappers(binDir string) {

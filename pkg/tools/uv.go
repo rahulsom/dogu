@@ -28,12 +28,12 @@ func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome strin
 		}
 	}
 
-	normVer := strings.TrimPrefix(versionSpec, "v")
-
 	baseURL := "https://github.com/astral-sh/uv/releases/download"
 	if mirrorBaseURL != "" {
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
+
+	normVer := resolveUVVersion(ctx, versionSpec)
 
 	target := mapUVTarget()
 	filename := fmt.Sprintf("uv-%s.tar.gz", target)
@@ -70,6 +70,20 @@ func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome strin
 		BinDirs:       []string{uvHome},
 		EnvVars:       envVars,
 	}, nil
+}
+
+func resolveUVVersion(ctx context.Context, versionSpec string) string {
+	if versions, err := FetchPyPIVersions(ctx, "uv"); err == nil && len(versions) > 0 {
+		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+			return CleanVersion(best)
+		}
+	}
+	if versions, err := FetchGitHubReleases(ctx, "astral-sh", "uv"); err == nil && len(versions) > 0 {
+		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+			return CleanVersion(best)
+		}
+	}
+	return CleanVersion(versionSpec)
 }
 
 func mapUVTarget() string {

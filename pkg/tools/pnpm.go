@@ -28,7 +28,7 @@ func (p *PNPMTool) Install(ctx context.Context, versionSpec string, doguHome str
 		}
 	}
 
-	normVer := strings.TrimPrefix(versionSpec, "v")
+	normVer := resolveNPMToolVersion(ctx, "pnpm", versionSpec, mirrorBaseURL)
 
 	baseURL := "https://github.com/pnpm/pnpm/releases/download"
 	if mirrorBaseURL != "" {

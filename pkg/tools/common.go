@@ -3,7 +3,6 @@ package tools
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/dogu-dev/dogu/pkg/downloader"
 	"github.com/dogu-dev/dogu/pkg/env"
@@ -27,14 +26,12 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string)
 		}
 	}
 
-	reqMajor := env.ExtractMajorVersion(versionSpec)
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		name := entry.Name()
-		entryMajor := env.ExtractMajorVersion(name)
-		if entryMajor == reqMajor || strings.HasPrefix(name, versionSpec) || strings.HasPrefix(name, "v"+versionSpec) {
+		if MatchVersion(name, versionSpec) {
 			dirPath := filepath.Join(candidatesDir, name)
 			if subEntries, _ := os.ReadDir(dirPath); len(subEntries) > 0 {
 				return dirPath, true

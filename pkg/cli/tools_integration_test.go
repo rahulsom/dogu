@@ -67,6 +67,41 @@ func TestToolIntegrations(t *testing.T) {
 			args:           []string{"--uv", "0.1.15", "--", "uv", "--version"},
 			expectedOutput: "0.1.15",
 		},
+		{
+			name:           "bun-partial",
+			args:           []string{"--bun", "1", "--", "bun", "--version"},
+			expectedOutput: "1.",
+		},
+		{
+			name:           "maven-partial",
+			args:           []string{"--maven", "3", "--", "mvn", "-version"},
+			expectedOutput: "3.",
+		},
+		{
+			name:           "npm-partial",
+			args:           []string{"--node", "20", "--npm", "10", "--", "npm", "-v"},
+			expectedOutput: "10.",
+		},
+		{
+			name:           "yarn-partial",
+			args:           []string{"--yarn", "1", "--", "yarn", "-v"},
+			expectedOutput: "1.",
+		},
+		{
+			name:           "pnpm-partial",
+			args:           []string{"--pnpm", "8", "--", "pnpm", "-v"},
+			expectedOutput: "8.",
+		},
+		{
+			name:           "python-partial",
+			args:           []string{"--python", "3", "--", "python", "--version"},
+			expectedOutput: "3.",
+		},
+		{
+			name:           "uv-partial",
+			args:           []string{"--uv", "0.1", "--", "uv", "--version"},
+			expectedOutput: "0.1.",
+		},
 	}
 
 	for _, tc := range testCases {

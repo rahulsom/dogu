@@ -33,12 +33,12 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 		}
 	}
 
-	normVer := strings.TrimPrefix(versionSpec, "v")
-
 	baseURL := "https://github.com/indygreg/python-build-standalone/releases/download"
 	if mirrorBaseURL != "" {
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
+
+	normVer := resolvePythonVersion(ctx, versionSpec)
 
 	target := mapPythonTarget()
 	filename := fmt.Sprintf("cpython-%s+%s-%s-install_only.tar.gz", normVer, "20240107", target)
@@ -81,6 +81,29 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 		BinDirs:       []string{binDir},
 		EnvVars:       envVars,
 	}, nil
+}
+
+func resolvePythonVersion(ctx context.Context, versionSpec string) string {
+	knownVersions := []string{"3.8.18", "3.9.18", "3.10.13", "3.11.7", "3.12.1"}
+	if versions, err := FetchGitHubReleases(ctx, "indygreg", "python-build-standalone"); err == nil && len(versions) > 0 {
+		var extracted []string
+		for _, v := range versions {
+			if strings.HasPrefix(v, "cpython-") {
+				parts := strings.Split(v, "+")
+				extracted = append(extracted, CleanVersion(parts[0]))
+			} else {
+				extracted = append(extracted, CleanVersion(v))
+			}
+		}
+		if len(extracted) > 0 {
+			knownVersions = append(knownVersions, extracted...)
+		}
+	}
+
+	if best, err := SelectBestVersion(knownVersions, versionSpec); err == nil {
+		return CleanVersion(best)
+	}
+	return CleanVersion(versionSpec)
 }
 
 func ensurePythonSymlink(binDir string) {
