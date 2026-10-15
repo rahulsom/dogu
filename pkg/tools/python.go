@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -24,7 +25,11 @@ func (p *PythonTool) Name() string {
 func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
 	if !force {
 		if existingDir, ok := findExistingCandidate(doguHome, "python", versionSpec); ok {
-			return buildResultFromDir("python", versionSpec, existingDir), nil
+			res := buildResultFromDir("python", versionSpec, existingDir)
+			for _, b := range res.BinDirs {
+				ensurePythonSymlink(b)
+			}
+			return res, nil
 		}
 	}
 
@@ -58,6 +63,7 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 	if runtime.GOOS == "windows" {
 		binDir = pythonHome
 	}
+	ensurePythonSymlink(binDir)
 
 	majorVer := env.ExtractMajorVersion(normVer)
 	envVars := map[string]string{
@@ -75,6 +81,29 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 		BinDirs:       []string{binDir},
 		EnvVars:       envVars,
 	}, nil
+}
+
+func ensurePythonSymlink(binDir string) {
+	if runtime.GOOS == "windows" {
+		target := filepath.Join(binDir, "python.exe")
+		if _, err := os.Stat(target); os.IsNotExist(err) {
+			py3 := filepath.Join(binDir, "python3.exe")
+			if fi, err := os.Stat(py3); err == nil && !fi.IsDir() {
+				data, err := os.ReadFile(py3)
+				if err == nil {
+					_ = os.WriteFile(target, data, 0755)
+				}
+			}
+		}
+	} else {
+		target := filepath.Join(binDir, "python")
+		if _, err := os.Stat(target); os.IsNotExist(err) {
+			py3 := filepath.Join(binDir, "python3")
+			if fi, err := os.Stat(py3); err == nil && !fi.IsDir() {
+				_ = os.Symlink("python3", target)
+			}
+		}
+	}
 }
 
 func mapPythonTarget() string {

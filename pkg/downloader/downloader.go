@@ -91,6 +91,10 @@ func SaveSingleBinary(ctx context.Context, downloadURL string, cacheFile string,
 		return err
 	}
 
+	if err := os.MkdirAll(filepath.Dir(cacheFile), 0755); err != nil {
+		return err
+	}
+
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
 		req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
 		if err != nil {
