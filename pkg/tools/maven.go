@@ -27,12 +27,12 @@ func (m *MavenTool) Install(ctx context.Context, versionSpec string, doguHome st
 		}
 	}
 
-	normVer := strings.TrimPrefix(versionSpec, "v")
-
 	baseURL := "https://archive.apache.org/dist/maven/maven-3"
 	if mirrorBaseURL != "" {
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
+
+	normVer := resolveMavenVersion(ctx, versionSpec, baseURL)
 
 	filename := fmt.Sprintf("apache-maven-%s-bin.tar.gz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s/binaries/%s", baseURL, normVer, filename)
@@ -64,4 +64,13 @@ func (m *MavenTool) Install(ctx context.Context, versionSpec string, doguHome st
 		BinDirs:       []string{binDir},
 		EnvVars:       envVars,
 	}, nil
+}
+
+func resolveMavenVersion(ctx context.Context, versionSpec string, baseURL string) string {
+	if versions, err := FetchApacheMavenVersions(ctx, baseURL); err == nil && len(versions) > 0 {
+		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+			return CleanVersion(best)
+		}
+	}
+	return CleanVersion(versionSpec)
 }

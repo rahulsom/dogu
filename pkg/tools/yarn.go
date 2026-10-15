@@ -27,7 +27,7 @@ func (y *YarnTool) Install(ctx context.Context, versionSpec string, doguHome str
 		}
 	}
 
-	normVer := strings.TrimPrefix(versionSpec, "v")
+	normVer := resolveNPMToolVersion(ctx, "yarn", versionSpec, mirrorBaseURL)
 
 	baseURL := "https://github.com/yarnpkg/yarn/releases/download"
 	if mirrorBaseURL != "" {

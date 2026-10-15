@@ -28,19 +28,12 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		}
 	}
 
-	normVer := versionSpec
-	if !strings.HasPrefix(normVer, "bun-v") && !strings.HasPrefix(normVer, "v") {
-		normVer = "v" + normVer
-	}
-	tag := normVer
-	if !strings.HasPrefix(tag, "bun-") {
-		tag = "bun-" + tag
-	}
-
 	baseURL := "https://github.com/oven-sh/bun/releases/download"
 	if mirrorBaseURL != "" {
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
+
+	tag, normVer := resolveBunVersion(ctx, versionSpec)
 
 	targetOS, targetArch := mapBunTarget()
 	filename := fmt.Sprintf("bun-%s-%s.zip", targetOS, targetArch)
@@ -73,6 +66,18 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		BinDirs:       []string{bunHome},
 		EnvVars:       envVars,
 	}, nil
+}
+
+func resolveBunVersion(ctx context.Context, versionSpec string) (tag string, normVer string) {
+	if versions, err := FetchGitHubReleases(ctx, "oven-sh", "bun"); err == nil && len(versions) > 0 {
+		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+			clean := CleanVersion(best)
+			return "bun-v" + clean, "v" + clean
+		}
+	}
+
+	clean := CleanVersion(versionSpec)
+	return "bun-v" + clean, "v" + clean
 }
 
 func mapBunTarget() (string, string) {
