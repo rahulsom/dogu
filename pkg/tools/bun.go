@@ -32,7 +32,10 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	if !strings.HasPrefix(normVer, "bun-v") && !strings.HasPrefix(normVer, "v") {
 		normVer = "v" + normVer
 	}
-	tag := strings.TrimPrefix(normVer, "bun-")
+	tag := normVer
+	if !strings.HasPrefix(tag, "bun-") {
+		tag = "bun-" + tag
+	}
 
 	baseURL := "https://github.com/oven-sh/bun/releases/download"
 	if mirrorBaseURL != "" {
