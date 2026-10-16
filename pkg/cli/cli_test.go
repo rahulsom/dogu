@@ -24,16 +24,27 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 	}
 
 	output := string(out)
-	if !strings.Contains(output, "Usage: dogu") {
-		t.Errorf("expected Usage in --help output, got: %s", output)
+	if !strings.Contains(output, "Usage:") || !strings.Contains(output, "[tools...]") {
+		t.Errorf("expected summarized Usage with [tools...] in --help output, got: %s", output)
 	}
-	if !strings.Contains(output, "Supported tools:") {
-		t.Errorf("expected Supported tools list in --help output, got: %s", output)
+	if !strings.Contains(output, "Supported Tools:") {
+		t.Errorf("expected Supported Tools header in --help output, got: %s", output)
 	}
+
+	for _, eco := range []string{"Java / JVM Ecosystem", "Node.js / JavaScript Ecosystem", "Python Ecosystem"} {
+		if !strings.Contains(output, eco) {
+			t.Errorf("expected ecosystem %s in --help output, got: %s", eco, output)
+		}
+	}
+
 	for _, tool := range []string{"java", "node", "maven", "npm", "yarn", "pnpm", "bun", "python", "uv"} {
-		if !strings.Contains(output, "- "+tool) {
+		if !strings.Contains(output, tool) {
 			t.Errorf("expected tool %s in supported tools list, got: %s", tool, output)
 		}
+	}
+
+	if !strings.Contains(output, "Examples:") {
+		t.Errorf("expected Examples in --help output, got: %s", output)
 	}
 }
 

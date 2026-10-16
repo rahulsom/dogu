@@ -6,34 +6,121 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/dogu-dev/dogu/pkg/config"
 	"github.com/dogu-dev/dogu/pkg/env"
 	"github.com/dogu-dev/dogu/pkg/tools"
 )
 
-// PrintUsage prints usage instructions including the list of supported tools.
+type toolHelp struct {
+	name        string
+	description string
+	examples    string
+}
+
+type ecosystemHelp struct {
+	name  string
+	tools []toolHelp
+}
+
+// PrintUsage prints usage instructions including the list of supported tools grouped by ecosystem.
 func PrintUsage(out *os.File) {
-	supported := tools.List()
-	sort.Strings(supported)
-	var formatted []string
-	for _, t := range supported {
-		formatted = append(formatted, "--"+t+" <version>")
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
+	ecoTitleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))
+	toolNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
+	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	exampleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	flagNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
+
+	var sb strings.Builder
+
+	sb.WriteString(headerStyle.Render("Usage:") + "\n")
+	sb.WriteString("  dogu [-v|--verbose] [--force] [tools...] -- <command> [args...]\n\n")
+
+	sb.WriteString(headerStyle.Render("Supported Tools:") + "\n\n")
+
+	ecosystems := []ecosystemHelp{
+		{
+			name: "Java / JVM Ecosystem",
+			tools: []toolHelp{
+				{
+					name:        "java",
+					description: "Major versions, exact versions, or vendor distribution suffixes (-zulu, -tem)",
+					examples:    "--java 21, --java 17-zulu, --java 25.0.3.0+9-tem",
+				},
+				{
+					name:        "maven",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--maven 3, --maven 3.9, --maven 3.9.6",
+				},
+			},
+		},
+		{
+			name: "Node.js / JavaScript Ecosystem",
+			tools: []toolHelp{
+				{
+					name:        "node",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--node 20, --node 22.11, --node 22.11.0",
+				},
+				{
+					name:        "npm",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--npm 10, --npm 10.2, --npm 10.2.4",
+				},
+				{
+					name:        "pnpm",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--pnpm 8, --pnpm 8.15, --pnpm 8.15.1",
+				},
+				{
+					name:        "yarn",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--yarn 1, --yarn 1.22, --yarn 1.22.19",
+				},
+				{
+					name:        "bun",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--bun 1, --bun 1.1, --bun 1.1.0",
+				},
+			},
+		},
+		{
+			name: "Python Ecosystem",
+			tools: []toolHelp{
+				{
+					name:        "python",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--python 3, --python 3.11, --python 3.11.7",
+				},
+				{
+					name:        "uv",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--uv 0, --uv 0.5, --uv 0.5.1",
+				},
+			},
+		},
 	}
 
-	fmt.Fprintf(out, "Usage: dogu [-v|--verbose] [--force] [%s] -- <command> [args...]\n\n", strings.Join(formatted, " | "))
-	fmt.Fprintf(out, "Supported tools:\n")
-	for _, t := range supported {
-		fmt.Fprintf(out, "  - %s\n", t)
+	for _, eco := range ecosystems {
+		sb.WriteString("  " + ecoTitleStyle.Render(eco.name) + "\n")
+		for _, tool := range eco.tools {
+			sb.WriteString(fmt.Sprintf("    • %s: %s\n", toolNameStyle.Render(tool.name), descStyle.Render(tool.description)))
+			sb.WriteString(fmt.Sprintf("      %s %s\n", exampleStyle.Render("Examples:"), exampleStyle.Render(tool.examples)))
+		}
+		sb.WriteString("\n")
 	}
-	fmt.Fprintf(out, "\nFlags:\n")
-	fmt.Fprintf(out, "  -v, --verbose  Enable verbose logging\n")
-	fmt.Fprintf(out, "  -f, --force    Force re-downloading candidate versions even if already installed\n")
-	fmt.Fprintf(out, "  -h, --help     Show usage information\n")
+
+	sb.WriteString(headerStyle.Render("Flags:") + "\n")
+	sb.WriteString(fmt.Sprintf("  %s  %s\n", flagNameStyle.Render("-v, --verbose"), descStyle.Render("Enable verbose logging")))
+	sb.WriteString(fmt.Sprintf("  %s    %s\n", flagNameStyle.Render("-f, --force"), descStyle.Render("Force re-downloading candidate versions even if already installed")))
+	sb.WriteString(fmt.Sprintf("  %s     %s\n", flagNameStyle.Render("-h, --help"), descStyle.Render("Show usage information")))
+
+	fmt.Fprint(out, sb.String())
 }
 
 // Run parses CLI args, provisions tools, updates environment, and executes sub-command.
