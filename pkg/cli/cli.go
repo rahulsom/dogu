@@ -137,6 +137,13 @@ func Run(args []string) error {
 		}
 	}
 
+	for k, v := range extraEnv {
+		log.Debug("Setting environment variable", "key", k, "value", v)
+	}
+	if len(binDirs) > 0 {
+		log.Debug("Prepending PATH entries", "binDirs", binDirs)
+	}
+
 	updatedEnv := env.BuildEnvMap(os.Environ(), binDirs, extraEnv)
 
 	cmdName := cmdArgs[0]
