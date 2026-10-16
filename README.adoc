@@ -1,8 +1,7 @@
 = dogu: Multiplatform CLI Development Tool Version Manager
-:toc:
-:icons: font
 
-`dogu` is a multiplatform command-line tool written in Go that seamlessly provisions and configures developer toolchains (Java, Node, Maven, Bun, Python, UV, npm, yarn, pnpm) on the fly before running any command.
+`dogu` is a multiplatform command-line tool written in Go that seamlessly provisions and configures developer toolchains.
+_Dogu_ is Korean for _tools_.
 
 == Features
 
