@@ -9,13 +9,13 @@
   ],
   "packageRules": [
     {
-      "matchPackagePatterns": [
-        "^github\\.com/charmbracelet/"
-      ],
       "matchUpdateTypes": [
         "major"
       ],
-      "enabled": false
+      "enabled": false,
+      "matchPackageNames": [
+        "/^github\\.com/charmbracelet//"
+      ]
     }
   ]
 }
