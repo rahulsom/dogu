@@ -14,6 +14,9 @@ func TestCleanVersion(t *testing.T) {
 		{"v1.2.3", "1.2.3"},
 		{"bun-v1.1.0", "1.1.0"},
 		{"apache-maven-3.9.6", "3.9.6"},
+		{"apache-ant-1.10.14", "1.10.14"},
+		{"gradle-8.10.2", "8.10.2"},
+		{"release_2.33.1", "2.33.1"},
 		{"cpython-3.12.1", "3.12.1"},
 		{"yarn-v1.22.19", "1.22.19"},
 		{"17.0.2+7", "17.0.2"},
@@ -112,6 +115,26 @@ func TestResolveMavenVersion(t *testing.T) {
 	normVer := resolveMavenVersion(t.Context(), "3", "https://archive.apache.org/dist/maven/maven-3")
 	if normVer == "3" {
 		t.Errorf("expected normVer to be resolved to full maven version, got %q", normVer)
+	}
+}
+
+func TestFetchGradleVersions(t *testing.T) {
+	versions, err := FetchGradleVersions(t.Context(), "")
+	if err != nil {
+		t.Fatalf("FetchGradleVersions failed: %v", err)
+	}
+	if len(versions) == 0 {
+		t.Errorf("expected gradle versions to be non-empty")
+	}
+}
+
+func TestFetchApacheAntVersions(t *testing.T) {
+	versions, err := FetchApacheAntVersions(t.Context(), "")
+	if err != nil {
+		t.Fatalf("FetchApacheAntVersions failed: %v", err)
+	}
+	if len(versions) == 0 {
+		t.Errorf("expected apache ant versions to be non-empty")
 	}
 }
 
