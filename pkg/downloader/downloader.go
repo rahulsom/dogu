@@ -14,6 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"github.com/ulikunitz/xz"
 )
 
@@ -60,6 +65,187 @@ type downloadTask struct {
 	lastReport  int64
 }
 
+type progressModel struct {
+	tasks       []*downloadTask
+	finished    []string
+	spinner     spinner.Model
+	progressBar progress.Model
+	quitting    bool
+}
+
+func newProgressModel() progressModel {
+	sp := spinner.New()
+	sp.Spinner = spinner.Dot
+	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
+	pBar := progress.New(
+		progress.WithGradient("#7D56F4", "#F25D94"),
+		progress.WithoutPercentage(),
+	)
+	pBar.Full = '█'
+	pBar.Empty = '░'
+	pBar.Width = 20
+
+	return progressModel{
+		spinner:     sp,
+		progressBar: pBar,
+	}
+}
+
+type taskStartMsg struct {
+	task *downloadTask
+}
+
+type taskUpdateMsg struct {
+	id      int
+	current int64
+}
+
+type taskFinishMsg struct {
+	id  int
+	msg string
+}
+
+type quitMsg struct{}
+
+func (m progressModel) Init() tea.Cmd {
+	return m.spinner.Tick
+}
+
+func (m progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if msg.String() == "ctrl+c" {
+			m.quitting = true
+			return m, tea.Quit
+		}
+	case tea.WindowSizeMsg:
+		w := msg.Width - 30
+		if w < 10 {
+			w = 10
+		}
+		if w > 40 {
+			w = 40
+		}
+		m.progressBar.Width = w
+		return m, nil
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	case taskStartMsg:
+		m.tasks = append(m.tasks, msg.task)
+		return m, nil
+	case taskUpdateMsg:
+		for _, t := range m.tasks {
+			if t.id == msg.id {
+				t.current = msg.current
+				break
+			}
+		}
+		return m, nil
+	case taskFinishMsg:
+		newTasks := make([]*downloadTask, 0, len(m.tasks))
+		for _, t := range m.tasks {
+			if t.id != msg.id {
+				newTasks = append(newTasks, t)
+			}
+		}
+		m.tasks = newTasks
+		m.finished = append(m.finished, msg.msg)
+		if len(m.tasks) == 0 {
+			return m, tea.Quit
+		}
+		return m, nil
+	case quitMsg:
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m progressModel) View() string {
+	if m.quitting {
+		return ""
+	}
+	return renderTasksView(m.spinner.View(), m.progressBar, m.tasks, m.finished)
+}
+
+func renderTasksView(spView string, pBar progress.Model, tasks []*downloadTask, finished []string) string {
+	var sb strings.Builder
+
+	checkStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true)
+	boldStyle := lipgloss.NewStyle().Bold(true)
+	infoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("246"))
+	urlStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("86"))
+
+	for _, finishedMsg := range finished {
+		sb.WriteString(checkStyle.Render("✔ ") + finishedMsg + "\n")
+	}
+
+	for _, task := range tasks {
+		if task.redirectURL != "" {
+			origName := truncateURL(task.name, 50)
+			sb.WriteString(fmt.Sprintf("%s Downloading %s\033[K\n", spView, urlStyle.Render(origName)))
+
+			targetName := truncateURL(task.redirectURL, 50)
+			if task.total > 0 {
+				pct := int((task.current * 100) / task.total)
+				if pct > 100 {
+					pct = 100
+				}
+				pctFrac := float64(task.current) / float64(task.total)
+				if pctFrac > 1.0 {
+					pctFrac = 1.0
+				}
+				bar := pBar.ViewAs(pctFrac)
+				sb.WriteString(fmt.Sprintf("%s Downloading %s %d%% [%s] (%s / %s)\033[K\n",
+					spView,
+					urlStyle.Render(targetName),
+					pct,
+					bar,
+					boldStyle.Render(formatBytes(task.current)),
+					infoStyle.Render(formatBytes(task.total)),
+				))
+			} else {
+				sb.WriteString(fmt.Sprintf("%s Downloading %s (%s downloaded)\033[K\n",
+					spView,
+					urlStyle.Render(targetName),
+					boldStyle.Render(formatBytes(task.current)),
+				))
+			}
+		} else {
+			displayName := truncateURL(task.name, 50)
+			if task.total > 0 {
+				pct := int((task.current * 100) / task.total)
+				if pct > 100 {
+					pct = 100
+				}
+				pctFrac := float64(task.current) / float64(task.total)
+				if pctFrac > 1.0 {
+					pctFrac = 1.0
+				}
+				bar := pBar.ViewAs(pctFrac)
+				sb.WriteString(fmt.Sprintf("%s Downloading %s %d%% [%s] (%s / %s)\033[K\n",
+					spView,
+					urlStyle.Render(displayName),
+					pct,
+					bar,
+					boldStyle.Render(formatBytes(task.current)),
+					infoStyle.Render(formatBytes(task.total)),
+				))
+			} else {
+				sb.WriteString(fmt.Sprintf("%s Downloading %s (%s downloaded)\033[K\n",
+					spView,
+					urlStyle.Render(displayName),
+					boldStyle.Render(formatBytes(task.current)),
+				))
+			}
+		}
+	}
+
+	return sb.String()
+}
+
 type progressManager struct {
 	mu            sync.Mutex
 	tasks         []*downloadTask
@@ -69,6 +255,7 @@ type progressManager struct {
 	ticker        *time.Ticker
 	doneChan      chan struct{}
 	spinnerIdx    int
+	teaProg       *tea.Program
 }
 
 var globalPM = newProgressManager()
@@ -109,12 +296,14 @@ func (pm *progressManager) startTask(downloadURL string, redirectURL string, tot
 		}
 	} else {
 		pm.tasks = append(pm.tasks, task)
-		if pm.ticker == nil {
-			pm.ticker = time.NewTicker(80 * time.Millisecond)
-			doneChan := make(chan struct{})
-			pm.doneChan = doneChan
-			go pm.renderLoop(pm.ticker, doneChan)
+		if pm.teaProg == nil {
+			m := newProgressModel()
+			pm.teaProg = tea.NewProgram(m, tea.WithOutput(os.Stderr), tea.WithoutSignalHandler())
+			go func() {
+				pm.teaProg.Run()
+			}()
 		}
+		pm.teaProg.Send(taskStartMsg{task: task})
 	}
 
 	return task
@@ -143,6 +332,8 @@ func (pm *progressManager) updateTask(task *downloadTask, n int) {
 				logProgress("Downloading %s: %s downloaded\n", targetName, formatBytes(task.current))
 			}
 		}
+	} else if pm.teaProg != nil {
+		pm.teaProg.Send(taskUpdateMsg{id: task.id, current: task.current})
 	}
 }
 
@@ -169,12 +360,11 @@ func (pm *progressManager) finishTask(task *downloadTask) {
 		return
 	}
 
-	pm.clearLines()
-
+	var msg string
 	if task.total > 0 {
-		fmt.Fprintf(os.Stderr, "Downloaded %s (100%% - %s)\n", targetName, formatBytes(task.total))
+		msg = fmt.Sprintf("Downloaded %s (100%% - %s)", targetName, formatBytes(task.total))
 	} else {
-		fmt.Fprintf(os.Stderr, "Downloaded %s (%s)\n", targetName, formatBytes(task.current))
+		msg = fmt.Sprintf("Downloaded %s (%s)", targetName, formatBytes(task.current))
 	}
 
 	newTasks := make([]*downloadTask, 0, len(pm.tasks))
@@ -185,17 +375,17 @@ func (pm *progressManager) finishTask(task *downloadTask) {
 	}
 	pm.tasks = newTasks
 
-	if len(pm.tasks) == 0 {
-		if pm.ticker != nil {
-			pm.ticker.Stop()
-			pm.ticker = nil
-			if pm.doneChan != nil {
-				close(pm.doneChan)
-				pm.doneChan = nil
-			}
+	if pm.teaProg != nil {
+		pm.teaProg.Send(taskFinishMsg{id: task.id, msg: msg})
+		if len(pm.tasks) == 0 {
+			pm.teaProg = nil
 		}
 	} else {
-		pm.renderLocked()
+		pm.clearLines()
+		fmt.Fprintf(os.Stderr, "%s\n", msg)
+		if len(pm.tasks) > 0 {
+			pm.renderLocked()
+		}
 	}
 }
 
@@ -229,53 +419,17 @@ func (pm *progressManager) renderLocked() {
 	pm.clearLines()
 
 	pm.spinnerIdx = (pm.spinnerIdx + 1) % len(spinnerFrames)
-	spinner := spinnerFrames[pm.spinnerIdx]
+	sp := spinnerFrames[pm.spinnerIdx]
 
-	lines := 0
-	for _, task := range pm.tasks {
-		if task.redirectURL != "" {
-			origName := truncateURL(task.name, 50)
-			fmt.Fprintf(os.Stderr, "%s Downloading %s\033[K\n", spinner, origName)
-			lines++
+	pBar := progress.New()
+	pBar.Full = '█'
+	pBar.Empty = '░'
+	pBar.Width = 20
 
-			targetName := truncateURL(task.redirectURL, 50)
-			var line string
-			if task.total > 0 {
-				pct := int((task.current * 100) / task.total)
-				if pct > 100 {
-					pct = 100
-				}
-				filled := (pct * 20) / 100
-				bar := strings.Repeat("█", filled) + strings.Repeat("░", 20-filled)
-				line = fmt.Sprintf("%s Downloading %s %d%% [%s] (%s / %s)",
-					spinner, targetName, pct, bar, formatBytes(task.current), formatBytes(task.total))
-			} else {
-				line = fmt.Sprintf("%s Downloading %s (%s downloaded)",
-					spinner, targetName, formatBytes(task.current))
-			}
-			fmt.Fprintf(os.Stderr, "%s\033[K\n", line)
-			lines++
-		} else {
-			displayName := truncateURL(task.name, 50)
-			var line string
-			if task.total > 0 {
-				pct := int((task.current * 100) / task.total)
-				if pct > 100 {
-					pct = 100
-				}
-				filled := (pct * 20) / 100
-				bar := strings.Repeat("█", filled) + strings.Repeat("░", 20-filled)
-				line = fmt.Sprintf("%s Downloading %s %d%% [%s] (%s / %s)",
-					spinner, displayName, pct, bar, formatBytes(task.current), formatBytes(task.total))
-			} else {
-				line = fmt.Sprintf("%s Downloading %s (%s downloaded)",
-					spinner, displayName, formatBytes(task.current))
-			}
-			fmt.Fprintf(os.Stderr, "%s\033[K\n", line)
-			lines++
-		}
-	}
+	viewStr := renderTasksView(sp, pBar, pm.tasks, nil)
+	fmt.Fprint(os.Stderr, viewStr)
 
+	lines := strings.Count(viewStr, "\n")
 	pm.linesRendered = lines
 }
 
@@ -304,6 +458,7 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 }
 
 func downloadFile(ctx context.Context, downloadURL string, cacheFile string) error {
+	log.Debug("Starting download task", "url", downloadURL, "cacheFile", cacheFile)
 	tmpCache := cacheFile + ".tmp"
 	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
 	if err != nil {
@@ -331,6 +486,7 @@ func downloadFile(ctx context.Context, downloadURL string, cacheFile string) err
 		finalURL := resp.Request.URL.String()
 		if finalURL != "" && finalURL != downloadURL {
 			redirectURL = finalURL
+			log.Debug("Followed redirect", "original", downloadURL, "redirect", redirectURL)
 		}
 	}
 	task := globalPM.startTask(downloadURL, redirectURL, total)
@@ -354,6 +510,7 @@ func downloadFile(ctx context.Context, downloadURL string, cacheFile string) err
 	}
 
 	globalPM.finishTask(task)
+	log.Debug("Download finished", "url", downloadURL)
 	return nil
 }
 
@@ -382,6 +539,8 @@ func DownloadAndExtract(ctx context.Context, downloadURL string, cacheFile strin
 
 	lowerURL := strings.ToLower(downloadURL)
 	lowerCache := strings.ToLower(cacheFile)
+
+	log.Debug("Extracting archive", "cacheFile", cacheFile, "targetDir", targetDir)
 
 	if strings.HasSuffix(lowerCache, ".zip") || strings.HasSuffix(lowerURL, ".zip") {
 		return ExtractZip(cacheFile, targetDir)

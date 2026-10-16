@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/charmbracelet/log"
 	"github.com/dogu-dev/dogu/pkg/config"
 	"github.com/dogu-dev/dogu/pkg/env"
 	"github.com/dogu-dev/dogu/pkg/tools"
@@ -24,12 +25,13 @@ func PrintUsage(out *os.File) {
 		formatted = append(formatted, "--"+t+" <version>")
 	}
 
-	fmt.Fprintf(out, "Usage: dogu [--force] [%s] -- <command> [args...]\n\n", strings.Join(formatted, " | "))
+	fmt.Fprintf(out, "Usage: dogu [-v|--verbose] [--force] [%s] -- <command> [args...]\n\n", strings.Join(formatted, " | "))
 	fmt.Fprintf(out, "Supported tools:\n")
 	for _, t := range supported {
 		fmt.Fprintf(out, "  - %s\n", t)
 	}
 	fmt.Fprintf(out, "\nFlags:\n")
+	fmt.Fprintf(out, "  -v, --verbose  Enable verbose logging\n")
 	fmt.Fprintf(out, "  --force        Force re-downloading candidate versions even if already installed\n")
 	fmt.Fprintf(out, "  --help, -h     Show usage information\n")
 }
@@ -61,10 +63,20 @@ func Run(args []string) error {
 		}
 	}
 
-	specs, force, err := parseToolSpecs(flagArgs)
+	specs, force, verbose, err := parseToolSpecs(flagArgs)
 	if err != nil {
 		return err
 	}
+
+	log.SetOutput(os.Stderr)
+	if verbose {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.WarnLevel)
+	}
+
+	log.Debug("Parsing CLI arguments", "flagArgs", flagArgs)
+	log.Debug("Parsed tool specifications", "specs", specs, "force", force, "verbose", verbose)
 
 	if len(cmdArgs) == 0 {
 		PrintUsage(os.Stderr)
@@ -72,6 +84,8 @@ func Run(args []string) error {
 	}
 
 	doguHome := env.GetDoguHome()
+	log.Debug("Resolved dogu home directory", "path", doguHome)
+
 	props, err := config.LoadProperties("")
 	if err != nil {
 		return fmt.Errorf("failed to load dogu properties: %w", err)
@@ -94,11 +108,13 @@ func Run(args []string) error {
 			}
 
 			mirrorURL := props.GetToolMirror(s.Name)
+			log.Debug("Provisioning tool candidate", "name", s.Name, "version", s.Version, "mirror", mirrorURL)
 			res, err := tool.Install(ctx, s.Version, doguHome, mirrorURL, force)
 			if err != nil {
 				errs[idx] = fmt.Errorf("failed to provision tool %s (%s): %w", s.Name, s.Version, err)
 				return
 			}
+			log.Debug("Tool candidate provisioned", "name", s.Name, "version", res.NormalizedVer, "dir", res.InstallDir)
 			results[idx] = res
 		}(i, spec)
 	}
@@ -121,12 +137,20 @@ func Run(args []string) error {
 		}
 	}
 
+	for k, v := range extraEnv {
+		log.Debug("Setting environment variable", "key", k, "value", v)
+	}
+	if len(binDirs) > 0 {
+		log.Debug("Prepending PATH entries", "binDirs", binDirs)
+	}
+
 	updatedEnv := env.BuildEnvMap(os.Environ(), binDirs, extraEnv)
 
 	cmdName := cmdArgs[0]
 	cmdFlags := cmdArgs[1:]
 
 	resolvedCmdName := resolveExecutable(cmdName, updatedEnv)
+	log.Debug("Resolved executable", "cmd", cmdName, "resolvedPath", resolvedCmdName)
 
 	cmd := exec.Command(resolvedCmdName, cmdFlags...)
 	cmd.Env = updatedEnv
@@ -134,6 +158,7 @@ func Run(args []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	log.Debug("Executing sub-command", "cmd", resolvedCmdName, "args", cmdFlags)
 	return cmd.Run()
 }
 
@@ -177,14 +202,19 @@ func isExecutable(fi os.FileInfo) bool {
 	return fi.Mode()&0111 != 0
 }
 
-func parseToolSpecs(args []string) ([]tools.Spec, bool, error) {
+func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, error) {
 	var specs []tools.Spec
 	force := false
+	verbose := false
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--force" {
 			force = true
+			continue
+		}
+		if arg == "-v" || arg == "--verbose" {
+			verbose = true
 			continue
 		}
 		if arg == "--help" || arg == "-h" {
@@ -198,12 +228,12 @@ func parseToolSpecs(args []string) ([]tools.Spec, bool, error) {
 				specs = append(specs, tools.Spec{Name: parts[0], Version: parts[1]})
 			} else {
 				if i+1 >= len(args) || strings.HasPrefix(args[i+1], "--") {
-					return nil, false, fmt.Errorf("flag --%s requires a version argument", toolName)
+					return nil, false, false, fmt.Errorf("flag --%s requires a version argument", toolName)
 				}
 				specs = append(specs, tools.Spec{Name: toolName, Version: args[i+1]})
 				i++
 			}
 		}
 	}
-	return specs, force, nil
+	return specs, force, verbose, nil
 }

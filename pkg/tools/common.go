@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/charmbracelet/log"
 	"github.com/dogu-dev/dogu/pkg/downloader"
 	"github.com/dogu-dev/dogu/pkg/env"
 )
@@ -13,6 +14,7 @@ type CommonTool struct {
 }
 
 func findExistingCandidate(doguHome string, toolName string, versionSpec string) (string, bool) {
+	log.Debug("Searching for existing candidate", "tool", toolName, "spec", versionSpec)
 	candidatesDir := filepath.Join(doguHome, "candidates", toolName)
 	entries, err := os.ReadDir(candidatesDir)
 	if err != nil {
@@ -22,6 +24,7 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string)
 	exactDir := filepath.Join(candidatesDir, versionSpec)
 	if fi, err := os.Stat(exactDir); err == nil && fi.IsDir() {
 		if subEntries, _ := os.ReadDir(exactDir); len(subEntries) > 0 {
+			log.Debug("Found candidate directory", "tool", toolName, "dir", exactDir)
 			return exactDir, true
 		}
 	}
@@ -34,6 +37,7 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string)
 		if MatchVersion(name, versionSpec) {
 			dirPath := filepath.Join(candidatesDir, name)
 			if subEntries, _ := os.ReadDir(dirPath); len(subEntries) > 0 {
+				log.Debug("Found matching candidate directory", "tool", toolName, "dir", dirPath)
 				return dirPath, true
 			}
 		}

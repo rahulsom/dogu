@@ -115,3 +115,42 @@ func TestParallelToolInstallation(t *testing.T) {
 		t.Errorf("expected output to contain both 8.15.1 and 1.22.19, got: %s", output)
 	}
 }
+
+func TestVerboseMode(t *testing.T) {
+	tempDir := t.TempDir()
+	doguBin := filepath.Join(tempDir, "dogu")
+
+	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("failed to build dogu binary: %v", err)
+	}
+
+	doguHome := filepath.Join(tempDir, "dogu_home")
+	node2611Dir := filepath.Join(doguHome, "candidates", "node", "26.11.0", "bin")
+	if err := os.MkdirAll(node2611Dir, 0755); err != nil {
+		t.Fatalf("failed to create node dir: %v", err)
+	}
+
+	mockNodeScript := []byte("#!/bin/sh\necho 'v26.11.0'\n")
+	if err := os.WriteFile(filepath.Join(node2611Dir, "node"), mockNodeScript, 0755); err != nil {
+		t.Fatalf("failed to write mock node: %v", err)
+	}
+
+	for _, verboseFlag := range []string{"-v", "--verbose"} {
+		cmd := exec.Command(doguBin, verboseFlag, "--node", "26", "--", "node", "--version")
+		cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("dogu %s failed: %v, output: %s", verboseFlag, err, string(out))
+		}
+
+		output := string(out)
+		if !strings.Contains(output, "DEBU") && !strings.Contains(output, "DEBUG") {
+			t.Errorf("expected DEBUG logs in verbose output for %s, got: %s", verboseFlag, output)
+		}
+		if !strings.Contains(output, "v26.11.0") {
+			t.Errorf("expected sub-command output v26.11.0, got: %s", output)
+		}
+	}
+}
