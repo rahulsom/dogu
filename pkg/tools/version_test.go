@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -145,5 +147,50 @@ func TestSelectBestVersion(t *testing.T) {
 	_, err = SelectBestVersion(versions, "3")
 	if err == nil {
 		t.Errorf("expected error for non-matching spec '3', got nil")
+	}
+}
+
+func TestFindJDKHome(t *testing.T) {
+	// 1. Standard layout: baseDir/bin
+	tmpDir1 := t.TempDir()
+	binDir1 := filepath.Join(tmpDir1, "bin")
+	if err := os.MkdirAll(binDir1, 0755); err != nil {
+		t.Fatalf("failed to create bin dir: %v", err)
+	}
+	if got := findJDKHome(tmpDir1); got != tmpDir1 {
+		t.Errorf("findJDKHome(standard) = %q; want %q", got, tmpDir1)
+	}
+
+	// 2. macOS top-level layout: baseDir/Contents/Home/bin
+	tmpDir2 := t.TempDir()
+	binDir2 := filepath.Join(tmpDir2, "Contents", "Home", "bin")
+	if err := os.MkdirAll(binDir2, 0755); err != nil {
+		t.Fatalf("failed to create mac home bin dir: %v", err)
+	}
+	wantMacHome2 := filepath.Join(tmpDir2, "Contents", "Home")
+	if got := findJDKHome(tmpDir2); got != wantMacHome2 {
+		t.Errorf("findJDKHome(mac top-level) = %q; want %q", got, wantMacHome2)
+	}
+
+	// 3. macOS nested layout: baseDir/amazon-corretto-8.jdk/Contents/Home/bin
+	tmpDir3 := t.TempDir()
+	binDir3 := filepath.Join(tmpDir3, "amazon-corretto-8.jdk", "Contents", "Home", "bin")
+	if err := os.MkdirAll(binDir3, 0755); err != nil {
+		t.Fatalf("failed to create mac nested jdk bin dir: %v", err)
+	}
+	wantMacHome3 := filepath.Join(tmpDir3, "amazon-corretto-8.jdk", "Contents", "Home")
+	if got := findJDKHome(tmpDir3); got != wantMacHome3 {
+		t.Errorf("findJDKHome(mac nested) = %q; want %q", got, wantMacHome3)
+	}
+
+	// 4. Nested standard layout: baseDir/jdk-17.0.1/bin
+	tmpDir4 := t.TempDir()
+	binDir4 := filepath.Join(tmpDir4, "jdk-17.0.1", "bin")
+	if err := os.MkdirAll(binDir4, 0755); err != nil {
+		t.Fatalf("failed to create nested standard bin dir: %v", err)
+	}
+	wantSub4 := filepath.Join(tmpDir4, "jdk-17.0.1")
+	if got := findJDKHome(tmpDir4); got != wantSub4 {
+		t.Errorf("findJDKHome(nested standard) = %q; want %q", got, wantSub4)
 	}
 }

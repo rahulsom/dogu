@@ -46,7 +46,7 @@ type discoResponse struct {
 func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
 	if !force {
 		if existingDir, ok := findExistingCandidate(doguHome, "java", versionSpec); ok {
-			return buildResultFromDir("java", versionSpec, existingDir), nil
+			return buildJavaResultFromDir(versionSpec, existingDir), nil
 		}
 	}
 
@@ -165,6 +165,34 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 	return pkg.Links.PkgDownloadRedirect, pkg.Filename, pkg.JavaVersion, nil
 }
 
+func buildJavaResultFromDir(versionSpec string, installDir string) *InstallResult {
+	jdkHome := findJDKHome(installDir)
+	binDir := filepath.Join(jdkHome, "bin")
+	if _, err := os.Stat(binDir); err != nil {
+		binDir = jdkHome
+	}
+
+	ver, _ := parseJavaSpec(versionSpec)
+	majorVersion := env.ExtractMajorVersion(ver)
+	majorKey := env.FormatEnvKey("java", majorVersion)
+	javaHomeKey := env.FormatEnvKey("java", "")
+
+	envVars := map[string]string{
+		majorKey:    jdkHome,
+		javaHomeKey: jdkHome,
+	}
+
+	return &InstallResult{
+		ToolName:      "java",
+		RequestedVer:  versionSpec,
+		NormalizedVer: versionSpec,
+		InstallDir:    installDir,
+		HomeDir:       jdkHome,
+		BinDirs:       []string{binDir},
+		EnvVars:       envVars,
+	}
+}
+
 func findJDKHome(baseDir string) string {
 	macHome := filepath.Join(baseDir, "Contents", "Home")
 	if fi, err := os.Stat(filepath.Join(macHome, "bin")); err == nil && fi.IsDir() {
@@ -175,13 +203,23 @@ func findJDKHome(baseDir string) string {
 		return baseDir
 	}
 
-	sub := downloader.FindSubDirWithDir(baseDir, "bin")
-	macSubHome := filepath.Join(sub, "Contents", "Home")
-	if fi, err := os.Stat(filepath.Join(macSubHome, "bin")); err == nil && fi.IsDir() {
-		return macSubHome
+	entries, err := os.ReadDir(baseDir)
+	if err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				sub := filepath.Join(baseDir, entry.Name())
+				macSubHome := filepath.Join(sub, "Contents", "Home")
+				if fi, err := os.Stat(filepath.Join(macSubHome, "bin")); err == nil && fi.IsDir() {
+					return macSubHome
+				}
+				if fi, err := os.Stat(filepath.Join(sub, "bin")); err == nil && fi.IsDir() {
+					return sub
+				}
+			}
+		}
 	}
 
-	return sub
+	return baseDir
 }
 
 func mapOS(goos string) string {

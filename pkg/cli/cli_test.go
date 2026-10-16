@@ -69,6 +69,28 @@ func TestCandidateReuseAndForce(t *testing.T) {
 	if !strings.Contains(string(out), "v26.11.0") {
 		t.Errorf("expected reused v26.11.0 output, got: %s", string(out))
 	}
+
+	// Test Java candidate reuse with nested macOS JDK layout
+	java8Dir := filepath.Join(doguHome, "candidates", "java", "8", "amazon-corretto-8.jdk", "Contents", "Home", "bin")
+	if err := os.MkdirAll(java8Dir, 0755); err != nil {
+		t.Fatalf("failed to create java mac dir: %v", err)
+	}
+	mockJavaScript := []byte("#!/bin/sh\necho 'openjdk version 1.8.0_402'\n")
+	if err := os.WriteFile(filepath.Join(java8Dir, "java"), mockJavaScript, 0755); err != nil {
+		t.Fatalf("failed to write mock java: %v", err)
+	}
+
+	javaCmd := exec.Command(doguBin, "--java", "8", "--", "java", "-version")
+	javaCmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+
+	javaOut, err := javaCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("dogu java failed to execute: %v, output: %s", err, string(javaOut))
+	}
+
+	if !strings.Contains(string(javaOut), "openjdk version 1.8.0_402") {
+		t.Errorf("expected reused java output 'openjdk version 1.8.0_402', got: %s", string(javaOut))
+	}
 }
 
 func TestParallelToolInstallation(t *testing.T) {
