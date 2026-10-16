@@ -29,12 +29,13 @@ type ecosystemHelp struct {
 
 // PrintUsage prints usage instructions including the list of supported tools grouped by ecosystem.
 func PrintUsage(out *os.File) {
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
-	ecoTitleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))
-	toolNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
-	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-	exampleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-	flagNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212"))
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))       // Hot Pink for Main Headers
+	ecoTitleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))       // Bright Cyan for Ecosystem Titles
+	toolNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42"))       // Vibrant Green for Tool Names
+	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))                     // Bright text for descriptions
+	exampleLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))              // Muted Gray for "Examples:" label
+	exampleValStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("117"))                // Soft Cyan/Blue for example flags
+	flagNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))       // Warm Yellow/Amber for Flags
 
 	var sb strings.Builder
 
@@ -110,7 +111,7 @@ func PrintUsage(out *os.File) {
 		sb.WriteString("  " + ecoTitleStyle.Render(eco.name) + "\n")
 		for _, tool := range eco.tools {
 			sb.WriteString(fmt.Sprintf("    • %s: %s\n", toolNameStyle.Render(tool.name), descStyle.Render(tool.description)))
-			sb.WriteString(fmt.Sprintf("      %s %s\n", exampleStyle.Render("Examples:"), exampleStyle.Render(tool.examples)))
+			sb.WriteString(fmt.Sprintf("      %s %s\n", exampleLabelStyle.Render("Examples:"), exampleValStyle.Render(tool.examples)))
 		}
 		sb.WriteString("\n")
 	}
@@ -118,7 +119,12 @@ func PrintUsage(out *os.File) {
 	sb.WriteString(headerStyle.Render("Flags:") + "\n")
 	sb.WriteString(fmt.Sprintf("  %s  %s\n", flagNameStyle.Render("-v, --verbose"), descStyle.Render("Enable verbose logging")))
 	sb.WriteString(fmt.Sprintf("  %s    %s\n", flagNameStyle.Render("-f, --force"), descStyle.Render("Force re-downloading candidate versions even if already installed")))
-	sb.WriteString(fmt.Sprintf("  %s     %s\n", flagNameStyle.Render("-h, --help"), descStyle.Render("Show usage information")))
+	sb.WriteString(fmt.Sprintf("  %s     %s\n\n", flagNameStyle.Render("-h, --help"), descStyle.Render("Show usage information")))
+
+	sb.WriteString(headerStyle.Render("Examples:") + "\n")
+	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --java 21 --node 22 -- mvn clean test")))
+	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --python 3.11 --uv 0.5 -- pytest")))
+	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --node 20 --pnpm 8.15 -- pnpm install")))
 
 	fmt.Fprint(out, sb.String())
 }

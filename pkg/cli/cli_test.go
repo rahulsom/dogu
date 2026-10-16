@@ -46,6 +46,12 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 	if !strings.Contains(output, "Examples:") {
 		t.Errorf("expected Examples in --help output, got: %s", output)
 	}
+
+	for _, e2e := range []string{"mvn clean test", "pytest", "pnpm install"} {
+		if !strings.Contains(output, e2e) {
+			t.Errorf("expected end-to-end example %s in --help output, got: %s", e2e, output)
+		}
+	}
 }
 
 func TestCandidateReuseAndForce(t *testing.T) {
