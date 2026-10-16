@@ -17,6 +17,13 @@ Properties follow standard key-value formatting:
 java.mirror=https://mirror.example.com/java
 node.mirror=https://mirror.example.com/node
 maven.mirror=https://mirror.example.com/maven
+sbt.mirror=https://mirror.example.com/sbt
+gradle.mirror=https://mirror.example.com/gradle
+ant.mirror=https://mirror.example.com/ant
+mill.mirror=https://mirror.example.com/mill
+bazel.mirror=https://mirror.example.com/bazel
+pants.mirror=https://mirror.example.com/pants
+buck2.mirror=https://mirror.example.com/buck2
 npm.mirror=https://mirror.example.com/npm
 yarn.mirror=https://mirror.example.com/yarn
 pnpm.mirror=https://mirror.example.com/pnpm

@@ -58,6 +58,46 @@ func PrintUsage(out *os.File) {
 					description: "Major versions, major.minor, or exact semver versions",
 					examples:    "--maven 3, --maven 3.9, --maven 3.9.6",
 				},
+				{
+					name:        "sbt",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--sbt 1, --sbt 1.10, --sbt 1.10.10",
+				},
+				{
+					name:        "gradle",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--gradle 8, --gradle 8.10, --gradle 8.10.2",
+				},
+			},
+		},
+		{
+			name: "Generic Build Tools",
+			tools: []toolHelp{
+				{
+					name:        "ant",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--ant 1, --ant 1.10, --ant 1.10.14",
+				},
+				{
+					name:        "mill",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--mill 0, --mill 0.12, --mill 0.12.5",
+				},
+				{
+					name:        "bazel",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--bazel 7, --bazel 7.4, --bazel 7.4.0",
+				},
+				{
+					name:        "pants",
+					description: "Major versions, major.minor, or exact semver versions",
+					examples:    "--pants 2, --pants 2.33, --pants 2.33.1",
+				},
+				{
+					name:        "buck2",
+					description: "Release dates or version tags",
+					examples:    "--buck2 2026, --buck2 2026-10, --buck2 2026-10-15",
+				},
 			},
 		},
 		{

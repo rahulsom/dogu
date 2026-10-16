@@ -20,6 +20,9 @@ func CleanVersion(v string) string {
 	v = strings.TrimSpace(v)
 	v = strings.TrimPrefix(v, "bun-v")
 	v = strings.TrimPrefix(v, "apache-maven-")
+	v = strings.TrimPrefix(v, "apache-ant-")
+	v = strings.TrimPrefix(v, "gradle-")
+	v = strings.TrimPrefix(v, "release_")
 	v = strings.TrimPrefix(v, "cpython-")
 	v = strings.TrimPrefix(v, "yarn-v")
 	v = strings.TrimPrefix(v, "v")
@@ -174,6 +177,106 @@ func FetchNPMVersions(ctx context.Context, pkgName string, mirrorBaseURL string)
 	return versions, nil
 }
 
+// FetchGradleVersions retrieves version strings from services.gradle.org/versions/all.
+func FetchGradleVersions(ctx context.Context, baseURL string) ([]string, error) {
+	reqURL := "https://services.gradle.org/versions/all"
+	if baseURL != "" {
+		reqURL = strings.TrimSuffix(baseURL, "/")
+		if !strings.HasSuffix(reqURL, "/versions/all") {
+			reqURL = fmt.Sprintf("%s/versions/all", reqURL)
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("gradle versions service returned status %s", resp.Status)
+	}
+
+	var gradleReleases []struct {
+		Version  string `json:"version"`
+		Snapshot bool   `json:"snapshot"`
+		Nightly  bool   `json:"nightly"`
+		Broken   bool   `json:"broken"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&gradleReleases); err != nil {
+		return nil, err
+	}
+
+	var versions []string
+	for _, r := range gradleReleases {
+		if !r.Snapshot && !r.Nightly && !r.Broken && r.Version != "" {
+			versions = append(versions, r.Version)
+		}
+	}
+
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("no valid gradle versions found at %s", reqURL)
+	}
+
+	return versions, nil
+}
+
+// FetchApacheAntVersions retrieves version strings from Apache Ant archive binaries index.
+func FetchApacheAntVersions(ctx context.Context, baseURL string) ([]string, error) {
+	if baseURL == "" {
+		baseURL = "https://archive.apache.org/dist/ant/binaries"
+	}
+	baseURL = strings.TrimSuffix(baseURL, "/")
+
+	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("apache ant archive returned status %s", resp.Status)
+	}
+
+	dirRegex := regexp.MustCompile(`apache-ant-([0-9]+\.[0-9]+\.[0-9]+)-bin\.tar\.gz`)
+	scanner := bufio.NewScanner(resp.Body)
+	versionMap := make(map[string]bool)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		matches := dirRegex.FindAllStringSubmatch(line, -1)
+		for _, m := range matches {
+			if len(m) > 1 {
+				versionMap[m[1]] = true
+			}
+		}
+	}
+
+	var versions []string
+	for v := range versionMap {
+		versions = append(versions, v)
+	}
+
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("no versions found at apache ant archive %s", baseURL)
+	}
+
+	return versions, nil
+}
+
 // FetchPyPIVersions retrieves all published version strings for a PyPI package.
 func FetchPyPIVersions(ctx context.Context, pkgName string) ([]string, error) {
 	reqURL := fmt.Sprintf("https://pypi.org/pypi/%s/json", pkgName)
@@ -220,13 +323,17 @@ func FetchGitHubReleases(ctx context.Context, owner, repo string) ([]string, err
 		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			var releases []struct {
-				TagName string `json:"tag_name"`
-				Name    string `json:"name"`
+				TagName string        `json:"tag_name"`
+				Name    string        `json:"name"`
+				Assets  []interface{} `json:"assets"`
 			}
 			if err := json.NewDecoder(resp.Body).Decode(&releases); err == nil && len(releases) > 0 {
 				resp.Body.Close()
 				var versions []string
 				for _, r := range releases {
+					if len(r.Assets) == 0 {
+						continue
+					}
 					v := r.TagName
 					if v == "" {
 						v = r.Name
@@ -235,7 +342,9 @@ func FetchGitHubReleases(ctx context.Context, owner, repo string) ([]string, err
 						versions = append(versions, v)
 					}
 				}
-				return versions, nil
+				if len(versions) > 0 {
+					return versions, nil
+				}
 			}
 			resp.Body.Close()
 		} else if resp != nil {

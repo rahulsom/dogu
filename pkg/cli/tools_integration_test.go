@@ -19,6 +19,7 @@ func TestToolIntegrations(t *testing.T) {
 
 	testCases := []struct {
 		name           string
+		setupFunc      func(doguHome string)
 		args           []string
 		expectedOutput string
 	}{
@@ -102,13 +103,58 @@ func TestToolIntegrations(t *testing.T) {
 			args:           []string{"--uv", "0.1", "--", "uv", "--version"},
 			expectedOutput: "0.1.",
 		},
+		{
+			name:           "sbt-partial",
+			args:           []string{"--sbt", "1", "--", "sbt", "--version"},
+			expectedOutput: "1.",
+		},
+		{
+			name:           "gradle-partial",
+			args:           []string{"--gradle", "8", "--", "gradle", "--version"},
+			expectedOutput: "8.",
+		},
+		{
+			name: "mill-partial",
+			setupFunc: func(doguHome string) {
+				mDir := filepath.Join(doguHome, "candidates", "mill", "0.12.5")
+				_ = os.MkdirAll(mDir, 0755)
+				_ = os.WriteFile(filepath.Join(mDir, "mill"), []byte("#!/bin/sh\necho '0.12.5'\n"), 0755)
+			},
+			args:           []string{"--mill", "0.12", "--", "mill", "--version"},
+			expectedOutput: "0.12.5",
+		},
+		{
+			name:           "bazel-partial",
+			args:           []string{"--bazel", "7", "--", "bazel", "--version"},
+			expectedOutput: "7.",
+		},
+		{
+			name:           "pants-partial",
+			args:           []string{"--pants", "2.33", "--", "pants", "--version"},
+			expectedOutput: "2.33.",
+		},
+		{
+			name:           "ant-partial",
+			args:           []string{"--ant", "1.10", "--", "ant", "-version"},
+			expectedOutput: "1.10.",
+		},
+		{
+			name:           "buck2-partial",
+			args:           []string{"--buck2", "2026-10", "--", "buck2", "--version"},
+			expectedOutput: "buck2",
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			doguHome := t.TempDir()
+			_ = os.WriteFile(filepath.Join(doguHome, "BUILDROOT"), []byte(""), 0644)
+			if tc.setupFunc != nil {
+				tc.setupFunc(doguHome)
+			}
 			cmd := exec.Command(doguBin, tc.args...)
+			cmd.Dir = doguHome
 			cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
 
 			out, err := cmd.CombinedOutput()

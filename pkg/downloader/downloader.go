@@ -19,6 +19,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
+	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
 )
 
@@ -586,6 +587,16 @@ func SaveSingleBinary(ctx context.Context, downloadURL string, cacheFile string,
 	}
 	defer out.Close()
 
+	if strings.HasSuffix(strings.ToLower(cacheFile), ".zst") || strings.HasSuffix(strings.ToLower(downloadURL), ".zst") {
+		zr, err := zstd.NewReader(in)
+		if err != nil {
+			return err
+		}
+		defer zr.Close()
+		_, err = io.Copy(out, zr)
+		return err
+	}
+
 	_, err = io.Copy(out, in)
 	return err
 }
@@ -728,16 +739,20 @@ func FindSubDirWithDir(candidateDir string, targetSub string) string {
 		return candidateDir
 	}
 
-	entries, err := os.ReadDir(candidateDir)
-	if err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				subPath := filepath.Join(candidateDir, entry.Name())
-				if fi, err := os.Stat(filepath.Join(subPath, targetSub)); err == nil && fi.IsDir() {
-					return subPath
-				}
-			}
+	var foundParent string
+	_ = filepath.WalkDir(candidateDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
 		}
+		if d.IsDir() && d.Name() == targetSub && path != candidateDir {
+			foundParent = filepath.Dir(path)
+			return filepath.SkipAll
+		}
+		return nil
+	})
+
+	if foundParent != "" {
+		return foundParent
 	}
 
 	return candidateDir

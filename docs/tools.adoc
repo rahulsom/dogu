@@ -11,6 +11,13 @@
 | Java | `--java` | `JAVA_<MAJOR>_HOME`, `JAVA_HOME` | Integrated with Foojay Disco API; supports vendor specs (`-zulu`, `-tem`)
 | Node.js | `--node` | `NODE_<MAJOR>_HOME`, `NODE_HOME` | Downloads official nodejs.org dist archives
 | Apache Maven | `--maven` | `MAVEN_<MAJOR>_HOME`, `MAVEN_HOME`, `M2_HOME` | Downloads Apache Maven releases
+| sbt | `--sbt` | `SBT_<MAJOR>_HOME`, `SBT_HOME` | Downloads sbt release archives
+| Gradle | `--gradle` | `GRADLE_<MAJOR>_HOME`, `GRADLE_HOME` | Downloads Gradle distribution zips
+| Apache Ant | `--ant` | `ANT_<MAJOR>_HOME`, `ANT_HOME` | Downloads Apache Ant binary archives
+| Mill | `--mill` | `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION` | Downloads Mill build tool releases
+| Bazel | `--bazel` | `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME` | Downloads standalone Bazel binaries
+| Pants | `--pants` | `PANTS_<MAJOR>_HOME`, `PANTS_HOME` | Downloads Pants build system executables
+| Buck2 | `--buck2` | `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME` | Downloads Buck2 build system releases
 | npm | `--npm` | `NPM_<MAJOR>_HOME`, `NPM_HOME` | Downloads npm release tarballs
 | Yarn | `--yarn` | `YARN_<MAJOR>_HOME`, `YARN_HOME` | Downloads Yarn v1 releases
 | pnpm | `--pnpm` | `PNPM_<MAJOR>_HOME`, `PNPM_HOME` | Downloads standalone pnpm binaries

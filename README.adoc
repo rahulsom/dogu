@@ -46,6 +46,9 @@ You can create a `.dogu.properties` file in your project or any parent directory
 java.mirror=https://my-internal-mirror.company.com/java
 node.mirror=https://my-internal-mirror.company.com/node
 maven.mirror=https://my-internal-mirror.company.com/maven
+gradle.mirror=https://my-internal-mirror.company.com/gradle
+sbt.mirror=https://my-internal-mirror.company.com/sbt
+bazel.mirror=https://my-internal-mirror.company.com/bazel
 ----
 
 == Supported Tools
@@ -53,6 +56,13 @@ maven.mirror=https://my-internal-mirror.company.com/maven
 * `java` (Supports major versions, Disco API vendor suffixes like `-zulu`, `-tem`)
 * `node`
 * `maven`
+* `sbt`
+* `gradle`
+* `ant`
+* `mill`
+* `bazel`
+* `pants`
+* `buck2`
 * `npm`
 * `yarn`
 * `pnpm`
