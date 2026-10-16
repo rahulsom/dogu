@@ -94,11 +94,6 @@ func PrintUsage(out *os.File) {
 					examples:    "--pants 2, --pants 2.33, --pants 2.33.1",
 				},
 				{
-					name:        "buck",
-					description: "Major versions or release dates",
-					examples:    "--buck 2022, --buck 2022.05, --buck 2022.05.05.01",
-				},
-				{
 					name:        "buck2",
 					description: "Release dates or version tags",
 					examples:    "--buck2 2026, --buck2 2026-10, --buck2 2026-10-15",

@@ -62,7 +62,6 @@ bazel.mirror=https://my-internal-mirror.company.com/bazel
 * `mill`
 * `bazel`
 * `pants`
-* `buck`
 * `buck2`
 * `npm`
 * `yarn`

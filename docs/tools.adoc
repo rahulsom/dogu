@@ -17,7 +17,6 @@
 | Mill | `--mill` | `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION` | Downloads Mill build tool releases
 | Bazel | `--bazel` | `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME` | Downloads standalone Bazel binaries
 | Pants | `--pants` | `PANTS_<MAJOR>_HOME`, `PANTS_HOME` | Downloads Pants build system executables
-| Buck | `--buck` | `BUCK_<MAJOR>_HOME`, `BUCK_HOME` | Downloads Buck build system releases
 | Buck2 | `--buck2` | `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME` | Downloads Buck2 build system releases
 | npm | `--npm` | `NPM_<MAJOR>_HOME`, `NPM_HOME` | Downloads npm release tarballs
 | Yarn | `--yarn` | `YARN_<MAJOR>_HOME`, `YARN_HOME` | Downloads Yarn v1 releases

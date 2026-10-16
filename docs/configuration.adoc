@@ -23,7 +23,6 @@ ant.mirror=https://mirror.example.com/ant
 mill.mirror=https://mirror.example.com/mill
 bazel.mirror=https://mirror.example.com/bazel
 pants.mirror=https://mirror.example.com/pants
-buck.mirror=https://mirror.example.com/buck
 buck2.mirror=https://mirror.example.com/buck2
 npm.mirror=https://mirror.example.com/npm
 yarn.mirror=https://mirror.example.com/yarn

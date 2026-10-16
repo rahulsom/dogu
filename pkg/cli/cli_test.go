@@ -37,7 +37,7 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 		}
 	}
 
-	for _, tool := range []string{"java", "node", "maven", "sbt", "gradle", "mill", "bazel", "pants", "ant", "buck", "buck2", "npm", "yarn", "pnpm", "bun", "python", "uv"} {
+	for _, tool := range []string{"java", "node", "maven", "sbt", "gradle", "mill", "bazel", "pants", "ant", "buck2", "npm", "yarn", "pnpm", "bun", "python", "uv"} {
 		if !strings.Contains(output, tool) {
 			t.Errorf("expected tool %s in supported tools list, got: %s", tool, output)
 		}
