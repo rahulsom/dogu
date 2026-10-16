@@ -32,8 +32,8 @@ func PrintUsage(out *os.File) {
 	}
 	fmt.Fprintf(out, "\nFlags:\n")
 	fmt.Fprintf(out, "  -v, --verbose  Enable verbose logging\n")
-	fmt.Fprintf(out, "  --force        Force re-downloading candidate versions even if already installed\n")
-	fmt.Fprintf(out, "  --help, -h     Show usage information\n")
+	fmt.Fprintf(out, "  -f, --force    Force re-downloading candidate versions even if already installed\n")
+	fmt.Fprintf(out, "  -h, --help     Show usage information\n")
 }
 
 // Run parses CLI args, provisions tools, updates environment, and executes sub-command.
@@ -209,11 +209,11 @@ func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, error) {
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if arg == "--force" {
+		if arg == "--force" || arg == "-f" {
 			force = true
 			continue
 		}
-		if arg == "-v" || arg == "--verbose" {
+		if arg == "--verbose" || arg == "-v" {
 			verbose = true
 			continue
 		}
