@@ -51,6 +51,49 @@ sbt.mirror=https://my-internal-mirror.company.com/sbt
 bazel.mirror=https://my-internal-mirror.company.com/bazel
 ----
 
+== Testing with a Local Mirror (Cachew)
+
+You can run a local pass-through caching mirror using link:https://github.com/block/cachew[Cachew] and Docker to test mirror provisioning:
+
+1. **Start the Cachew container:**
++
+[source,bash]
+----
+docker run -d --rm \
+  --name dogu-cachew-mirror \
+  -p 8080:8080 \
+  -v "$(pwd)/testdata/cachew.hcl:/app/cachew.hcl:ro" \
+  ghcr.io/block/cachew:latest \
+  --config /app/cachew.hcl
+----
+
+2. **Configure `.dogu.properties`:**
++
+Create a `.dogu.properties` file pointing to the local mirror (for example, in your project or current working directory):
++
+[source,properties]
+----
+maven.mirror=http://localhost:8080/archive.apache.org/dist/maven/maven-3
+node.mirror=http://localhost:8080/nodejs.org/dist
+----
+
+3. **Test with `go run cmd/dogu/main.go`:**
++
+Run `dogu` with `-v` (verbose) to observe downloads routing through the mirror:
++
+[source,bash]
+----
+go run cmd/dogu/main.go -v --maven 3.9.6 -- mvn -v
+go run cmd/dogu/main.go -v --node 20.18.0 -- node -v
+----
+
+4. **Stop the container when finished:**
++
+[source,bash]
+----
+docker stop dogu-cachew-mirror
+----
+
 == Supported Tools
 
 * `java` (Supports major versions, Disco API vendor suffixes like `-zulu`, `-tem`)
