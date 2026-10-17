@@ -22,5 +22,8 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Pre-pull Cachew Docker image
+        run: docker pull ghcr.io/block/cachew:latest
+
       - name: Run tests
         run: go test -v -race -cover ./...
