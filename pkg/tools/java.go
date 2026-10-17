@@ -108,7 +108,7 @@ func parseJavaSpec(spec string) (version string, distribution string) {
 }
 
 func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist string, osName string, archName string, mirrorBaseURL string) (downloadURL string, filename string, normVersion string, err error) {
-	if mirrorBaseURL != "" {
+	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") {
 		mirrorBaseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 		distSuffix := ""
 		if dist != "" {
@@ -125,6 +125,9 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 	}
 
 	endpoint := "https://api.foojay.io/disco/v3.0/packages"
+	if mirrorBaseURL != "" && strings.Contains(mirrorBaseURL, "foojay") {
+		endpoint = strings.TrimSuffix(mirrorBaseURL, "/")
+	}
 	v := url.Values{}
 	v.Set("version", ver)
 	v.Set("operating_system", osName)
@@ -162,7 +165,15 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 	}
 
 	pkg := discoResp.Result[0]
-	return pkg.Links.PkgDownloadRedirect, pkg.Filename, pkg.JavaVersion, nil
+	redirectURL := pkg.Links.PkgDownloadRedirect
+	if mirrorBaseURL != "" && strings.HasPrefix(redirectURL, "https://") {
+		if parsedMirror, err := url.Parse(mirrorBaseURL); err == nil && parsedMirror.Host != "" {
+			if parsedRedirect, err := url.Parse(redirectURL); err == nil {
+				redirectURL = fmt.Sprintf("%s://%s/%s%s", parsedMirror.Scheme, parsedMirror.Host, parsedRedirect.Host, parsedRedirect.RequestURI())
+			}
+		}
+	}
+	return redirectURL, pkg.Filename, pkg.JavaVersion, nil
 }
 
 func buildJavaResultFromDir(versionSpec string, installDir string) *InstallResult {

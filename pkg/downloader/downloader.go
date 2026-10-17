@@ -466,7 +466,28 @@ func downloadFile(ctx context.Context, downloadURL string, cacheFile string) err
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("stopped after 10 redirects")
+			}
+			if len(via) > 0 {
+				initialURL := via[0].URL
+				firstSeg := strings.SplitN(strings.TrimPrefix(initialURL.Path, "/"), "/", 2)[0]
+				if strings.Contains(firstSeg, ".") && firstSeg != initialURL.Host {
+					targetHost := req.URL.Host
+					if targetHost != "" && targetHost != initialURL.Host {
+						req.URL.Scheme = initialURL.Scheme
+						req.URL.Host = initialURL.Host
+						req.URL.Path = "/" + targetHost + req.URL.Path
+					}
+				}
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to download %s: %w", downloadURL, err)
 	}

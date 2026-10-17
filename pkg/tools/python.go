@@ -42,14 +42,7 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 
 	target := mapPythonTarget()
 	filename := fmt.Sprintf("cpython-%s+%s-%s-install_only.tar.gz", normVer, "20240107", target)
-	if mirrorBaseURL != "" {
-		filename = fmt.Sprintf("python-%s-%s.tar.gz", normVer, target)
-	}
-
 	downloadURL := fmt.Sprintf("%s/20240107/%s", baseURL, filename)
-	if mirrorBaseURL != "" {
-		downloadURL = fmt.Sprintf("%s/%s", baseURL, filename)
-	}
 
 	installDir := filepath.Join(doguHome, "candidates", "python", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "python", filename)

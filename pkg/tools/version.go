@@ -129,8 +129,10 @@ func SelectBestVersion(versions []string, spec string) (string, error) {
 // FetchNPMVersions retrieves all published version strings for an npm package.
 func FetchNPMVersions(ctx context.Context, pkgName string, mirrorBaseURL string) ([]string, error) {
 	reqURL := fmt.Sprintf("https://registry.npmjs.org/%s", pkgName)
-	if mirrorBaseURL != "" {
+	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "github.com") {
 		reqURL = strings.TrimSuffix(mirrorBaseURL, "/")
+		reqURL = strings.TrimSuffix(reqURL, "/-")
+		reqURL = strings.TrimSuffix(reqURL, "/"+pkgName)
 		if !strings.HasSuffix(reqURL, pkgName) {
 			reqURL = fmt.Sprintf("%s/%s", reqURL, pkgName)
 		}
@@ -182,6 +184,7 @@ func FetchGradleVersions(ctx context.Context, baseURL string) ([]string, error) 
 	reqURL := "https://services.gradle.org/versions/all"
 	if baseURL != "" {
 		reqURL = strings.TrimSuffix(baseURL, "/")
+		reqURL = strings.TrimSuffix(reqURL, "/distributions")
 		if !strings.HasSuffix(reqURL, "/versions/all") {
 			reqURL = fmt.Sprintf("%s/versions/all", reqURL)
 		}

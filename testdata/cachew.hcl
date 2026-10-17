@@ -22,3 +22,11 @@ cache "memory" {
 strategy "host" "https://archive.apache.org" {}
 strategy "host" "https://nodejs.org" {}
 strategy "host" "https://services.gradle.org" {}
+strategy "host" "https://registry.npmjs.org" {}
+strategy "host" "https://github.com" {}
+strategy "host" "https://objects.githubusercontent.com" {}
+strategy "host" "https://raw.githubusercontent.com" {}
+strategy "host" "https://api.github.com" {}
+strategy "host" "https://pypi.org" {}
+strategy "host" "https://api.foojay.io" {}
+strategy "host" "https://cdn.azul.com" {}
