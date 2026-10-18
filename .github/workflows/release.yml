@@ -23,7 +23,7 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -v -race -cover ./...
+        run: go run gotest.tools/gotestsum@latest --format testdox -- -race -cover ./...
 
   release:
     name: Publish Release Binaries
