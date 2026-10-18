@@ -58,21 +58,37 @@ func TestGenerateDocumentation(t *testing.T) {
 		}
 	}
 
-	// Verify that generated configuration.adoc in build directory contains expected mirror configuration
+	// Verify that generated configuration.adoc in build directory contains expected mirror configurations
 	generatedConfigPath := filepath.Join(buildDocsDir, "configuration.adoc")
 	data, err := os.ReadFile(generatedConfigPath)
 	if err != nil {
 		t.Fatalf("failed to read generated configuration.adoc at %s: %v", generatedConfigPath, err)
 	}
 
-	expectedComment := "# http://localhost:8080/archive.apache.org/ mirrors https://archive.apache.org/ on our proxy"
-	expectedProperty := "maven.mirror=http://localhost:8080/archive.apache.org/dist/maven/maven-3"
-
 	contentStr := string(data)
-	if !strings.Contains(contentStr, expectedComment) {
-		t.Errorf("generated configuration.adoc missing expected comment %q", expectedComment)
+
+	expectedProperties := []string{
+		"java.mirror=http://localhost:8080/api.foojay.io/disco/v3.0/packages",
+		"node.mirror=http://localhost:8080/nodejs.org/dist",
+		"maven.mirror=http://localhost:8080/archive.apache.org/dist/maven/maven-3",
+		"sbt.mirror=http://localhost:8080/github.com/sbt/sbt/releases/download",
+		"gradle.mirror=http://localhost:8080/services.gradle.org/distributions",
+		"ant.mirror=http://localhost:8080/archive.apache.org/dist/ant/binaries",
+		"mill.mirror=http://localhost:8080/github.com/com-lihaoyi/mill/releases/download",
+		"bazel.mirror=http://localhost:8080/github.com/bazelbuild/bazel/releases/download",
+		"pants.mirror=http://localhost:8080/github.com/pantsbuild/pants/releases/download",
+		"buck2.mirror=http://localhost:8080/github.com/facebook/buck2/releases/download",
+		"npm.mirror=http://localhost:8080/registry.npmjs.org/npm/-",
+		"yarn.mirror=http://localhost:8080/github.com/yarnpkg/yarn/releases/download",
+		"pnpm.mirror=http://localhost:8080/github.com/pnpm/pnpm/releases/download",
+		"bun.mirror=http://localhost:8080/github.com/oven-sh/bun/releases/download",
+		"python.mirror=http://localhost:8080/github.com/indygreg/python-build-standalone/releases/download",
+		"uv.mirror=http://localhost:8080/github.com/astral-sh/uv/releases/download",
 	}
-	if !strings.Contains(contentStr, expectedProperty) {
-		t.Errorf("generated configuration.adoc missing expected property %q", expectedProperty)
+
+	for _, prop := range expectedProperties {
+		if !strings.Contains(contentStr, prop) {
+			t.Errorf("generated configuration.adoc missing expected property %q", prop)
+		}
 	}
 }
