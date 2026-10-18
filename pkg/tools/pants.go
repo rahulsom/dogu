@@ -105,13 +105,8 @@ func resolvePantsDownloadURL(ctx context.Context, baseURL string, normVer string
 				targetSuffixPex := fmt.Sprintf("-%s_%s.pex", osName, archName)
 
 				for _, a := range releaseData.Assets {
-					if strings.HasSuffix(a.Name, targetSuffix) {
-						return a.BrowserDownloadURL
-					}
-				}
-				for _, a := range releaseData.Assets {
-					if strings.HasSuffix(a.Name, targetSuffixPex) {
-						return a.BrowserDownloadURL
+					if strings.HasSuffix(a.Name, targetSuffix) || strings.HasSuffix(a.Name, targetSuffixPex) {
+						return fmt.Sprintf("%s/release_%s/%s", baseURL, normVer, a.Name)
 					}
 				}
 			}
