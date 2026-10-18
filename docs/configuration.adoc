@@ -15,7 +15,8 @@ Properties follow standard key-value formatting:
 # Mirror configurations
 java.mirror=https://mirror.example.com/java
 node.mirror=https://mirror.example.com/node
-maven.mirror=https://mirror.example.com/maven
+# http://localhost:8080/archive.apache.org/ mirrors https://archive.apache.org/ on our proxy
+maven.mirror=http://localhost:8080/archive.apache.org/dist/maven/maven-3
 sbt.mirror=https://mirror.example.com/sbt
 gradle.mirror=https://mirror.example.com/gradle
 ant.mirror=https://mirror.example.com/ant
