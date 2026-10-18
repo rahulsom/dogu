@@ -4,44 +4,168 @@
 
 == Java / JVM Ecosystem
 
-|===
-| Tool | Flag | Version Formats | Examples | Environment Variables Set | Notes
+=== Java
 
-| Java | `--java` | Major versions, exact versions, or vendor distribution suffixes (`-zulu`, `-tem`) | `--java 21`, `--java 17-zulu`, `--java 25.0.3.0+9-tem` | `JAVA_<MAJOR>_HOME`, `JAVA_HOME` | Integrated with Foojay Disco API; supports vendor specs (`-zulu`, `-tem`)
-| Apache Maven | `--maven` | Major versions, major.minor, or exact semver versions | `--maven 3`, `--maven 3.9`, `--maven 3.9.6` | `MAVEN_<MAJOR>_HOME`, `MAVEN_HOME`, `M2_HOME` | Downloads Apache Maven releases
-| sbt | `--sbt` | Major versions, major.minor, or exact semver versions | `--sbt 1`, `--sbt 1.10`, `--sbt 1.10.10` | `SBT_<MAJOR>_HOME`, `SBT_HOME` | Downloads sbt release archives
-| Gradle | `--gradle` | Major versions, major.minor, or exact semver versions | `--gradle 8`, `--gradle 8.10`, `--gradle 8.10.2` | `GRADLE_<MAJOR>_HOME`, `GRADLE_HOME` | Downloads Gradle distribution zips
-|===
+* **CLI Flag:** `--java`
+* **Default Base URL:** `https://api.foojay.io/disco/v3.0/packages`
+* **Mirror Property:** `java.mirror`
+* **Version Formats:** Major versions, exact versions, or vendor distribution suffixes (`-zulu`, `-tem`)
+* **Examples:** `--java 21`, `--java 17-zulu`, `--java 25.0.3.0+9-tem`
+* **Environment Variables Set:** `JAVA_<MAJOR>_HOME`, `JAVA_HOME`
+* **Notes:** Integrated with Foojay Disco API; supports vendor specs (`-zulu`, `-tem`)
+
+=== Apache Maven
+
+* **CLI Flag:** `--maven`
+* **Default Base URL:** `https://archive.apache.org/dist/maven/maven-3`
+* **Mirror Property:** `maven.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--maven 3`, `--maven 3.9`, `--maven 3.9.6`
+* **Environment Variables Set:** `MAVEN_<MAJOR>_HOME`, `MAVEN_HOME`, `M2_HOME`
+* **Notes:** Downloads Apache Maven releases
+
+=== sbt
+
+* **CLI Flag:** `--sbt`
+* **Default Base URL:** `https://github.com/sbt/sbt/releases/download`
+* **Mirror Property:** `sbt.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--sbt 1`, `--sbt 1.10`, `--sbt 1.10.10`
+* **Environment Variables Set:** `SBT_<MAJOR>_HOME`, `SBT_HOME`
+* **Notes:** Downloads sbt release archives
+
+=== Gradle
+
+* **CLI Flag:** `--gradle`
+* **Default Base URL:** `https://services.gradle.org/distributions`
+* **Mirror Property:** `gradle.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--gradle 8`, `--gradle 8.10`, `--gradle 8.10.2`
+* **Environment Variables Set:** `GRADLE_<MAJOR>_HOME`, `GRADLE_HOME`
+* **Notes:** Downloads Gradle distribution zips
 
 == Generic Build Tools
 
-|===
-| Tool | Flag | Version Formats | Examples | Environment Variables Set | Notes
+=== Apache Ant
 
-| Apache Ant | `--ant` | Major versions, major.minor, or exact semver versions | `--ant 1`, `--ant 1.10`, `--ant 1.10.14` | `ANT_<MAJOR>_HOME`, `ANT_HOME` | Downloads Apache Ant binary archives
-| Mill | `--mill` | Major versions, major.minor, or exact semver versions | `--mill 0`, `--mill 0.12`, `--mill 0.12.5` | `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION` | Downloads Mill build tool releases
-| Bazel | `--bazel` | Major versions, major.minor, or exact semver versions | `--bazel 7`, `--bazel 7.4`, `--bazel 7.4.0` | `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME` | Downloads standalone Bazel binaries
-| Pants | `--pants` | Major versions, major.minor, or exact semver versions | `--pants 2`, `--pants 2.33`, `--pants 2.33.1` | `PANTS_<MAJOR>_HOME`, `PANTS_HOME` | Downloads Pants build system executables
-| Buck2 | `--buck2` | Release dates or version tags | `--buck2 2026`, `--buck2 2026-10`, `--buck2 2026-10-15` | `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME` | Downloads Buck2 build system releases
-|===
+* **CLI Flag:** `--ant`
+* **Default Base URL:** `https://archive.apache.org/dist/ant/binaries`
+* **Mirror Property:** `ant.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--ant 1`, `--ant 1.10`, `--ant 1.10.14`
+* **Environment Variables Set:** `ANT_<MAJOR>_HOME`, `ANT_HOME`
+* **Notes:** Downloads Apache Ant binary archives
+
+=== Mill
+
+* **CLI Flag:** `--mill`
+* **Default Base URL:** `https://github.com/com-lihaoyi/mill/releases/download`
+* **Mirror Property:** `mill.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--mill 0`, `--mill 0.12`, `--mill 0.12.5`
+* **Environment Variables Set:** `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION`
+* **Notes:** Downloads Mill build tool releases
+
+=== Bazel
+
+* **CLI Flag:** `--bazel`
+* **Default Base URL:** `https://github.com/bazelbuild/bazel/releases/download`
+* **Mirror Property:** `bazel.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--bazel 7`, `--bazel 7.4`, `--bazel 7.4.0`
+* **Environment Variables Set:** `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME`
+* **Notes:** Downloads standalone Bazel binaries
+
+=== Pants
+
+* **CLI Flag:** `--pants`
+* **Default Base URL:** `https://github.com/pantsbuild/pants/releases/download`
+* **Mirror Property:** `pants.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--pants 2`, `--pants 2.33`, `--pants 2.33.1`
+* **Environment Variables Set:** `PANTS_<MAJOR>_HOME`, `PANTS_HOME`
+* **Notes:** Downloads Pants build system executables
+
+=== Buck2
+
+* **CLI Flag:** `--buck2`
+* **Default Base URL:** `https://github.com/facebook/buck2/releases/download`
+* **Mirror Property:** `buck2.mirror`
+* **Version Formats:** Release dates or version tags
+* **Examples:** `--buck2 2026`, `--buck2 2026-10`, `--buck2 2026-10-15`
+* **Environment Variables Set:** `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME`
+* **Notes:** Downloads Buck2 build system releases
 
 == Node.js / JavaScript Ecosystem
 
-|===
-| Tool | Flag | Version Formats | Examples | Environment Variables Set | Notes
+=== Node.js
 
-| Node.js | `--node` | Major versions, major.minor, or exact semver versions | `--node 20`, `--node 22.11`, `--node 22.11.0` | `NODE_<MAJOR>_HOME`, `NODE_HOME` | Downloads official nodejs.org dist archives
-| npm | `--npm` | Major versions, major.minor, or exact semver versions | `--npm 10`, `--npm 10.2`, `--npm 10.2.4` | `NPM_<MAJOR>_HOME`, `NPM_HOME` | Downloads npm release tarballs
-| pnpm | `--pnpm` | Major versions, major.minor, or exact semver versions | `--pnpm 8`, `--pnpm 8.15`, `--pnpm 8.15.1` | `PNPM_<MAJOR>_HOME`, `PNPM_HOME` | Downloads standalone pnpm binaries
-| Yarn | `--yarn` | Major versions, major.minor, or exact semver versions | `--yarn 1`, `--yarn 1.22`, `--yarn 1.22.19` | `YARN_<MAJOR>_HOME`, `YARN_HOME` | Downloads Yarn v1 releases
-| Bun | `--bun` | Major versions, major.minor, or exact semver versions | `--bun 1`, `--bun 1.1`, `--bun 1.1.0` | `BUN_<MAJOR>_HOME`, `BUN_HOME` | Downloads Oven Bun release archives
-|===
+* **CLI Flag:** `--node`
+* **Default Base URL:** `https://nodejs.org/dist`
+* **Mirror Property:** `node.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--node 20`, `--node 22.11`, `--node 22.11.0`
+* **Environment Variables Set:** `NODE_<MAJOR>_HOME`, `NODE_HOME`
+* **Notes:** Downloads official nodejs.org dist archives
+
+=== npm
+
+* **CLI Flag:** `--npm`
+* **Default Base URL:** `https://registry.npmjs.org/npm/-`
+* **Mirror Property:** `npm.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--npm 10`, `--npm 10.2`, `--npm 10.2.4`
+* **Environment Variables Set:** `NPM_<MAJOR>_HOME`, `NPM_HOME`
+* **Notes:** Downloads npm release tarballs
+
+=== pnpm
+
+* **CLI Flag:** `--pnpm`
+* **Default Base URL:** `https://github.com/pnpm/pnpm/releases/download`
+* **Mirror Property:** `pnpm.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--pnpm 8`, `--pnpm 8.15`, `--pnpm 8.15.1`
+* **Environment Variables Set:** `PNPM_<MAJOR>_HOME`, `PNPM_HOME`
+* **Notes:** Downloads standalone pnpm binaries
+
+=== Yarn
+
+* **CLI Flag:** `--yarn`
+* **Default Base URL:** `https://github.com/yarnpkg/yarn/releases/download`
+* **Mirror Property:** `yarn.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--yarn 1`, `--yarn 1.22`, `--yarn 1.22.19`
+* **Environment Variables Set:** `YARN_<MAJOR>_HOME`, `YARN_HOME`
+* **Notes:** Downloads Yarn v1 releases
+
+=== Bun
+
+* **CLI Flag:** `--bun`
+* **Default Base URL:** `https://github.com/oven-sh/bun/releases/download`
+* **Mirror Property:** `bun.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--bun 1`, `--bun 1.1`, `--bun 1.1.0`
+* **Environment Variables Set:** `BUN_<MAJOR>_HOME`, `BUN_HOME`
+* **Notes:** Downloads Oven Bun release archives
 
 == Python Ecosystem
 
-|===
-| Tool | Flag | Version Formats | Examples | Environment Variables Set | Notes
+=== Python
 
-| Python | `--python` | Major versions, major.minor, or exact semver versions | `--python 3`, `--python 3.11`, `--python 3.11.7` | `PYTHON_<MAJOR>_HOME`, `PYTHON_HOME`, `PYTHONHOME` | Standalone Python builds
-| UV | `--uv` | Major versions, major.minor, or exact semver versions | `--uv 0`, `--uv 0.5`, `--uv 0.5.1` | `UV_<MAJOR>_HOME`, `UV_HOME` | Downloads Astral UV releases
-|===
+* **CLI Flag:** `--python`
+* **Default Base URL:** `https://github.com/indygreg/python-build-standalone/releases/download`
+* **Mirror Property:** `python.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--python 3`, `--python 3.11`, `--python 3.11.7`
+* **Environment Variables Set:** `PYTHON_<MAJOR>_HOME`, `PYTHON_HOME`, `PYTHONHOME`
+* **Notes:** Standalone Python builds
+
+=== UV
+
+* **CLI Flag:** `--uv`
+* **Default Base URL:** `https://github.com/astral-sh/uv/releases/download`
+* **Mirror Property:** `uv.mirror`
+* **Version Formats:** Major versions, major.minor, or exact semver versions
+* **Examples:** `--uv 0`, `--uv 0.5`, `--uv 0.5.1`
+* **Environment Variables Set:** `UV_<MAJOR>_HOME`, `UV_HOME`
+* **Notes:** Downloads Astral UV releases
