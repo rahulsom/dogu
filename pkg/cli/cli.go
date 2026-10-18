@@ -162,7 +162,7 @@ func PrintUsage(out *os.File) {
 	sb.WriteString(fmt.Sprintf("  %s     %s\n\n", flagNameStyle.Render("-h, --help"), descStyle.Render("Show usage information")))
 
 	sb.WriteString(headerStyle.Render("Examples:") + "\n")
-	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --java 21 --node 22 -- mvn clean test")))
+	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --java 21 --maven 3.9 --node 22 -- mvn clean test")))
 	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --python 3.11 --uv 0.5 -- pytest")))
 	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --node 20 --pnpm 8.15 -- pnpm install")))
 

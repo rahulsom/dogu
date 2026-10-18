@@ -12,26 +12,48 @@ _Dogu_ is Korean for _tools_.
 * **Flexible Mirror Support:** Configure custom download mirror URLs in `.dogu.properties` files discovered hierarchically upwards.
 * **Multiplatform Support:** Works across Linux, macOS, and Windows.
 
-== Quick Usage
+== Usage & CLI Flags
 
-Run any command prefixed with `dogu` and the desired tool flags:
+=== Command Syntax
 
-[source,bash]
-----
-dogu \
-  --java 17 \
-  --java 21-zulu \
-  --java 25.0.3.0+9-tem \
-  --node 24 \
-  --node 26.11.1 \
-  -- <SOME COMMAND>
-----
-
-=== Example
+Run any command prefixed with `dogu` and the desired tool or CLI flags:
 
 [source,bash]
 ----
-dogu --java 21 --node 24 -- mvn clean test
+dogu [-v|--verbose] [--force] [tools...] -- <command> [args...]
+----
+
+=== Flags
+
+|===
+| Flag | Description
+
+| `-v, --verbose` | Enable verbose logging.
+| `-f, --force` | Force re-downloading candidate versions even if already installed.
+| `-h, --help` | Show usage information.
+|===
+
+=== Examples
+
+Run Maven tests with Java, Maven, and Node.js provisioned:
+
+[source,bash]
+----
+dogu --java 21 --maven 3.9 --node 24 -- mvn clean test
+----
+
+Run Pytest with Python and UV provisioned:
+
+[source,bash]
+----
+dogu --python 3.11 --uv 0.5 -- pytest
+----
+
+Install Node dependencies with pnpm:
+
+[source,bash]
+----
+dogu --node 20 --pnpm 8.15 -- pnpm install
 ----
 
 == Candidate Storage
@@ -39,7 +61,6 @@ dogu --java 21 --node 24 -- mvn clean test
 Candidate binaries are cached and unpacked at `$DOGU_HOME/candidates`.
 If `DOGU_HOME` is not set, `dogu` defaults to `$HOME/.dogu`.
 
-== Guides & Reference
+include::configuration.adoc[leveloffset=+1]
 
-* link:configuration.html[Configuration Guide (`.dogu.properties`)] - Learn how to configure custom download mirrors.
-* link:tools.html[Supported Tools & Version Reference] - View all supported tools, flags, and environment variables.
+include::tools.adoc[leveloffset=+1]
