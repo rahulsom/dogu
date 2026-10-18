@@ -1,14 +1,45 @@
-= dogu Documentation Site
+= dogu
 :toc: left
 :icons: font
 
-Welcome to the `dogu` documentation site.
+`dogu` is a multiplatform command-line tool written in Go that seamlessly provisions and configures developer toolchains.
+_Dogu_ is Korean for _tools_.
 
-== Overview
+== Overview & Features
 
-`dogu` is a multiplatform developer tool manager designed to simplify cross-version development and CI/CD pipelines.
+* **On-Demand Tool Provisioning:** Automatically downloads, unpacks, and registers candidate tool releases.
+* **Environment Variable Automation:** Sets version-specific environment variables (e.g. `JAVA_17_HOME`, `JAVA_21_HOME`, `JAVA_HOME`, `NODE_24_HOME`, `NODE_HOME`) and prepends `PATH`.
+* **Flexible Mirror Support:** Configure custom download mirror URLs in `.dogu.properties` files discovered hierarchically upwards.
+* **Multiplatform Support:** Works across Linux, macOS, and Windows.
 
-== Navigation
+== Quick Usage
 
-* link:configuration.html[Configuration Guide (`.dogu.properties`)]
-* link:tools.html[Supported Tools & Version Specification]
+Run any command prefixed with `dogu` and the desired tool flags:
+
+[source,bash]
+----
+dogu \
+  --java 17 \
+  --java 21-zulu \
+  --java 25.0.3.0+9-tem \
+  --node 24 \
+  --node 26.11.1 \
+  -- <SOME COMMAND>
+----
+
+=== Example
+
+[source,bash]
+----
+dogu --java 21 --node 24 -- mvn clean test
+----
+
+== Candidate Storage
+
+Candidate binaries are cached and unpacked at `$DOGU_HOME/candidates`.
+If `DOGU_HOME` is not set, `dogu` defaults to `$HOME/.dogu`.
+
+== Guides & Reference
+
+* link:configuration.html[Configuration Guide (`.dogu.properties`)] - Learn how to configure custom download mirrors.
+* link:tools.html[Supported Tools & Version Reference] - View all supported tools, flags, and environment variables.

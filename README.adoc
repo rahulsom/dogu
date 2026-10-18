@@ -1,54 +1,52 @@
-= dogu: Multiplatform CLI Development Tool Version Manager
+= dogu
 
-`dogu` is a multiplatform command-line tool written in Go that seamlessly provisions and configures developer toolchains.
-_Dogu_ is Korean for _tools_.
+`dogu` is a multiplatform CLI developer tool manager written in Go.
 
-== Features
+For user-facing documentation, usage instructions, configuration guides, and supported tool references, please visit the https://rahulsom.github.io/dogu/[dogu Documentation Site].
 
-* **On-Demand Tool Provisioning:** Automatically downloads, unpacks, and registers candidate tool releases.
-* **Environment Variable Automation:** Sets version-specific environment variables (e.g. `JAVA_17_HOME`, `JAVA_21_HOME`, `JAVA_HOME`, `NODE_24_HOME`, `NODE_HOME`) and prepends `PATH`.
-* **Flexible Mirror Support:** Configure custom download mirror URLs in `.dogu.properties` files discovered hierarchically upwards.
-* **Multiplatform Support:** Works across Linux, macOS, and Windows.
+== Repository Structure
 
-== Quick Usage
+* `cmd/dogu/`: Entry point for the `dogu` CLI binary.
+* `pkg/cli/`: CLI parsing, flags handling, execution runner, and TUI progress rendering.
+* `pkg/config/`: Configuration parsing and hierarchical `.dogu.properties` resolution.
+* `pkg/downloader/`: HTTP archive download, extraction (`.tar.gz`, `.zip`, `.tar.xz`, `.tar.zst`), and progress bars.
+* `pkg/env/`: Environment variable resolution and PATH construction for invoked commands.
+* `pkg/tools/`: Tool providers and resolution logic for Java, Node.js, Maven, Gradle, Go/Python/Rust ecosystem tools, etc.
+* `docs/`: Source AsciiDoc files for the user documentation published to GitHub Pages.
+* `testdata/`: Test data fixtures, including Cachew configuration for mirror integration tests.
 
-Run any command prefixed with `dogu` and the desired tool flags:
+== Building `dogu`
 
-[source,bash]
-----
-dogu \
-  --java 17 \
-  --java 21-zulu \
-  --java 25.0.3.0+9-tem \
-  --node 24 \
-  --node 26.11.1 \
-  -- <SOME COMMAND>
-----
+Ensure you have Go installed (1.23 or newer as specified in `go.mod`).
 
-=== Example
+To compile all packages:
 
 [source,bash]
 ----
-dogu --java 21 --node 24 -- mvn clean test
+go build ./...
 ----
 
-== Candidate Storage
+To build the `dogu` binary:
 
-Candidate binaries are cached and unpacked at `$DOGU_HOME/candidates`.
-If `DOGU_HOME` is not set, `dogu` defaults to `$HOME/.dogu`.
-
-== Configuration (`.dogu.properties`)
-
-You can create a `.dogu.properties` file in your project or any parent directory to specify mirror URLs:
-
-[source,properties]
+[source,bash]
 ----
-java.mirror=https://my-internal-mirror.company.com/java
-node.mirror=https://my-internal-mirror.company.com/node
-maven.mirror=https://my-internal-mirror.company.com/maven
-gradle.mirror=https://my-internal-mirror.company.com/gradle
-sbt.mirror=https://my-internal-mirror.company.com/sbt
-bazel.mirror=https://my-internal-mirror.company.com/bazel
+go build -o dogu ./cmd/dogu
+----
+
+== Running Tests
+
+To run all unit and integration tests:
+
+[source,bash]
+----
+go test -v ./...
+----
+
+Or using `gotestsum` with coverage and race detection (as used in CI):
+
+[source,bash]
+----
+go run gotest.tools/gotestsum@latest --format testdox -- -race -cover ./...
 ----
 
 == Testing with a Local Mirror (Cachew)
@@ -69,7 +67,7 @@ docker run -d --rm \
 
 2. **Configure `.dogu.properties`:**
 +
-Create a `.dogu.properties` file pointing to the local mirror (for example, in your project or current working directory):
+Create a `.dogu.properties` file pointing to the local mirror (for example, in your project or working directory):
 +
 [source,properties]
 ----
@@ -93,26 +91,3 @@ go run cmd/dogu/main.go -v --node 20.18.0 -- node -v
 ----
 docker stop dogu-cachew-mirror
 ----
-
-== Supported Tools
-
-* `java` (Supports major versions, Disco API vendor suffixes like `-zulu`, `-tem`)
-* `node`
-* `maven`
-* `sbt`
-* `gradle`
-* `ant`
-* `mill`
-* `bazel`
-* `pants`
-* `buck2`
-* `npm`
-* `yarn`
-* `pnpm`
-* `bun`
-* `python`
-* `uv`
-
-== Documentation Site
-
-Site documentation source files are available in the link:docs/[`docs/`] directory.
