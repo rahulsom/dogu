@@ -1,27 +1,47 @@
 = Supported Tools Reference
-:toc: left
 
 `dogu` manages tool installations in `$DOGU_HOME/candidates/<tool>/<version>`.
 
-== Tools Overview
+== Java / JVM Ecosystem
 
 |===
-| Tool | Flag | Environment Variables Set | Notes
+| Tool | Flag | Version Formats | Examples | Environment Variables Set | Notes
 
-| Java | `--java` | `JAVA_<MAJOR>_HOME`, `JAVA_HOME` | Integrated with Foojay Disco API; supports vendor specs (`-zulu`, `-tem`)
-| Node.js | `--node` | `NODE_<MAJOR>_HOME`, `NODE_HOME` | Downloads official nodejs.org dist archives
-| Apache Maven | `--maven` | `MAVEN_<MAJOR>_HOME`, `MAVEN_HOME`, `M2_HOME` | Downloads Apache Maven releases
-| sbt | `--sbt` | `SBT_<MAJOR>_HOME`, `SBT_HOME` | Downloads sbt release archives
-| Gradle | `--gradle` | `GRADLE_<MAJOR>_HOME`, `GRADLE_HOME` | Downloads Gradle distribution zips
-| Apache Ant | `--ant` | `ANT_<MAJOR>_HOME`, `ANT_HOME` | Downloads Apache Ant binary archives
-| Mill | `--mill` | `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION` | Downloads Mill build tool releases
-| Bazel | `--bazel` | `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME` | Downloads standalone Bazel binaries
-| Pants | `--pants` | `PANTS_<MAJOR>_HOME`, `PANTS_HOME` | Downloads Pants build system executables
-| Buck2 | `--buck2` | `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME` | Downloads Buck2 build system releases
-| npm | `--npm` | `NPM_<MAJOR>_HOME`, `NPM_HOME` | Downloads npm release tarballs
-| Yarn | `--yarn` | `YARN_<MAJOR>_HOME`, `YARN_HOME` | Downloads Yarn v1 releases
-| pnpm | `--pnpm` | `PNPM_<MAJOR>_HOME`, `PNPM_HOME` | Downloads standalone pnpm binaries
-| Bun | `--bun` | `BUN_<MAJOR>_HOME`, `BUN_HOME` | Downloads Oven Bun release archives
-| Python | `--python` | `PYTHON_<MAJOR>_HOME`, `PYTHON_HOME`, `PYTHONHOME` | Standalone Python builds
-| UV | `--uv` | `UV_<MAJOR>_HOME`, `UV_HOME` | Downloads Astral UV releases
+| Java | `--java` | Major versions, exact versions, or vendor distribution suffixes (`-zulu`, `-tem`) | `--java 21`, `--java 17-zulu`, `--java 25.0.3.0+9-tem` | `JAVA_<MAJOR>_HOME`, `JAVA_HOME` | Integrated with Foojay Disco API; supports vendor specs (`-zulu`, `-tem`)
+| Apache Maven | `--maven` | Major versions, major.minor, or exact semver versions | `--maven 3`, `--maven 3.9`, `--maven 3.9.6` | `MAVEN_<MAJOR>_HOME`, `MAVEN_HOME`, `M2_HOME` | Downloads Apache Maven releases
+| sbt | `--sbt` | Major versions, major.minor, or exact semver versions | `--sbt 1`, `--sbt 1.10`, `--sbt 1.10.10` | `SBT_<MAJOR>_HOME`, `SBT_HOME` | Downloads sbt release archives
+| Gradle | `--gradle` | Major versions, major.minor, or exact semver versions | `--gradle 8`, `--gradle 8.10`, `--gradle 8.10.2` | `GRADLE_<MAJOR>_HOME`, `GRADLE_HOME` | Downloads Gradle distribution zips
+|===
+
+== Generic Build Tools
+
+|===
+| Tool | Flag | Version Formats | Examples | Environment Variables Set | Notes
+
+| Apache Ant | `--ant` | Major versions, major.minor, or exact semver versions | `--ant 1`, `--ant 1.10`, `--ant 1.10.14` | `ANT_<MAJOR>_HOME`, `ANT_HOME` | Downloads Apache Ant binary archives
+| Mill | `--mill` | Major versions, major.minor, or exact semver versions | `--mill 0`, `--mill 0.12`, `--mill 0.12.5` | `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION` | Downloads Mill build tool releases
+| Bazel | `--bazel` | Major versions, major.minor, or exact semver versions | `--bazel 7`, `--bazel 7.4`, `--bazel 7.4.0` | `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME` | Downloads standalone Bazel binaries
+| Pants | `--pants` | Major versions, major.minor, or exact semver versions | `--pants 2`, `--pants 2.33`, `--pants 2.33.1` | `PANTS_<MAJOR>_HOME`, `PANTS_HOME` | Downloads Pants build system executables
+| Buck2 | `--buck2` | Release dates or version tags | `--buck2 2026`, `--buck2 2026-10`, `--buck2 2026-10-15` | `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME` | Downloads Buck2 build system releases
+|===
+
+== Node.js / JavaScript Ecosystem
+
+|===
+| Tool | Flag | Version Formats | Examples | Environment Variables Set | Notes
+
+| Node.js | `--node` | Major versions, major.minor, or exact semver versions | `--node 20`, `--node 22.11`, `--node 22.11.0` | `NODE_<MAJOR>_HOME`, `NODE_HOME` | Downloads official nodejs.org dist archives
+| npm | `--npm` | Major versions, major.minor, or exact semver versions | `--npm 10`, `--npm 10.2`, `--npm 10.2.4` | `NPM_<MAJOR>_HOME`, `NPM_HOME` | Downloads npm release tarballs
+| pnpm | `--pnpm` | Major versions, major.minor, or exact semver versions | `--pnpm 8`, `--pnpm 8.15`, `--pnpm 8.15.1` | `PNPM_<MAJOR>_HOME`, `PNPM_HOME` | Downloads standalone pnpm binaries
+| Yarn | `--yarn` | Major versions, major.minor, or exact semver versions | `--yarn 1`, `--yarn 1.22`, `--yarn 1.22.19` | `YARN_<MAJOR>_HOME`, `YARN_HOME` | Downloads Yarn v1 releases
+| Bun | `--bun` | Major versions, major.minor, or exact semver versions | `--bun 1`, `--bun 1.1`, `--bun 1.1.0` | `BUN_<MAJOR>_HOME`, `BUN_HOME` | Downloads Oven Bun release archives
+|===
+
+== Python Ecosystem
+
+|===
+| Tool | Flag | Version Formats | Examples | Environment Variables Set | Notes
+
+| Python | `--python` | Major versions, major.minor, or exact semver versions | `--python 3`, `--python 3.11`, `--python 3.11.7` | `PYTHON_<MAJOR>_HOME`, `PYTHON_HOME`, `PYTHONHOME` | Standalone Python builds
+| UV | `--uv` | Major versions, major.minor, or exact semver versions | `--uv 0`, `--uv 0.5`, `--uv 0.5.1` | `UV_<MAJOR>_HOME`, `UV_HOME` | Downloads Astral UV releases
 |===

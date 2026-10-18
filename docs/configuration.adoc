@@ -1,5 +1,4 @@
-= Configuration Guide
-:toc: left
+= Configuration Guide (`.dogu.properties`)
 
 `dogu` supports overriding authoritative download URLs with mirror base URLs using `.dogu.properties`.
 
