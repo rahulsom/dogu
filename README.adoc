@@ -1,4 +1,5 @@
 = dogu
+:source-highlighter: highlight.js
 
 `dogu` is a multiplatform CLI developer tool manager written in Go.
 
