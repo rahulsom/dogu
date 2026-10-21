@@ -1,4 +1,5 @@
 = Configuration Guide (`.dogu.properties`)
+:source-highlighter: highlight.js
 
 `dogu` supports overriding authoritative download URLs with mirror base URLs using `.dogu.properties`.
 

@@ -1,4 +1,5 @@
 = Supported Tools Reference
+:source-highlighter: highlight.js
 
 `dogu` manages tool installations in `$DOGU_HOME/candidates/<tool>/<version>`.
 
