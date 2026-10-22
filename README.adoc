@@ -92,3 +92,17 @@ go run cmd/dogu/main.go -v --node 20.18.0 -- node -v
 ----
 docker stop dogu-cachew-mirror
 ----
+
+== Generating Documentation
+
+You can run this command to generate the HTML documentation from the AsciiDoc sources in `docs/`.
+
+[source,bash]
+----
+docker run --rm -v $(pwd):/documents \
+    asciidoctor/docker-asciidoctor:main asciidoctor \
+    --destination-dir build/docs \
+    --backend=html5 \
+    --out-file index.html \
+    docs/index.adoc
+----
