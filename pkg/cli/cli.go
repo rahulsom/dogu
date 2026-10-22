@@ -253,7 +253,7 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 			}
 
 			baseURL := cfg.GetBaseURL(s.Name)
-			log.Debug("Provisioning tool candidate", "name", s.Name, "version", s.Version, "baseURL", baseURL)
+			log.Debug("Provisioning tool candidate", "name", s.Name, "version", s.Version, "mirror", baseURL)
 			res, err := tool.Install(ctx, s.Version, doguHome, baseURL, force)
 			if err != nil {
 				errs[idx] = fmt.Errorf("failed to provision tool %s (%s): %w", s.Name, s.Version, err)

@@ -166,7 +166,7 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 
 	pkg := discoResp.Result[0]
 	redirectURL := pkg.Links.PkgDownloadRedirect
-	if mirrorBaseURL != "" && strings.HasPrefix(redirectURL, "https://") {
+	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") && strings.HasPrefix(redirectURL, "https://") {
 		if parsedMirror, err := url.Parse(mirrorBaseURL); err == nil && parsedMirror.Host != "" {
 			if parsedRedirect, err := url.Parse(redirectURL); err == nil {
 				redirectURL = fmt.Sprintf("%s://%s/%s%s", parsedMirror.Scheme, parsedMirror.Host, parsedRedirect.Host, parsedRedirect.RequestURI())
