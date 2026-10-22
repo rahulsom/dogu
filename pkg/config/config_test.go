@@ -62,7 +62,16 @@ func TestDoguHomeConfigOverride(t *testing.T) {
 	t.Setenv("DOGU_CONFIGURATION", "")
 
 	userConfig := filepath.Join(tempDoguHome, "config.json")
-	content := []byte(`{"baseUrls": {"node": "https://custom-node-mirror.internal/dist", "java": "https://custom-java-mirror.internal/packages"}}`)
+	content := []byte(`{
+		// Single line comment
+		/* Multi-line
+		   comment */
+		# Hash comment
+		"baseUrls": {
+			"node": "https://custom-node-mirror.internal/dist", // node comment
+			"java": "https://custom-java-mirror.internal/packages"
+		}
+	}`)
 	if err := os.WriteFile(userConfig, content, 0644); err != nil {
 		t.Fatalf("failed to write user config: %v", err)
 	}

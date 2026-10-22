@@ -61,7 +61,8 @@ func NewConfig() *Config {
 // DefaultConfig returns a new Config populated with default tool base URLs.
 func DefaultConfig() (*Config, error) {
 	cfg := NewConfig()
-	if err := json.Unmarshal(dogu.DefaultConfigBytes, cfg); err != nil {
+	cleaned := stripJSONComments(dogu.DefaultConfigBytes)
+	if err := json.Unmarshal(cleaned, cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse embedded default config.json: %w", err)
 	}
 	if cfg.BaseURLs == nil {
@@ -98,7 +99,8 @@ func Load(opts ...Option) (*Config, error) {
 	if userConfigFile != "" {
 		if data, err := os.ReadFile(userConfigFile); err == nil {
 			var userConfig Config
-			if err := json.Unmarshal(data, &userConfig); err == nil {
+			cleaned := stripJSONComments(data)
+			if err := json.Unmarshal(cleaned, &userConfig); err == nil {
 				for k, v := range userConfig.BaseURLs {
 					cfg.BaseURLs[k] = v
 				}
@@ -124,6 +126,76 @@ func Load(opts ...Option) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// stripJSONComments removes JavaScript/C-style single-line (//), hash-style (#), and multi-line (/* */) comments
+// from JSON bytes while respecting string literals and escapes.
+func stripJSONComments(data []byte) []byte {
+	out := make([]byte, 0, len(data))
+	inString := false
+	isEscaped := false
+	inLineComment := false
+	inBlockComment := false
+
+	n := len(data)
+	for i := 0; i < n; i++ {
+		ch := data[i]
+
+		if inLineComment {
+			if ch == '\n' || ch == '\r' {
+				inLineComment = false
+				out = append(out, ch)
+			}
+			continue
+		}
+
+		if inBlockComment {
+			if ch == '*' && i+1 < n && data[i+1] == '/' {
+				inBlockComment = false
+				i++
+			}
+			continue
+		}
+
+		if inString {
+			out = append(out, ch)
+			if isEscaped {
+				isEscaped = false
+			} else if ch == '\\' {
+				isEscaped = true
+			} else if ch == '"' {
+				inString = false
+			}
+			continue
+		}
+
+		if ch == '"' {
+			inString = true
+			out = append(out, ch)
+			continue
+		}
+
+		if ch == '/' && i+1 < n && data[i+1] == '/' {
+			inLineComment = true
+			i++
+			continue
+		}
+
+		if ch == '#' {
+			inLineComment = true
+			continue
+		}
+
+		if ch == '/' && i+1 < n && data[i+1] == '*' {
+			inBlockComment = true
+			i++
+			continue
+		}
+
+		out = append(out, ch)
+	}
+
+	return out
 }
 
 // GetBaseURL returns the configured base URL for a given tool (e.g., "node", "java").
