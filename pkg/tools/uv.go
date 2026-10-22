@@ -21,9 +21,9 @@ func (u *UVTool) Name() string {
 	return "uv"
 }
 
-func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "uv", versionSpec); ok {
+func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "uv", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("uv", versionSpec, existingDir), nil
 		}
 	}
@@ -33,7 +33,7 @@ func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome strin
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolveUVVersion(ctx, versionSpec)
+	normVer := resolveUVVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	target := mapUVTarget()
 	filename := fmt.Sprintf("uv-%s.tar.gz", target)
@@ -72,14 +72,14 @@ func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome strin
 	}, nil
 }
 
-func resolveUVVersion(ctx context.Context, versionSpec string) string {
+func resolveUVVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
 	if versions, err := FetchPyPIVersions(ctx, "uv"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}
 	if versions, err := FetchGitHubReleases(ctx, "astral-sh", "uv"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

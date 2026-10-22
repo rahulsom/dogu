@@ -19,7 +19,8 @@ const (
 
 // Config represents configuration holding tool base URLs and options.
 type Config struct {
-	BaseURLs map[string]string `json:"baseUrls,omitempty"`
+	BaseURLs          map[string]string `json:"baseUrls,omitempty"`
+	IncludePrerelease bool              `json:"includePrerelease,omitempty"`
 }
 
 // Properties represents legacy property file contents or loaded configuration values.
@@ -104,6 +105,9 @@ func Load(opts ...Option) (*Config, error) {
 				for k, v := range userConfig.BaseURLs {
 					cfg.BaseURLs[k] = v
 				}
+				if userConfig.IncludePrerelease {
+					cfg.IncludePrerelease = true
+				}
 			} else if os.Getenv(EnvDoguConfig) != "" && userConfigFile == os.Getenv(EnvDoguConfig) {
 				return nil, fmt.Errorf("failed to parse configuration file at %s: %w", userConfigFile, err)
 			}
@@ -116,7 +120,10 @@ func Load(opts ...Option) (*Config, error) {
 	props, err := LoadProperties(options.StartDir)
 	if err == nil && props != nil {
 		for key, val := range props.values {
-			if strings.HasSuffix(key, ".mirror") {
+			lowerKey := strings.ToLower(key)
+			if lowerKey == "includeprerelease" || lowerKey == "include-prerelease" || lowerKey == "prerelease" || lowerKey == "rc" || lowerKey == "include-rc" {
+				cfg.IncludePrerelease = (val == "true" || val == "1" || val == "yes")
+			} else if strings.HasSuffix(key, ".mirror") {
 				tool := strings.TrimSuffix(key, ".mirror")
 				cfg.BaseURLs[tool] = val
 			} else {

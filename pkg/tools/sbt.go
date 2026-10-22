@@ -21,9 +21,9 @@ func (s *SBTTool) Name() string {
 	return "sbt"
 }
 
-func (s *SBTTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "sbt", versionSpec); ok {
+func (s *SBTTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "sbt", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("sbt", versionSpec, existingDir), nil
 		}
 	}
@@ -33,7 +33,7 @@ func (s *SBTTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolveSBTVersion(ctx, versionSpec)
+	normVer := resolveSBTVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	ext := "tgz"
 	if runtime.GOOS == "windows" {
@@ -70,9 +70,9 @@ func (s *SBTTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	}, nil
 }
 
-func resolveSBTVersion(ctx context.Context, versionSpec string) string {
+func resolveSBTVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
 	if versions, err := FetchGitHubReleases(ctx, "sbt", "sbt"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

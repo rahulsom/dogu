@@ -20,9 +20,9 @@ func (a *AntTool) Name() string {
 	return "ant"
 }
 
-func (a *AntTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "ant", versionSpec); ok {
+func (a *AntTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "ant", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("ant", versionSpec, existingDir), nil
 		}
 	}
@@ -32,7 +32,7 @@ func (a *AntTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolveAntVersion(ctx, versionSpec, baseURL)
+	normVer := resolveAntVersion(ctx, versionSpec, baseURL, opts.IncludePrerelease)
 
 	filename := fmt.Sprintf("apache-ant-%s-bin.tar.gz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
@@ -65,9 +65,9 @@ func (a *AntTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	}, nil
 }
 
-func resolveAntVersion(ctx context.Context, versionSpec string, baseURL string) string {
+func resolveAntVersion(ctx context.Context, versionSpec string, baseURL string, includePrerelease bool) string {
 	if versions, err := FetchApacheAntVersions(ctx, baseURL); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

@@ -22,9 +22,9 @@ func (p *PythonTool) Name() string {
 	return "python"
 }
 
-func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "python", versionSpec); ok {
+func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "python", versionSpec, opts.IncludePrerelease); ok {
 			res := buildResultFromDir("python", versionSpec, existingDir)
 			for _, b := range res.BinDirs {
 				ensurePythonSymlink(b)
@@ -38,7 +38,7 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolvePythonVersion(ctx, versionSpec)
+	normVer := resolvePythonVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	target := mapPythonTarget()
 	filename := fmt.Sprintf("cpython-%s+%s-%s-install_only.tar.gz", normVer, "20240107", target)
@@ -76,7 +76,7 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 	}, nil
 }
 
-func resolvePythonVersion(ctx context.Context, versionSpec string) string {
+func resolvePythonVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
 	knownVersions := []string{"3.8.18", "3.9.18", "3.10.13", "3.11.7", "3.12.1"}
 	if versions, err := FetchGitHubReleases(ctx, "indygreg", "python-build-standalone"); err == nil && len(versions) > 0 {
 		var extracted []string
@@ -93,7 +93,7 @@ func resolvePythonVersion(ctx context.Context, versionSpec string) string {
 		}
 	}
 
-	if best, err := SelectBestVersion(knownVersions, versionSpec); err == nil {
+	if best, err := SelectBestVersion(knownVersions, versionSpec, includePrerelease); err == nil {
 		return CleanVersion(best)
 	}
 	return CleanVersion(versionSpec)

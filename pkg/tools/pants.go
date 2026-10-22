@@ -24,9 +24,9 @@ func (p *PantsTool) Name() string {
 	return "pants"
 }
 
-func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "pants", versionSpec); ok {
+func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "pants", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("pants", versionSpec, existingDir), nil
 		}
 	}
@@ -36,7 +36,7 @@ func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome st
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolvePantsVersion(ctx, versionSpec)
+	normVer := resolvePantsVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	osName, archName := mapPantsTarget()
 	targetBin := "pants"
@@ -72,14 +72,14 @@ func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome st
 	}, nil
 }
 
-func resolvePantsVersion(ctx context.Context, versionSpec string) string {
+func resolvePantsVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
 	if versions, err := FetchGitHubReleases(ctx, "pantsbuild", "pants"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}
 	if versions, err := FetchPyPIVersions(ctx, "pantsbuild.pants"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

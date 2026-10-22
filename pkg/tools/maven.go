@@ -20,9 +20,9 @@ func (m *MavenTool) Name() string {
 	return "maven"
 }
 
-func (m *MavenTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "maven", versionSpec); ok {
+func (m *MavenTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "maven", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("maven", versionSpec, existingDir), nil
 		}
 	}
@@ -32,7 +32,7 @@ func (m *MavenTool) Install(ctx context.Context, versionSpec string, doguHome st
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolveMavenVersion(ctx, versionSpec, baseURL)
+	normVer := resolveMavenVersion(ctx, versionSpec, baseURL, opts.IncludePrerelease)
 
 	filename := fmt.Sprintf("apache-maven-%s-bin.tar.gz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s/binaries/%s", baseURL, normVer, filename)
@@ -66,9 +66,9 @@ func (m *MavenTool) Install(ctx context.Context, versionSpec string, doguHome st
 	}, nil
 }
 
-func resolveMavenVersion(ctx context.Context, versionSpec string, baseURL string) string {
+func resolveMavenVersion(ctx context.Context, versionSpec string, baseURL string, includePrerelease bool) string {
 	if versions, err := FetchApacheMavenVersions(ctx, baseURL); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

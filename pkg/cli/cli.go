@@ -40,7 +40,7 @@ func PrintUsage(out *os.File) {
 	var sb strings.Builder
 
 	sb.WriteString(headerStyle.Render("Usage:") + "\n")
-	sb.WriteString("  dogu [-v|--verbose] [--force] [tools...] -- <command> [args...]\n\n")
+	sb.WriteString("  dogu [-v|--verbose] [--force] [--prerelease] [tools...] -- <command> [args...]\n\n")
 
 	sb.WriteString(headerStyle.Render("Supported Tools:") + "\n\n")
 
@@ -159,6 +159,7 @@ func PrintUsage(out *os.File) {
 	sb.WriteString(headerStyle.Render("Flags:") + "\n")
 	sb.WriteString(fmt.Sprintf("  %s  %s\n", flagNameStyle.Render("-v, --verbose"), descStyle.Render("Enable verbose logging")))
 	sb.WriteString(fmt.Sprintf("  %s    %s\n", flagNameStyle.Render("-f, --force"), descStyle.Render("Force re-downloading candidate versions even if already installed")))
+	sb.WriteString(fmt.Sprintf("  %s %s\n", flagNameStyle.Render("--prerelease"), descStyle.Render("Include release candidates/pre-releases when resolving partial versions")))
 	sb.WriteString(fmt.Sprintf("  %s     %s\n\n", flagNameStyle.Render("-h, --help"), descStyle.Render("Show usage information")))
 
 	sb.WriteString(headerStyle.Render("Examples:") + "\n")
@@ -205,7 +206,7 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 		}
 	}
 
-	specs, force, verbose, err := parseToolSpecs(flagArgs)
+	specs, force, verbose, cliPrerelease, err := parseToolSpecs(flagArgs)
 	if err != nil {
 		return err
 	}
@@ -236,6 +237,16 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 		}
 	}
 
+	includePrerelease := cfg.IncludePrerelease
+	if cliPrerelease != nil {
+		includePrerelease = *cliPrerelease
+	}
+
+	installOpts := tools.InstallOptions{
+		Force:             force,
+		IncludePrerelease: includePrerelease,
+	}
+
 	ctx := context.Background()
 
 	results := make([]*tools.InstallResult, len(specs))
@@ -254,7 +265,7 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 
 			baseURL := cfg.GetBaseURL(s.Name)
 			log.Debug("Provisioning tool candidate", "name", s.Name, "version", s.Version, "mirror", baseURL)
-			res, err := tool.Install(ctx, s.Version, doguHome, baseURL, force)
+			res, err := tool.Install(ctx, s.Version, doguHome, baseURL, installOpts)
 			if err != nil {
 				errs[idx] = fmt.Errorf("failed to provision tool %s (%s): %w", s.Name, s.Version, err)
 				return
@@ -347,10 +358,11 @@ func isExecutable(fi os.FileInfo) bool {
 	return fi.Mode()&0111 != 0
 }
 
-func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, error) {
+func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, *bool, error) {
 	var specs []tools.Spec
 	force := false
 	verbose := false
+	var includePrerelease *bool
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -360,6 +372,22 @@ func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, error) {
 		}
 		if arg == "--verbose" || arg == "-v" {
 			verbose = true
+			continue
+		}
+		if arg == "--prerelease" || arg == "--include-prerelease" || arg == "--rc" || arg == "--include-rc" {
+			val := true
+			includePrerelease = &val
+			continue
+		}
+		if arg == "--no-prerelease" || arg == "--include-prerelease=false" || arg == "--prerelease=false" || arg == "--rc=false" || arg == "--include-rc=false" {
+			val := false
+			includePrerelease = &val
+			continue
+		}
+		if strings.HasPrefix(arg, "--prerelease=") || strings.HasPrefix(arg, "--include-prerelease=") || strings.HasPrefix(arg, "--rc=") || strings.HasPrefix(arg, "--include-rc=") {
+			parts := strings.SplitN(arg, "=", 2)
+			val := (parts[1] == "true" || parts[1] == "1" || parts[1] == "yes")
+			includePrerelease = &val
 			continue
 		}
 		if arg == "--help" || arg == "-h" {
@@ -373,12 +401,12 @@ func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, error) {
 				specs = append(specs, tools.Spec{Name: parts[0], Version: parts[1]})
 			} else {
 				if i+1 >= len(args) || strings.HasPrefix(args[i+1], "--") {
-					return nil, false, false, fmt.Errorf("flag --%s requires a version argument", toolName)
+					return nil, false, false, nil, fmt.Errorf("flag --%s requires a version argument", toolName)
 				}
 				specs = append(specs, tools.Spec{Name: toolName, Version: args[i+1]})
 				i++
 			}
 		}
 	}
-	return specs, force, verbose, nil
+	return specs, force, verbose, includePrerelease, nil
 }

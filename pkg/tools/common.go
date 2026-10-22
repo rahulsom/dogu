@@ -3,6 +3,7 @@ package tools
 import (
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/charmbracelet/log"
 	"github.com/dogu-dev/dogu/pkg/downloader"
@@ -13,7 +14,7 @@ type CommonTool struct {
 	toolName string
 }
 
-func findExistingCandidate(doguHome string, toolName string, versionSpec string) (string, bool) {
+func findExistingCandidate(doguHome string, toolName string, versionSpec string, includePrerelease bool) (string, bool) {
 	log.Debug("Searching for existing candidate", "tool", toolName, "spec", versionSpec)
 	candidatesDir := filepath.Join(doguHome, "candidates", toolName)
 	entries, err := os.ReadDir(candidatesDir)
@@ -29,21 +30,36 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string)
 		}
 	}
 
+	specIsRC := IsRC(versionSpec)
+	var matchingDirs []string
+
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		name := entry.Name()
 		if MatchVersion(name, versionSpec) {
+			if !includePrerelease && !specIsRC && IsRC(name) {
+				continue
+			}
 			dirPath := filepath.Join(candidatesDir, name)
 			if subEntries, _ := os.ReadDir(dirPath); len(subEntries) > 0 {
-				log.Debug("Found matching candidate directory", "tool", toolName, "dir", dirPath)
-				return dirPath, true
+				matchingDirs = append(matchingDirs, name)
 			}
 		}
 	}
 
-	return "", false
+	if len(matchingDirs) == 0 {
+		return "", false
+	}
+
+	sort.Slice(matchingDirs, func(i, j int) bool {
+		return CompareVersions(matchingDirs[i], matchingDirs[j]) < 0
+	})
+
+	bestDir := filepath.Join(candidatesDir, matchingDirs[len(matchingDirs)-1])
+	log.Debug("Found matching candidate directory", "tool", toolName, "dir", bestDir)
+	return bestDir, true
 }
 
 func buildResultFromDir(toolName string, versionSpec string, installDir string) *InstallResult {

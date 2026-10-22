@@ -21,9 +21,9 @@ func (b *BunTool) Name() string {
 	return "bun"
 }
 
-func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "bun", versionSpec); ok {
+func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "bun", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("bun", versionSpec, existingDir), nil
 		}
 	}
@@ -33,7 +33,7 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	tag, normVer := resolveBunVersion(ctx, versionSpec)
+	tag, normVer := resolveBunVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	targetOS, targetArch := mapBunTarget()
 	filename := fmt.Sprintf("bun-%s-%s.zip", targetOS, targetArch)
@@ -68,9 +68,9 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	}, nil
 }
 
-func resolveBunVersion(ctx context.Context, versionSpec string) (tag string, normVer string) {
+func resolveBunVersion(ctx context.Context, versionSpec string, includePrerelease bool) (tag string, normVer string) {
 	if versions, err := FetchGitHubReleases(ctx, "oven-sh", "bun"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			clean := CleanVersion(best)
 			return "bun-v" + clean, "v" + clean
 		}

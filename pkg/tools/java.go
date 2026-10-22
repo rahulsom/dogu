@@ -33,6 +33,7 @@ type discoPackage struct {
 	JavaVersion         string `json:"java_version"`
 	DistributionVersion string `json:"distribution_version"`
 	Filename            string `json:"filename"`
+	EarlyAccess         bool   `json:"early_access"`
 	Links               struct {
 		PkgDownloadRedirect string `json:"pkg_download_redirect"`
 	} `json:"links"`
@@ -43,9 +44,9 @@ type discoResponse struct {
 	Message string         `json:"message"`
 }
 
-func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "java", versionSpec); ok {
+func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "java", versionSpec, opts.IncludePrerelease); ok {
 			return buildJavaResultFromDir(versionSpec, existingDir), nil
 		}
 	}
@@ -55,7 +56,7 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 	osName := mapOS(runtime.GOOS)
 	archName := mapArch(runtime.GOARCH)
 
-	downloadURL, filename, normVersion, err := j.resolveDownloadURL(ctx, ver, dist, osName, archName, mirrorBaseURL)
+	downloadURL, filename, normVersion, err := j.resolveDownloadURL(ctx, ver, dist, osName, archName, mirrorBaseURL, opts.IncludePrerelease)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve java version '%s': %w", versionSpec, err)
 	}
@@ -107,7 +108,7 @@ func parseJavaSpec(spec string) (version string, distribution string) {
 	return version, distribution
 }
 
-func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist string, osName string, archName string, mirrorBaseURL string) (downloadURL string, filename string, normVersion string, err error) {
+func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist string, osName string, archName string, mirrorBaseURL string, includePrerelease bool) (downloadURL string, filename string, normVersion string, err error) {
 	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") {
 		mirrorBaseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 		distSuffix := ""
@@ -135,6 +136,11 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 	v.Set("archive_type", archiveType)
 	v.Set("package_type", "jdk")
 
+	specIsRC := IsRC(ver)
+	if !includePrerelease && !specIsRC {
+		v.Set("early_access", "false")
+	}
+
 	if dist != "" {
 		v.Set("distribution", dist)
 	}
@@ -160,11 +166,25 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 		return "", "", "", err
 	}
 
-	if len(discoResp.Result) == 0 {
-		return "", "", "", fmt.Errorf("no java package found for version=%s, dist=%s, os=%s, arch=%s", ver, dist, osName, archName)
+	var validPkgs []discoPackage
+	for _, p := range discoResp.Result {
+		if !includePrerelease && !specIsRC {
+			if p.EarlyAccess || IsRC(p.JavaVersion) {
+				continue
+			}
+		}
+		validPkgs = append(validPkgs, p)
 	}
 
-	pkg := discoResp.Result[0]
+	if len(validPkgs) == 0 {
+		if len(discoResp.Result) > 0 && !includePrerelease && !specIsRC {
+			validPkgs = discoResp.Result
+		} else {
+			return "", "", "", fmt.Errorf("no java package found for version=%s, dist=%s, os=%s, arch=%s", ver, dist, osName, archName)
+		}
+	}
+
+	pkg := validPkgs[0]
 	redirectURL := pkg.Links.PkgDownloadRedirect
 	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") && strings.HasPrefix(redirectURL, "https://") {
 		if parsedMirror, err := url.Parse(mirrorBaseURL); err == nil && parsedMirror.Host != "" {

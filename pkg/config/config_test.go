@@ -142,3 +142,37 @@ func TestProgrammaticConfigInjection(t *testing.T) {
 		t.Errorf("expected injected python URL, got '%s'", val)
 	}
 }
+
+func TestIncludePrereleaseConfig(t *testing.T) {
+	tempDoguHome := t.TempDir()
+	userConfig := filepath.Join(tempDoguHome, "config.json")
+	content := []byte(`{"includePrerelease": true}`)
+	if err := os.WriteFile(userConfig, content, 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	t.Setenv("DOGU_HOME", tempDoguHome)
+	t.Setenv("DOGU_CONFIGURATION", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("expected Load to succeed, got %v", err)
+	}
+	if !cfg.IncludePrerelease {
+		t.Errorf("expected IncludePrerelease to be true from config.json")
+	}
+
+	tempDir := t.TempDir()
+	propFile := filepath.Join(tempDir, ".dogu.properties")
+	if err := os.WriteFile(propFile, []byte("includePrerelease=true\n"), 0644); err != nil {
+		t.Fatalf("failed to write properties: %v", err)
+	}
+
+	cfgProp, err := config.Load(config.WithStartDir(tempDir))
+	if err != nil {
+		t.Fatalf("expected Load to succeed, got %v", err)
+	}
+	if !cfgProp.IncludePrerelease {
+		t.Errorf("expected IncludePrerelease to be true from .dogu.properties")
+	}
+}

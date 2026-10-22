@@ -21,14 +21,14 @@ func (p *PNPMTool) Name() string {
 	return "pnpm"
 }
 
-func (p *PNPMTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "pnpm", versionSpec); ok {
+func (p *PNPMTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "pnpm", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("pnpm", versionSpec, existingDir), nil
 		}
 	}
 
-	normVer := resolveNPMToolVersion(ctx, "pnpm", versionSpec, mirrorBaseURL)
+	normVer := resolveNPMToolVersion(ctx, "pnpm", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
 
 	baseURL := "https://github.com/pnpm/pnpm/releases/download"
 	if mirrorBaseURL != "" {

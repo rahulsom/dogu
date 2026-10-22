@@ -61,6 +61,40 @@ func TestMatchVersion(t *testing.T) {
 	}
 }
 
+func TestIsRC(t *testing.T) {
+	tests := []struct {
+		version  string
+		expected bool
+	}{
+		{"7.7.1rc2", true},
+		{"7.7.0", false},
+		{"8.11-rc-1", true},
+		{"8.10.2", false},
+		{"4.0.0-rc-1", true},
+		{"4.0.0-alpha-1", true},
+		{"3.9.6", false},
+		{"1.10.0-RC1", true},
+		{"1.10.10", false},
+		{"2.23.0rc0", true},
+		{"2.23.0a0", true},
+		{"2.33.1", false},
+		{"3.13.0a1", true},
+		{"3.11.7", false},
+		{"v23.0.0-rc.1", true},
+		{"v22.11.0", false},
+		{"21-ea", true},
+		{"21", false},
+		{"17.0.2+7", false},
+	}
+
+	for _, tc := range tests {
+		got := IsRC(tc.version)
+		if got != tc.expected {
+			t.Errorf("IsRC(%q) = %v; want %v", tc.version, got, tc.expected)
+		}
+	}
+}
+
 func TestCompareVersions(t *testing.T) {
 	tests := []struct {
 		v1       string
@@ -73,6 +107,9 @@ func TestCompareVersions(t *testing.T) {
 		{"v20.18.0", "20.18.0", 0},
 		{"1.22.19", "1.22.22", -1},
 		{"0.1.15", "0.2.0", -1},
+		{"7.7.0", "7.7.1rc2", -1},
+		{"7.7.1", "7.7.1rc2", 1},
+		{"7.7.1rc1", "7.7.1rc2", -1},
 	}
 
 	for _, tc := range tests {
@@ -84,19 +121,19 @@ func TestCompareVersions(t *testing.T) {
 }
 
 func TestResolveUVVersion(t *testing.T) {
-	normVer := resolveUVVersion(t.Context(), "0.1")
+	normVer := resolveUVVersion(t.Context(), "0.1", false)
 	if normVer == "0.1" {
 		t.Errorf("expected uv 0.1 to resolve to full version, got %q", normVer)
 	}
 }
 
 func TestResolvePythonVersion(t *testing.T) {
-	normVer := resolvePythonVersion(t.Context(), "3.12")
+	normVer := resolvePythonVersion(t.Context(), "3.12", false)
 	if normVer != "3.12.1" {
 		t.Errorf("expected python 3.12 to resolve to 3.12.1, got %q", normVer)
 	}
 
-	normVer3 := resolvePythonVersion(t.Context(), "3")
+	normVer3 := resolvePythonVersion(t.Context(), "3", false)
 	if normVer3 == "3" {
 		t.Errorf("expected python 3 to resolve to full version, got %q", normVer3)
 	}
@@ -104,7 +141,7 @@ func TestResolvePythonVersion(t *testing.T) {
 
 func TestResolveNPMToolVersion(t *testing.T) {
 	for _, tool := range []string{"npm", "pnpm", "yarn"} {
-		normVer := resolveNPMToolVersion(t.Context(), tool, "1", "")
+		normVer := resolveNPMToolVersion(t.Context(), tool, "1", "", false)
 		if normVer == "1" {
 			t.Errorf("expected %s normVer to be resolved to full version, got %q", tool, normVer)
 		}
@@ -112,7 +149,7 @@ func TestResolveNPMToolVersion(t *testing.T) {
 }
 
 func TestResolveMavenVersion(t *testing.T) {
-	normVer := resolveMavenVersion(t.Context(), "3", "https://archive.apache.org/dist/maven/maven-3")
+	normVer := resolveMavenVersion(t.Context(), "3", "https://archive.apache.org/dist/maven/maven-3", false)
 	if normVer == "3" {
 		t.Errorf("expected normVer to be resolved to full maven version, got %q", normVer)
 	}
@@ -139,7 +176,7 @@ func TestFetchApacheAntVersions(t *testing.T) {
 }
 
 func TestResolveBunVersion(t *testing.T) {
-	tag, normVer := resolveBunVersion(t.Context(), "1")
+	tag, normVer := resolveBunVersion(t.Context(), "1", false)
 	if tag == "bun-v1" {
 		t.Errorf("expected tag to be resolved to full version tag, got %q", tag)
 	}
@@ -151,7 +188,7 @@ func TestResolveBunVersion(t *testing.T) {
 func TestSelectBestVersion(t *testing.T) {
 	versions := []string{"1.0.0", "1.1.0", "1.1.42", "1.2.0", "2.0.0"}
 
-	got, err := SelectBestVersion(versions, "1.1")
+	got, err := SelectBestVersion(versions, "1.1", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -159,7 +196,7 @@ func TestSelectBestVersion(t *testing.T) {
 		t.Errorf("SelectBestVersion(..., '1.1') = %q; want %q", got, "1.1.42")
 	}
 
-	got, err = SelectBestVersion(versions, "1")
+	got, err = SelectBestVersion(versions, "1", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -167,9 +204,40 @@ func TestSelectBestVersion(t *testing.T) {
 		t.Errorf("SelectBestVersion(..., '1') = %q; want %q", got, "1.2.0")
 	}
 
-	_, err = SelectBestVersion(versions, "3")
+	_, err = SelectBestVersion(versions, "3", false)
 	if err == nil {
 		t.Errorf("expected error for non-matching spec '3', got nil")
+	}
+}
+
+func TestSelectBestVersionWithPrereleases(t *testing.T) {
+	bazelVersions := []string{"7.7.0", "7.7.1rc2"}
+
+	// Default: includePrerelease = false -> should avoid 7.7.1rc2 and select 7.7.0
+	got, err := SelectBestVersion(bazelVersions, "7", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "7.7.0" {
+		t.Errorf("SelectBestVersion(bazelVersions, '7', false) = %q; want %q", got, "7.7.0")
+	}
+
+	// Option enabled: includePrerelease = true -> should include 7.7.1rc2 and select 7.7.1rc2
+	got, err = SelectBestVersion(bazelVersions, "7", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "7.7.1rc2" {
+		t.Errorf("SelectBestVersion(bazelVersions, '7', true) = %q; want %q", got, "7.7.1rc2")
+	}
+
+	// Explicit RC spec: even with includePrerelease = false, explicit spec should select 7.7.1rc2
+	got, err = SelectBestVersion(bazelVersions, "7.7.1rc2", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "7.7.1rc2" {
+		t.Errorf("SelectBestVersion(bazelVersions, '7.7.1rc2', false) = %q; want %q", got, "7.7.1rc2")
 	}
 }
 
