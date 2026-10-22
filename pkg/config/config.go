@@ -2,18 +2,15 @@ package config
 
 import (
 	"bufio"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/dogu-dev/dogu"
 	"github.com/dogu-dev/dogu/pkg/env"
 )
-
-//go:embed config.json
-var defaultConfigBytes []byte
 
 const (
 	ConfigFileName = ".dogu.properties"
@@ -64,7 +61,7 @@ func NewConfig() *Config {
 // DefaultConfig returns a new Config populated with default tool base URLs.
 func DefaultConfig() (*Config, error) {
 	cfg := NewConfig()
-	if err := json.Unmarshal(defaultConfigBytes, cfg); err != nil {
+	if err := json.Unmarshal(dogu.DefaultConfigBytes, cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse embedded default config.json: %w", err)
 	}
 	if cfg.BaseURLs == nil {
