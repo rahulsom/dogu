@@ -1,4 +1,4 @@
-= Configuration Guide (`config.json`)
+= Configuration Guide
 :source-highlighter: highlight.js
 
 `dogu` supports configuring standard tool base URLs using `config.json` files and environment variables.
