@@ -171,6 +171,15 @@ func PrintUsage(out *os.File) {
 
 // Run parses CLI args, provisions tools, updates environment, and executes sub-command.
 func Run(args []string) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("failed to load dogu configuration: %w", err)
+	}
+	return RunWithConfig(args, cfg)
+}
+
+// RunWithConfig parses CLI args, provisions tools using the provided config, updates environment, and executes sub-command.
+func RunWithConfig(args []string, cfg *config.Config) error {
 	doubleDashIdx := -1
 	for i, arg := range args {
 		if arg == "--" {
@@ -219,9 +228,12 @@ func Run(args []string) error {
 	doguHome := env.GetDoguHome()
 	log.Debug("Resolved dogu home directory", "path", doguHome)
 
-	props, err := config.LoadProperties("")
-	if err != nil {
-		return fmt.Errorf("failed to load dogu properties: %w", err)
+	if cfg == nil {
+		var err error
+		cfg, err = config.Load()
+		if err != nil {
+			return fmt.Errorf("failed to load dogu configuration: %w", err)
+		}
 	}
 
 	ctx := context.Background()
@@ -240,9 +252,9 @@ func Run(args []string) error {
 				return
 			}
 
-			mirrorURL := props.GetToolMirror(s.Name)
-			log.Debug("Provisioning tool candidate", "name", s.Name, "version", s.Version, "mirror", mirrorURL)
-			res, err := tool.Install(ctx, s.Version, doguHome, mirrorURL, force)
+			baseURL := cfg.GetBaseURL(s.Name)
+			log.Debug("Provisioning tool candidate", "name", s.Name, "version", s.Version, "baseURL", baseURL)
+			res, err := tool.Install(ctx, s.Version, doguHome, baseURL, force)
 			if err != nil {
 				errs[idx] = fmt.Errorf("failed to provision tool %s (%s): %w", s.Name, s.Version, err)
 				return

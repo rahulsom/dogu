@@ -1,63 +1,56 @@
-= Configuration Guide (`.dogu.properties`)
+= Configuration Guide (`config.json`)
 :source-highlighter: highlight.js
 
-`dogu` supports overriding authoritative download URLs with mirror base URLs using `.dogu.properties`.
+`dogu` supports configuring standard tool base URLs using `config.json` files and environment variables.
 
-== File Resolution
+== Default Base URLs
 
-`dogu` searches for `.dogu.properties` starting from the current working directory and traversing upwards to the root directory until a file is found.
+Default base URLs for all supported tools are embedded directly within `dogu` (from the repository's `config.json`).
 
-== Format
+== Configuration Overrides
 
-Properties follow standard key-value formatting:
+You can override default base URLs by creating a user JSON configuration file:
 
-[source,properties]
+1. **Environment Variable:** Set `DOGU_CONFIGURATION` to the path of your custom JSON configuration file.
+2. **User Home Config:** Place a `config.json` file inside `$DOGU_HOME/config.json` (defaults to `~/.dogu/config.json`).
+3. **Project Properties:** `.dogu.properties` files located in project directories (discovered hierarchically upwards) continue to be supported as project-specific overrides.
+
+== JSON Format
+
+In `config.json`, tool base URLs are grouped under the `baseUrls` object, where keys match tool names (such as `node`, `java`, `maven`) mapped to their base download URLs:
+
+[source,json]
 ----
-# http://localhost:8080/api.foojay.io/ mirrors https://api.foojay.io/ on our proxy
-java.mirror=http://localhost:8080/api.foojay.io/disco/v3.0/packages
+{
+  "baseUrls": {
+    "ant": "http://localhost:8080/archive.apache.org/dist/ant/binaries",
+    "bazel": "http://localhost:8080/github.com/bazelbuild/bazel/releases/download",
+    "buck2": "http://localhost:8080/github.com/facebook/buck2/releases/download",
+    "bun": "http://localhost:8080/github.com/oven-sh/bun/releases/download",
+    "gradle": "http://localhost:8080/services.gradle.org/distributions",
+    "java": "http://localhost:8080/api.foojay.io/disco/v3.0/packages",
+    "maven": "http://localhost:8080/archive.apache.org/dist/maven/maven-3",
+    "mill": "http://localhost:8080/github.com/com-lihaoyi/mill/releases/download",
+    "node": "http://localhost:8080/nodejs.org/dist",
+    "npm": "http://localhost:8080/registry.npmjs.org/npm/-",
+    "pants": "http://localhost:8080/github.com/pantsbuild/pants/releases/download",
+    "pnpm": "http://localhost:8080/github.com/pnpm/pnpm/releases/download",
+    "python": "http://localhost:8080/github.com/indygreg/python-build-standalone/releases/download",
+    "sbt": "http://localhost:8080/github.com/sbt/sbt/releases/download",
+    "uv": "http://localhost:8080/github.com/astral-sh/uv/releases/download",
+    "yarn": "http://localhost:8080/github.com/yarnpkg/yarn/releases/download"
+  }
+}
+----
 
-# http://localhost:8080/nodejs.org/ mirrors https://nodejs.org/ on our proxy
-node.mirror=http://localhost:8080/nodejs.org/dist
+== Programmatic Configuration Injection
 
-# http://localhost:8080/archive.apache.org/ mirrors https://archive.apache.org/ on our proxy
-maven.mirror=http://localhost:8080/archive.apache.org/dist/maven/maven-3
+When using `dogu` as a Go module dependency in another project, configuration can be initialized or injected programmatically:
 
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-sbt.mirror=http://localhost:8080/github.com/sbt/sbt/releases/download
+[source,go]
+----
+cfg := config.NewConfig()
+cfg.BaseURLs["node"] = "https://custom-node-mirror.internal/dist"
 
-# http://localhost:8080/services.gradle.org/ mirrors https://services.gradle.org/ on our proxy
-gradle.mirror=http://localhost:8080/services.gradle.org/distributions
-
-# http://localhost:8080/archive.apache.org/ mirrors https://archive.apache.org/ on our proxy
-ant.mirror=http://localhost:8080/archive.apache.org/dist/ant/binaries
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-mill.mirror=http://localhost:8080/github.com/com-lihaoyi/mill/releases/download
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-bazel.mirror=http://localhost:8080/github.com/bazelbuild/bazel/releases/download
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-pants.mirror=http://localhost:8080/github.com/pantsbuild/pants/releases/download
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-buck2.mirror=http://localhost:8080/github.com/facebook/buck2/releases/download
-
-# http://localhost:8080/registry.npmjs.org/ mirrors https://registry.npmjs.org/ on our proxy
-npm.mirror=http://localhost:8080/registry.npmjs.org/npm/-
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-yarn.mirror=http://localhost:8080/github.com/yarnpkg/yarn/releases/download
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-pnpm.mirror=http://localhost:8080/github.com/pnpm/pnpm/releases/download
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-bun.mirror=http://localhost:8080/github.com/oven-sh/bun/releases/download
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-python.mirror=http://localhost:8080/github.com/indygreg/python-build-standalone/releases/download
-
-# http://localhost:8080/github.com/ mirrors https://github.com/ on our proxy
-uv.mirror=http://localhost:8080/github.com/astral-sh/uv/releases/download
+err := cli.RunWithConfig(args, cfg)
 ----
