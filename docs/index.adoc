@@ -31,6 +31,7 @@ dogu [-v|--verbose] [--force] [tools...] -- <command> [args...]
 
 | `-v, --verbose` | Enable verbose logging.
 | `-f, --force` | Force re-downloading candidate versions even if already installed.
+| `--prerelease` | Include release candidates / pre-releases when resolving partial versions (default is `false`).
 | `-h, --help` | Show usage information.
 |===
 

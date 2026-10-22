@@ -21,9 +21,9 @@ func (b *Buck2Tool) Name() string {
 	return "buck2"
 }
 
-func (b *Buck2Tool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "buck2", versionSpec); ok {
+func (b *Buck2Tool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "buck2", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("buck2", versionSpec, existingDir), nil
 		}
 	}
@@ -33,7 +33,7 @@ func (b *Buck2Tool) Install(ctx context.Context, versionSpec string, doguHome st
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolveBuck2Version(ctx, versionSpec)
+	normVer := resolveBuck2Version(ctx, versionSpec, opts.IncludePrerelease)
 
 	arch, sys := mapBuck2Target()
 	binName := fmt.Sprintf("buck2-%s-%s.zst", arch, sys)
@@ -69,9 +69,9 @@ func (b *Buck2Tool) Install(ctx context.Context, versionSpec string, doguHome st
 	}, nil
 }
 
-func resolveBuck2Version(ctx context.Context, versionSpec string) string {
+func resolveBuck2Version(ctx context.Context, versionSpec string, includePrerelease bool) string {
 	if versions, err := FetchGitHubReleases(ctx, "facebook", "buck2"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

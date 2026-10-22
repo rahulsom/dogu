@@ -20,14 +20,14 @@ func (y *YarnTool) Name() string {
 	return "yarn"
 }
 
-func (y *YarnTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "yarn", versionSpec); ok {
+func (y *YarnTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "yarn", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("yarn", versionSpec, existingDir), nil
 		}
 	}
 
-	normVer := resolveNPMToolVersion(ctx, "yarn", versionSpec, mirrorBaseURL)
+	normVer := resolveNPMToolVersion(ctx, "yarn", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
 
 	baseURL := "https://github.com/yarnpkg/yarn/releases/download"
 	if mirrorBaseURL != "" {

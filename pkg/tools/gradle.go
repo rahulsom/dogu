@@ -20,9 +20,9 @@ func (g *GradleTool) Name() string {
 	return "gradle"
 }
 
-func (g *GradleTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "gradle", versionSpec); ok {
+func (g *GradleTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "gradle", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("gradle", versionSpec, existingDir), nil
 		}
 	}
@@ -32,7 +32,7 @@ func (g *GradleTool) Install(ctx context.Context, versionSpec string, doguHome s
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolveGradleVersion(ctx, versionSpec, mirrorBaseURL)
+	normVer := resolveGradleVersion(ctx, versionSpec, mirrorBaseURL, opts.IncludePrerelease)
 
 	filename := fmt.Sprintf("gradle-%s-bin.zip", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
@@ -65,9 +65,9 @@ func (g *GradleTool) Install(ctx context.Context, versionSpec string, doguHome s
 	}, nil
 }
 
-func resolveGradleVersion(ctx context.Context, versionSpec string, mirrorBaseURL string) string {
+func resolveGradleVersion(ctx context.Context, versionSpec string, mirrorBaseURL string, includePrerelease bool) string {
 	if versions, err := FetchGradleVersions(ctx, mirrorBaseURL); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

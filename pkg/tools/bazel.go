@@ -21,9 +21,9 @@ func (b *BazelTool) Name() string {
 	return "bazel"
 }
 
-func (b *BazelTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "bazel", versionSpec); ok {
+func (b *BazelTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "bazel", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("bazel", versionSpec, existingDir), nil
 		}
 	}
@@ -33,7 +33,7 @@ func (b *BazelTool) Install(ctx context.Context, versionSpec string, doguHome st
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolveBazelVersion(ctx, versionSpec)
+	normVer := resolveBazelVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	osName, archName := mapBazelTarget()
 	binName := fmt.Sprintf("bazel-%s-%s-%s", normVer, osName, archName)
@@ -70,9 +70,9 @@ func (b *BazelTool) Install(ctx context.Context, versionSpec string, doguHome st
 	}, nil
 }
 
-func resolveBazelVersion(ctx context.Context, versionSpec string) string {
+func resolveBazelVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
 	if versions, err := FetchGitHubReleases(ctx, "bazelbuild", "bazel"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

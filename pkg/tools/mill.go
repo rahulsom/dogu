@@ -21,9 +21,9 @@ func (m *MillTool) Name() string {
 	return "mill"
 }
 
-func (m *MillTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "mill", versionSpec); ok {
+func (m *MillTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "mill", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("mill", versionSpec, existingDir), nil
 		}
 	}
@@ -33,7 +33,7 @@ func (m *MillTool) Install(ctx context.Context, versionSpec string, doguHome str
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer := resolveMillVersion(ctx, versionSpec)
+	normVer := resolveMillVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	assetName := normVer
 	binaryName := "mill"
@@ -70,9 +70,9 @@ func (m *MillTool) Install(ctx context.Context, versionSpec string, doguHome str
 	}, nil
 }
 
-func resolveMillVersion(ctx context.Context, versionSpec string) string {
+func resolveMillVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
 	if versions, err := FetchGitHubReleases(ctx, "com-lihaoyi", "mill"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec); err == nil {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
 			return CleanVersion(best)
 		}
 	}

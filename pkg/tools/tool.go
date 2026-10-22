@@ -13,6 +13,12 @@ type Spec struct {
 	Version string
 }
 
+// InstallOptions options for installing a tool candidate.
+type InstallOptions struct {
+	Force             bool
+	IncludePrerelease bool
+}
+
 // InstallResult holds information about an installed candidate tool.
 type InstallResult struct {
 	ToolName      string
@@ -27,7 +33,7 @@ type InstallResult struct {
 // Tool defines the interface for tool providers.
 type Tool interface {
 	Name() string
-	Install(ctx context.Context, version string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error)
+	Install(ctx context.Context, version string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error)
 }
 
 var (

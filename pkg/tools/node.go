@@ -23,9 +23,9 @@ func (n *NodeTool) Name() string {
 	return "node"
 }
 
-func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, force bool) (*InstallResult, error) {
-	if !force {
-		if existingDir, ok := findExistingCandidate(doguHome, "node", versionSpec); ok {
+func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
+	if !opts.Force {
+		if existingDir, ok := findExistingCandidate(doguHome, "node", versionSpec, opts.IncludePrerelease); ok {
 			return buildResultFromDir("node", versionSpec, existingDir), nil
 		}
 	}
@@ -35,7 +35,7 @@ func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome str
 		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 
-	normVer, err := resolveNodeFullVersion(ctx, baseURL, versionSpec)
+	normVer, err := resolveNodeFullVersion(ctx, baseURL, versionSpec, opts.IncludePrerelease)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve node version '%s': %w", versionSpec, err)
 	}
@@ -82,14 +82,10 @@ func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome str
 	}, nil
 }
 
-func resolveNodeFullVersion(ctx context.Context, baseURL string, spec string) (string, error) {
+func resolveNodeFullVersion(ctx context.Context, baseURL string, spec string, includePrerelease bool) (string, error) {
 	clean := spec
 	if !strings.HasPrefix(clean, "v") {
 		clean = "v" + clean
-	}
-
-	if strings.Count(clean, ".") >= 2 {
-		return clean, nil
 	}
 
 	indexURL := fmt.Sprintf("%s/index.tab", baseURL)
@@ -108,15 +104,25 @@ func resolveNodeFullVersion(ctx context.Context, baseURL string, spec string) (s
 		return clean, nil
 	}
 
+	var versions []string
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
 		fields := strings.Split(line, "\t")
 		if len(fields) > 0 {
 			ver := fields[0]
-			if strings.HasPrefix(ver, clean+".") || ver == clean {
-				return ver, nil
+			if ver != "" && ver != "version" {
+				versions = append(versions, ver)
 			}
+		}
+	}
+
+	if len(versions) > 0 {
+		if best, err := SelectBestVersion(versions, spec, includePrerelease); err == nil {
+			if !strings.HasPrefix(best, "v") {
+				best = "v" + CleanVersion(best)
+			}
+			return best, nil
 		}
 	}
 

@@ -61,6 +61,84 @@ func MatchVersion(candidateVersion string, versionSpec string) bool {
 	return false
 }
 
+// IsRC returns true if the version string represents a Release Candidate or Pre-release.
+func IsRC(v string) bool {
+	if v == "" {
+		return false
+	}
+	clean := CleanVersion(v)
+	lower := strings.ToLower(clean)
+
+	rcKeywords := []string{
+		"rc", "alpha", "beta", "dev", "milestone", "preview",
+		"snapshot", "nightly", "next", "canary", "cr",
+	}
+
+	for _, kw := range rcKeywords {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+
+	if strings.Contains(lower, "-ea") || strings.HasSuffix(lower, "ea") {
+		return true
+	}
+
+	if regexp.MustCompile(`(?i)[-.]m[0-9]+`).MatchString(lower) {
+		return true
+	}
+
+	if regexp.MustCompile(`(?i)[0-9]+[ab][0-9]+`).MatchString(lower) {
+		return true
+	}
+
+	return false
+}
+
+func getMainNumericParts(v string) []int {
+	c := CleanVersion(v)
+	cut := len(c)
+	if IsRC(c) {
+		lower := strings.ToLower(c)
+		for _, kw := range []string{"rc", "alpha", "beta", "dev", "milestone", "preview", "snapshot", "nightly", "next", "canary", "cr", "ea"} {
+			if idx := strings.Index(lower, kw); idx != -1 && idx < cut {
+				cut = idx
+			}
+		}
+		if idx := regexp.MustCompile(`(?i)[-.]m[0-9]+`).FindStringIndex(lower); idx != nil && idx[0] < cut {
+			cut = idx[0]
+		}
+		if idx := regexp.MustCompile(`(?i)[0-9]+[ab][0-9]+`).FindStringIndex(lower); idx != nil {
+			match := lower[idx[0]:idx[1]]
+			for i, ch := range match {
+				if ch == 'a' || ch == 'b' || ch == 'A' || ch == 'B' {
+					cutCandidate := idx[0] + i
+					if cutCandidate < cut {
+						cut = cutCandidate
+					}
+					break
+				}
+			}
+		}
+		if idx := strings.Index(c, "-"); idx != -1 && idx < cut {
+			cut = idx
+		}
+	}
+
+	prefix := c[:cut]
+	rawParts := versionNumRegex.FindAllString(prefix, -1)
+	if len(rawParts) == 0 {
+		rawParts = versionNumRegex.FindAllString(c, -1)
+	}
+
+	var res []int
+	for _, p := range rawParts {
+		n, _ := strconv.Atoi(p)
+		res = append(res, n)
+	}
+	return res
+}
+
 // CompareVersions compares two version strings numerically.
 // Returns -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2.
 func CompareVersions(v1Str, v2Str string) int {
@@ -71,15 +149,57 @@ func CompareVersions(v1Str, v2Str string) int {
 		return 0
 	}
 
-	parts1 := versionNumRegex.FindAllString(c1, -1)
-	parts2 := versionNumRegex.FindAllString(c2, -1)
+	main1 := getMainNumericParts(c1)
+	main2 := getMainNumericParts(c2)
 
-	maxLen := len(parts1)
-	if len(parts2) > maxLen {
-		maxLen = len(parts2)
+	maxLen := len(main1)
+	if len(main2) > maxLen {
+		maxLen = len(main2)
 	}
 
 	for i := 0; i < maxLen; i++ {
+		var n1, n2 int
+		if i < len(main1) {
+			n1 = main1[i]
+		}
+		if i < len(main2) {
+			n2 = main2[i]
+		}
+
+		if n1 < n2 {
+			return -1
+		}
+		if n1 > n2 {
+			return 1
+		}
+	}
+
+	if len(main1) < len(main2) {
+		return -1
+	}
+	if len(main1) > len(main2) {
+		return 1
+	}
+
+	rc1 := IsRC(c1)
+	rc2 := IsRC(c2)
+
+	if !rc1 && rc2 {
+		return 1
+	}
+	if rc1 && !rc2 {
+		return -1
+	}
+
+	parts1 := versionNumRegex.FindAllString(c1, -1)
+	parts2 := versionNumRegex.FindAllString(c2, -1)
+
+	maxLenAll := len(parts1)
+	if len(parts2) > maxLenAll {
+		maxLenAll = len(parts2)
+	}
+
+	for i := 0; i < maxLenAll; i++ {
 		var n1, n2 int
 		if i < len(parts1) {
 			n1, _ = strconv.Atoi(parts1[i])
@@ -96,21 +216,19 @@ func CompareVersions(v1Str, v2Str string) int {
 		}
 	}
 
-	if len(parts1) < len(parts2) {
-		return -1
-	}
-	if len(parts1) > len(parts2) {
-		return 1
-	}
-
 	return strings.Compare(c1, c2)
 }
 
 // SelectBestVersion returns the highest matching version from available list for versionSpec.
-func SelectBestVersion(versions []string, spec string) (string, error) {
+func SelectBestVersion(versions []string, spec string, includePrerelease bool) (string, error) {
+	specIsRC := IsRC(spec)
+
 	var matches []string
 	for _, v := range versions {
 		if MatchVersion(v, spec) {
+			if !includePrerelease && !specIsRC && IsRC(v) {
+				continue
+			}
 			matches = append(matches, v)
 		}
 	}
@@ -319,40 +437,48 @@ func FetchPyPIVersions(ctx context.Context, pkgName string) ([]string, error) {
 func FetchGitHubReleases(ctx context.Context, owner, repo string) ([]string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 
-	// Try GitHub API first
-	reqURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases?per_page=100", owner, repo)
-	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
-	if err == nil {
-		resp, err := client.Do(req)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			var releases []struct {
-				TagName string        `json:"tag_name"`
-				Name    string        `json:"name"`
-				Assets  []interface{} `json:"assets"`
-			}
-			if err := json.NewDecoder(resp.Body).Decode(&releases); err == nil && len(releases) > 0 {
-				resp.Body.Close()
-				var versions []string
-				for _, r := range releases {
-					if len(r.Assets) == 0 {
-						continue
-					}
-					v := r.TagName
-					if v == "" {
-						v = r.Name
-					}
-					if v != "" {
-						versions = append(versions, v)
-					}
-				}
-				if len(versions) > 0 {
-					return versions, nil
-				}
-			}
-			resp.Body.Close()
-		} else if resp != nil {
-			resp.Body.Close()
+	var versions []string
+	for page := 1; page <= 3; page++ {
+		reqURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases?per_page=100&page=%d", owner, repo, page)
+		req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+		if err != nil {
+			break
 		}
+		resp, err := client.Do(req)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			if resp != nil {
+				resp.Body.Close()
+			}
+			break
+		}
+
+		var releases []struct {
+			TagName string        `json:"tag_name"`
+			Name    string        `json:"name"`
+			Assets  []interface{} `json:"assets"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil || len(releases) == 0 {
+			resp.Body.Close()
+			break
+		}
+		resp.Body.Close()
+
+		for _, r := range releases {
+			if len(r.Assets) == 0 {
+				continue
+			}
+			v := r.TagName
+			if v == "" {
+				v = r.Name
+			}
+			if v != "" {
+				versions = append(versions, v)
+			}
+		}
+	}
+
+	if len(versions) > 0 {
+		return versions, nil
 	}
 
 	// Fallback to Atom feed
@@ -386,16 +512,16 @@ func FetchGitHubReleases(ctx context.Context, owner, repo string) ([]string, err
 		}
 	}
 
-	var versions []string
+	var atomVersions []string
 	for v := range versionMap {
-		versions = append(versions, v)
+		atomVersions = append(atomVersions, v)
 	}
 
-	if len(versions) == 0 {
+	if len(atomVersions) == 0 {
 		return nil, fmt.Errorf("no versions found in github atom feed for %s/%s", owner, repo)
 	}
 
-	return versions, nil
+	return atomVersions, nil
 }
 
 // FetchApacheMavenVersions retrieves version strings from Apache Maven archive index.
