@@ -13,10 +13,15 @@ type Spec struct {
 	Version string
 }
 
+type RewriteRule interface {
+	RewriteURL(url string) string
+}
+
 // InstallOptions options for installing a tool candidate.
 type InstallOptions struct {
 	Force             bool
 	IncludePrerelease bool
+	RewriteRules      RewriteRule
 }
 
 // InstallResult holds information about an installed candidate tool.

@@ -242,6 +242,7 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 	installOpts := tools.InstallOptions{
 		Force:             force,
 		IncludePrerelease: includePrerelease,
+		RewriteRules:      cfg.Rewrite,
 	}
 
 	ctx := context.Background()

@@ -1,10 +1,12 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/dogu-dev/dogu"
 	"github.com/dogu-dev/dogu/pkg/env"
@@ -14,9 +16,57 @@ const (
 	EnvDoguConfig = "DOGU_CONFIGURATION"
 )
 
-// Config represents configuration holding tool base URLs.
+// RewriteRule defines a URL prefix matching rule.
+type RewriteRule struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+// RewriteRules represents a list of URL rewrite rules.
+type RewriteRules []RewriteRule
+
+// UnmarshalJSON implements json.Unmarshaler for RewriteRules supporting both map and list formats.
+func (r *RewriteRules) UnmarshalJSON(data []byte) error {
+	var raw json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		*r = nil
+		return nil
+	}
+
+	if trimmed[0] == '[' {
+		var list []RewriteRule
+		if err := json.Unmarshal(trimmed, &list); err != nil {
+			return err
+		}
+		*r = list
+		return nil
+	}
+
+	if trimmed[0] == '{' {
+		var m map[string]string
+		if err := json.Unmarshal(trimmed, &m); err != nil {
+			return err
+		}
+		var list []RewriteRule
+		for k, v := range m {
+			list = append(list, RewriteRule{From: k, To: v})
+		}
+		*r = list
+		return nil
+	}
+
+	return fmt.Errorf("invalid rewrite configuration: expected object or array")
+}
+
+// Config represents configuration holding tool base URLs and URL rewrite rules.
 type Config struct {
 	BaseURLs map[string]string `json:"baseUrls,omitempty"`
+	Rewrite  RewriteRules      `json:"rewrite,omitempty"`
 }
 
 // Options options for loading configuration.
@@ -38,6 +88,7 @@ func WithConfigFile(path string) Option {
 func NewConfig() *Config {
 	return &Config{
 		BaseURLs: make(map[string]string),
+		Rewrite:  RewriteRules{},
 	}
 }
 
@@ -88,6 +139,7 @@ func Load(opts ...Option) (*Config, error) {
 			for k, v := range userConfig.BaseURLs {
 				cfg.BaseURLs[k] = v
 			}
+			cfg.Rewrite = append(cfg.Rewrite, userConfig.Rewrite...)
 		} else if envPath := os.Getenv(EnvDoguConfig); envPath != "" && userConfigFile == envPath {
 			return nil, fmt.Errorf("failed to read configuration file specified by %s (%s): %w", EnvDoguConfig, userConfigFile, err)
 		}
@@ -177,4 +229,23 @@ func (c *Config) GetBaseURL(toolName string) string {
 // GetToolMirror is an alias for GetBaseURL for backward compatibility.
 func (c *Config) GetToolMirror(toolName string) string {
 	return c.GetBaseURL(toolName)
+}
+
+// RewriteURL applies configured rewrite rules to rawURL and returns the rewritten URL.
+// If no rule matches, rawURL is returned unchanged.
+func (c *Config) RewriteURL(rawURL string) string {
+	if c == nil || len(c.Rewrite) == 0 {
+		return rawURL
+	}
+	return c.Rewrite.RewriteURL(rawURL)
+}
+
+// RewriteURL applies rewrite rules to rawURL in order.
+func (r RewriteRules) RewriteURL(rawURL string) string {
+	for _, rule := range r {
+		if rule.From != "" && strings.HasPrefix(rawURL, rule.From) {
+			return rule.To + strings.TrimPrefix(rawURL, rule.From)
+		}
+	}
+	return rawURL
 }

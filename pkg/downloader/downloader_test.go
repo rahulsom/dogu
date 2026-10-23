@@ -104,3 +104,61 @@ func TestDownloadAndExtract_RedirectProgressNotification(t *testing.T) {
 		t.Errorf("expected stderr to contain redirected target URL %q, got: %q", targetServer.URL, stderrStr)
 	}
 }
+
+type testRewriter struct {
+	from string
+	to   string
+}
+
+func (tr testRewriter) RewriteURL(u string) string {
+	if strings.HasPrefix(u, tr.from) {
+		return tr.to + strings.TrimPrefix(u, tr.from)
+	}
+	return u
+}
+
+func TestDownload_URLRewriteOnRedirect(t *testing.T) {
+	payload := []byte("redirect rewrite test payload")
+
+	// Internal/artifactory server
+	internalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/internal/download/jdk.tar.gz" {
+			http.Error(w, "not found on internal server", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(payload)))
+		w.WriteHeader(http.StatusOK)
+		w.Write(payload)
+	}))
+	defer internalServer.Close()
+
+	// Initial server that redirects to upstream public URL
+	upstreamPublicPrefix := "https://github.com/adoptium/temurin25-binaries/releases/download/"
+	redirectServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, upstreamPublicPrefix+"jdk.tar.gz", http.StatusFound)
+	}))
+	defer redirectServer.Close()
+
+	// Configure rewrite rule: upstreamPublicPrefix -> internalServer.URL + "/internal/download/"
+	rewriter := testRewriter{
+		from: upstreamPublicPrefix,
+		to:   internalServer.URL + "/internal/download/",
+	}
+
+	tempDir := t.TempDir()
+	cacheFile := filepath.Join(tempDir, "cache", "jdk.tar.gz")
+	targetDir := filepath.Join(tempDir, "target")
+
+	err := downloader.SaveSingleBinary(context.Background(), redirectServer.URL, cacheFile, targetDir, "jdk.tar.gz", downloader.WithRewriteRule(rewriter))
+	if err != nil {
+		t.Fatalf("SaveSingleBinary with rewrite rule failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(targetDir, "jdk.tar.gz"))
+	if err != nil {
+		t.Fatalf("failed to read downloaded file: %v", err)
+	}
+	if string(content) != string(payload) {
+		t.Errorf("expected content %q, got %q", string(payload), string(content))
+	}
+}

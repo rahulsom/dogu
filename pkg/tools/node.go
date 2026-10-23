@@ -53,7 +53,7 @@ func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome str
 	installDir := filepath.Join(doguHome, "candidates", "node", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "node", filename)
 
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir); err != nil {
+	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download node from %s: %w", downloadURL, err)
 	}
 

@@ -40,7 +40,7 @@ func (m *MavenTool) Install(ctx context.Context, versionSpec string, doguHome st
 	installDir := filepath.Join(doguHome, "candidates", "maven", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "maven", filename)
 
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir); err != nil {
+	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download maven from %s: %w", downloadURL, err)
 	}
 

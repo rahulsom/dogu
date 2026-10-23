@@ -64,7 +64,7 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 	installDir := filepath.Join(doguHome, "candidates", "java", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "java", filename)
 
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir); err != nil {
+	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download and extract java: %w", err)
 	}
 

@@ -139,3 +139,59 @@ func TestConfigFileValidationAndParseError(t *testing.T) {
 		t.Errorf("expected Load to fail when user config.json contains invalid JSON, but it succeeded")
 	}
 }
+
+func TestRewriteRulesMapAndArrayFormats(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Map format
+	mapConfigFile := filepath.Join(tempDir, "map-config.json")
+	mapContent := []byte(`{
+		"rewrite": {
+			"https://github.com/adoptium/temurin25-binaries/releases/download/": "https://artifactory.internal/temurin25/"
+		}
+	}`)
+	if err := os.WriteFile(mapConfigFile, mapContent, 0644); err != nil {
+		t.Fatalf("failed to write map config: %v", err)
+	}
+
+	cfgMap, err := config.Load(config.WithConfigFile(mapConfigFile))
+	if err != nil {
+		t.Fatalf("failed to load map config: %v", err)
+	}
+
+	origURL := "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.3%2B9/OpenJDK25U-jdk_s390x_linux_hotspot_25.0.3_9.tar.gz"
+	expectedURL := "https://artifactory.internal/temurin25/jdk-25.0.3%2B9/OpenJDK25U-jdk_s390x_linux_hotspot_25.0.3_9.tar.gz"
+
+	if rewritten := cfgMap.RewriteURL(origURL); rewritten != expectedURL {
+		t.Errorf("map rewrite failed: got %q, expected %q", rewritten, expectedURL)
+	}
+
+	// Array format
+	arrConfigFile := filepath.Join(tempDir, "arr-config.json")
+	arrContent := []byte(`{
+		"rewrite": [
+			{
+				"from": "https://github.com/adoptium/temurin25-binaries/releases/download/",
+				"to": "https://artifactory.internal/temurin25/"
+			}
+		]
+	}`)
+	if err := os.WriteFile(arrConfigFile, arrContent, 0644); err != nil {
+		t.Fatalf("failed to write arr config: %v", err)
+	}
+
+	cfgArr, err := config.Load(config.WithConfigFile(arrConfigFile))
+	if err != nil {
+		t.Fatalf("failed to load arr config: %v", err)
+	}
+
+	if rewritten := cfgArr.RewriteURL(origURL); rewritten != expectedURL {
+		t.Errorf("array rewrite failed: got %q, expected %q", rewritten, expectedURL)
+	}
+
+	// Unmatched URL
+	unmatchedURL := "https://github.com/other/releases/download/v1.0.0"
+	if rewritten := cfgArr.RewriteURL(unmatchedURL); rewritten != unmatchedURL {
+		t.Errorf("expected unmatched URL to remain unchanged, got %q", rewritten)
+	}
+}

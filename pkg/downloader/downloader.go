@@ -445,6 +445,24 @@ func truncateURL(u string, maxLen int) string {
 	return u[:half] + "..." + u[len(u)-half:]
 }
 
+type RewriteRule interface {
+	RewriteURL(url string) string
+}
+
+type options struct {
+	rewriteRules RewriteRule
+}
+
+// DownloadOption modifies download behavior.
+type DownloadOption func(*options)
+
+// WithRewriteRule sets a URL rewrite rule/rules provider for downloader functions.
+func WithRewriteRule(rule RewriteRule) DownloadOption {
+	return func(o *options) {
+		o.rewriteRules = rule
+	}
+}
+
 type progressReader struct {
 	reader io.Reader
 	task   *downloadTask
@@ -458,7 +476,20 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func downloadFile(ctx context.Context, downloadURL string, cacheFile string) error {
+func downloadFile(ctx context.Context, downloadURL string, cacheFile string, opts ...DownloadOption) error {
+	var o options
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	if o.rewriteRules != nil {
+		rewritten := o.rewriteRules.RewriteURL(downloadURL)
+		if rewritten != downloadURL {
+			log.Debug("Rewrote initial download URL", "original", downloadURL, "rewritten", rewritten)
+			downloadURL = rewritten
+		}
+	}
+
 	log.Debug("Starting download task", "url", downloadURL, "cacheFile", cacheFile)
 	tmpCache := cacheFile + ".tmp"
 	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
@@ -470,6 +501,16 @@ func downloadFile(ctx context.Context, downloadURL string, cacheFile string) err
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return fmt.Errorf("stopped after 10 redirects")
+			}
+			if o.rewriteRules != nil {
+				targetURL := req.URL.String()
+				rewritten := o.rewriteRules.RewriteURL(targetURL)
+				if rewritten != targetURL {
+					log.Debug("Rewrote redirect URL", "original", targetURL, "rewritten", rewritten)
+					if newReqURL, err := req.URL.Parse(rewritten); err == nil {
+						req.URL = newReqURL
+					}
+				}
 			}
 			if len(via) > 0 {
 				initialURL := via[0].URL
@@ -537,7 +578,7 @@ func downloadFile(ctx context.Context, downloadURL string, cacheFile string) err
 }
 
 // DownloadAndExtract downloads archive from downloadURL (or checks cache) and extracts it into targetDir.
-func DownloadAndExtract(ctx context.Context, downloadURL string, cacheFile string, targetDir string) error {
+func DownloadAndExtract(ctx context.Context, downloadURL string, cacheFile string, targetDir string, opts ...DownloadOption) error {
 	// If targetDir already exists and is non-empty, assume already installed
 	if entries, err := os.ReadDir(targetDir); err == nil && len(entries) > 0 {
 		return nil
@@ -549,7 +590,7 @@ func DownloadAndExtract(ctx context.Context, downloadURL string, cacheFile strin
 
 	// Download to cacheFile if not present
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
-		if err := downloadFile(ctx, downloadURL, cacheFile); err != nil {
+		if err := downloadFile(ctx, downloadURL, cacheFile, opts...); err != nil {
 			return err
 		}
 	}
@@ -576,7 +617,7 @@ func DownloadAndExtract(ctx context.Context, downloadURL string, cacheFile strin
 }
 
 // SaveSingleBinary saves a single binary file to targetDir/binName
-func SaveSingleBinary(ctx context.Context, downloadURL string, cacheFile string, targetDir string, binName string) error {
+func SaveSingleBinary(ctx context.Context, downloadURL string, cacheFile string, targetDir string, binName string, opts ...DownloadOption) error {
 	destPath := filepath.Join(targetDir, binName)
 	if _, err := os.Stat(destPath); err == nil {
 		return nil
@@ -591,7 +632,7 @@ func SaveSingleBinary(ctx context.Context, downloadURL string, cacheFile string,
 	}
 
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
-		if err := downloadFile(ctx, downloadURL, cacheFile); err != nil {
+		if err := downloadFile(ctx, downloadURL, cacheFile, opts...); err != nil {
 			return err
 		}
 	}
