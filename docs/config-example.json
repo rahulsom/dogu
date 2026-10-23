@@ -1,0 +1,36 @@
+{
+  "baseUrls": {
+    // Mirrors https://archive.apache.org/dist/ant/binaries
+    "ant": "http://localhost:8080/archive.apache.org/dist/ant/binaries",
+    // Mirrors https://github.com/bazelbuild/bazel/releases/download
+    "bazel": "http://localhost:8080/github.com/bazelbuild/bazel/releases/download",
+    // Mirrors https://github.com/facebook/buck2/releases/download
+    "buck2": "http://localhost:8080/github.com/facebook/buck2/releases/download",
+    // Mirrors https://github.com/oven-sh/bun/releases/download
+    "bun": "http://localhost:8080/github.com/oven-sh/bun/releases/download",
+    // Mirrors https://services.gradle.org/distributions
+    "gradle": "http://localhost:8080/services.gradle.org/distributions",
+    // Mirrors https://api.foojay.io/disco/v3.0/packages
+    "java": "http://localhost:8080/api.foojay.io/disco/v3.0/packages",
+    // Mirrors https://archive.apache.org/dist/maven/maven-3
+    "maven": "http://localhost:8080/archive.apache.org/dist/maven/maven-3",
+    // Mirrors https://github.com/com-lihaoyi/mill/releases/download
+    "mill": "http://localhost:8080/github.com/com-lihaoyi/mill/releases/download",
+    // Mirrors https://nodejs.org/dist
+    "node": "http://localhost:8080/nodejs.org/dist",
+    // Mirrors https://registry.npmjs.org/npm/-
+    "npm": "http://localhost:8080/registry.npmjs.org/npm/-",
+    // Mirrors https://github.com/pantsbuild/pants/releases/download
+    "pants": "http://localhost:8080/github.com/pantsbuild/pants/releases/download",
+    // Mirrors https://github.com/pnpm/pnpm/releases/download
+    "pnpm": "http://localhost:8080/github.com/pnpm/pnpm/releases/download",
+    // Mirrors https://github.com/indygreg/python-build-standalone/releases/download
+    "python": "http://localhost:8080/github.com/indygreg/python-build-standalone/releases/download",
+    // Mirrors https://github.com/sbt/sbt/releases/download
+    "sbt": "http://localhost:8080/github.com/sbt/sbt/releases/download",
+    // Mirrors https://github.com/astral-sh/uv/releases/download
+    "uv": "http://localhost:8080/github.com/astral-sh/uv/releases/download",
+    // Mirrors https://github.com/yarnpkg/yarn/releases/download
+    "yarn": "http://localhost:8080/github.com/yarnpkg/yarn/releases/download"
+  }
+}
