@@ -105,3 +105,37 @@ func TestProgrammaticConfigInjection(t *testing.T) {
 		t.Errorf("expected injected python URL, got '%s'", val)
 	}
 }
+
+func TestConfigFileValidationAndParseError(t *testing.T) {
+	// 1. Verify root config.json and docs/config-example.json are valid configurations
+	repoRoot := filepath.Join("..", "..")
+
+	configFiles := []string{
+		filepath.Join(repoRoot, "config.json"),
+		filepath.Join(repoRoot, "docs", "config-example.json"),
+	}
+
+	for _, cfgFile := range configFiles {
+		cfg, err := config.Load(config.WithConfigFile(cfgFile))
+		if err != nil {
+			t.Errorf("expected configuration file %s to be valid, got error: %v", cfgFile, err)
+		} else if len(cfg.BaseURLs) == 0 {
+			t.Errorf("expected configuration file %s to contain baseUrls", cfgFile)
+		}
+	}
+
+	// 2. Verify invalid JSON in DOGU_HOME/config.json returns error
+	tempDoguHome := t.TempDir()
+	t.Setenv("DOGU_HOME", tempDoguHome)
+	t.Setenv("DOGU_CONFIGURATION", "")
+
+	userConfigFile := filepath.Join(tempDoguHome, "config.json")
+	if err := os.WriteFile(userConfigFile, []byte(`{ invalid json`), 0644); err != nil {
+		t.Fatalf("failed to write invalid user config: %v", err)
+	}
+
+	_, err := config.Load()
+	if err == nil {
+		t.Errorf("expected Load to fail when user config.json contains invalid JSON, but it succeeded")
+	}
+}

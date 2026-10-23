@@ -82,12 +82,11 @@ func Load(opts ...Option) (*Config, error) {
 		if data, err := os.ReadFile(userConfigFile); err == nil {
 			var userConfig Config
 			cleaned := stripJSONComments(data)
-			if err := json.Unmarshal(cleaned, &userConfig); err == nil {
-				for k, v := range userConfig.BaseURLs {
-					cfg.BaseURLs[k] = v
-				}
-			} else if os.Getenv(EnvDoguConfig) != "" && userConfigFile == os.Getenv(EnvDoguConfig) {
+			if err := json.Unmarshal(cleaned, &userConfig); err != nil {
 				return nil, fmt.Errorf("failed to parse configuration file at %s: %w", userConfigFile, err)
+			}
+			for k, v := range userConfig.BaseURLs {
+				cfg.BaseURLs[k] = v
 			}
 		} else if envPath := os.Getenv(EnvDoguConfig); envPath != "" && userConfigFile == envPath {
 			return nil, fmt.Errorf("failed to read configuration file specified by %s (%s): %w", EnvDoguConfig, userConfigFile, err)
