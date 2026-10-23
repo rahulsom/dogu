@@ -30,7 +30,7 @@ When using `dogu` as a Go module dependency in another project, configuration ca
 [source,go]
 ----
 cfg := config.NewConfig()
-cfg.BaseURLs["node"] = "https://custom-node-mirror.internal/dist"
+cfg.BaseURLs["node"] = "http://localhost:8080/nodejs.org/dist"
 
 err := cli.RunWithConfig(args, cfg)
 ----

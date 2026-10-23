@@ -7,150 +7,182 @@
 
 === Java
 
-* **CLI Flag:** `--java`
-* **Default Base URL:** `https://api.foojay.io/disco/v3.0/packages`
-* **Version Formats:** Major versions, exact versions, or vendor distribution suffixes (`-zulu`, `-tem`)
-* **Examples:** `--java 21`, `--java 17-zulu`, `--java 25.0.3.0+9-tem`
-* **Environment Variables Set:** `JAVA_<MAJOR>_HOME`, `JAVA_HOME`
-* **Notes:** Integrated with Foojay Disco API; supports vendor specs (`-zulu`, `-tem`)
+Integrated with Foojay Disco API; supports vendor specs (`-zulu`, `-tem`).
+The default base URL is `https://api.foojay.io/disco/v3.0/packages`.
+
+You can specify versions with `--java`.
+This supports major versions, exact versions, or vendor distribution suffixes (e.g., `-zulu`, `-tem`).
+E.g. `--java 21`, `--java 17-zulu`, `--java 25.0.3.0+9-tem`
+
+It will set the following environment variables: `JAVA_<MAJOR>_HOME`, `JAVA_HOME`.
 
 === Apache Maven
 
-* **CLI Flag:** `--maven`
-* **Default Base URL:** `https://archive.apache.org/dist/maven/maven-3`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--maven 3`, `--maven 3.9`, `--maven 3.9.6`
-* **Environment Variables Set:** `MAVEN_<MAJOR>_HOME`, `MAVEN_HOME`, `M2_HOME`
-* **Notes:** Downloads Apache Maven releases
+Downloads Apache Maven releases.
+The default base URL is `https://archive.apache.org/dist/maven/maven-3`.
+
+You can specify versions with `--maven`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--maven 3`, `--maven 3.9`, `--maven 3.9.6`
+
+It will set the following environment variables: `MAVEN_<MAJOR>_HOME`, `MAVEN_HOME`, `M2_HOME`.
 
 === sbt
 
-* **CLI Flag:** `--sbt`
-* **Default Base URL:** `https://github.com/sbt/sbt/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--sbt 1`, `--sbt 1.10`, `--sbt 1.10.10`
-* **Environment Variables Set:** `SBT_<MAJOR>_HOME`, `SBT_HOME`
-* **Notes:** Downloads sbt release archives
+Downloads sbt release archives.
+The default base URL is `https://github.com/sbt/sbt/releases/download`.
+
+You can specify versions with `--sbt`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--sbt 1`, `--sbt 1.10`, `--sbt 1.10.10`
+
+It will set the following environment variables: `SBT_<MAJOR>_HOME`, `SBT_HOME`.
 
 === Gradle
 
-* **CLI Flag:** `--gradle`
-* **Default Base URL:** `https://services.gradle.org/distributions`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--gradle 8`, `--gradle 8.10`, `--gradle 8.10.2`
-* **Environment Variables Set:** `GRADLE_<MAJOR>_HOME`, `GRADLE_HOME`
-* **Notes:** Downloads Gradle distribution zips
+Downloads Gradle distribution zips.
+The default base URL is `https://services.gradle.org/distributions`.
+
+You can specify versions with `--gradle`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--gradle 8`, `--gradle 8.10`, `--gradle 8.10.2`
+
+It will set the following environment variables: `GRADLE_<MAJOR>_HOME`, `GRADLE_HOME`.
 
 == Generic Build Tools
 
 === Apache Ant
 
-* **CLI Flag:** `--ant`
-* **Default Base URL:** `https://archive.apache.org/dist/ant/binaries`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--ant 1`, `--ant 1.10`, `--ant 1.10.14`
-* **Environment Variables Set:** `ANT_<MAJOR>_HOME`, `ANT_HOME`
-* **Notes:** Downloads Apache Ant binary archives
+Downloads Apache Ant binary archives.
+The default base URL is `https://archive.apache.org/dist/ant/binaries`.
+
+You can specify versions with `--ant`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--ant 1`, `--ant 1.10`, `--ant 1.10.14`
+
+It will set the following environment variables: `ANT_<MAJOR>_HOME`, `ANT_HOME`.
 
 === Mill
 
-* **CLI Flag:** `--mill`
-* **Default Base URL:** `https://github.com/com-lihaoyi/mill/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--mill 0`, `--mill 0.12`, `--mill 0.12.5`
-* **Environment Variables Set:** `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION`
-* **Notes:** Downloads Mill build tool releases
+Downloads Mill build tool releases.
+The default base URL is `https://github.com/com-lihaoyi/mill/releases/download`.
+
+You can specify versions with `--mill`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--mill 0`, `--mill 0.12`, `--mill 0.12.5`
+
+It will set the following environment variables: `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION`.
 
 === Bazel
 
-* **CLI Flag:** `--bazel`
-* **Default Base URL:** `https://github.com/bazelbuild/bazel/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--bazel 7`, `--bazel 7.4`, `--bazel 7.4.0`
-* **Environment Variables Set:** `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME`
-* **Notes:** Downloads standalone Bazel binaries
+Downloads standalone Bazel binaries.
+The default base URL is `https://github.com/bazelbuild/bazel/releases/download`.
+
+You can specify versions with `--bazel`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--bazel 7`, `--bazel 7.4`, `--bazel 7.4.0`
+
+It will set the following environment variables: `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME`.
 
 === Pants
 
-* **CLI Flag:** `--pants`
-* **Default Base URL:** `https://github.com/pantsbuild/pants/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--pants 2`, `--pants 2.33`, `--pants 2.33.1`
-* **Environment Variables Set:** `PANTS_<MAJOR>_HOME`, `PANTS_HOME`
-* **Notes:** Downloads Pants build system executables
+Downloads Pants build system executables.
+The default base URL is `https://github.com/pantsbuild/pants/releases/download`.
+
+You can specify versions with `--pants`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--pants 2`, `--pants 2.33`, `--pants 2.33.1`
+
+It will set the following environment variables: `PANTS_<MAJOR>_HOME`, `PANTS_HOME`.
 
 === Buck2
 
-* **CLI Flag:** `--buck2`
-* **Default Base URL:** `https://github.com/facebook/buck2/releases/download`
-* **Version Formats:** Release dates or version tags
-* **Examples:** `--buck2 2026`, `--buck2 2026-10`, `--buck2 2026-10-15`
-* **Environment Variables Set:** `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME`
-* **Notes:** Downloads Buck2 build system releases
+Downloads Buck2 build system releases.
+The default base URL is `https://github.com/facebook/buck2/releases/download`.
+
+You can specify versions with `--buck2`.
+This supports release dates or version tags.
+E.g. `--buck2 2026`, `--buck2 2026-10`, `--buck2 2026-10-15`
+
+It will set the following environment variables: `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME`.
 
 == Node.js / JavaScript Ecosystem
 
 === Node.js
 
-* **CLI Flag:** `--node`
-* **Default Base URL:** `https://nodejs.org/dist`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--node 20`, `--node 22.11`, `--node 22.11.0`
-* **Environment Variables Set:** `NODE_<MAJOR>_HOME`, `NODE_HOME`
-* **Notes:** Downloads official nodejs.org dist archives
+Downloads official nodejs.org dist archives.
+The default base URL is `https://nodejs.org/dist`.
+
+You can specify versions with `--node`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--node 20`, `--node 22.11`, `--node 22.11.0`
+
+It will set the following environment variables: `NODE_<MAJOR>_HOME`, `NODE_HOME`.
 
 === npm
 
-* **CLI Flag:** `--npm`
-* **Default Base URL:** `https://registry.npmjs.org/npm/-`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--npm 10`, `--npm 10.2`, `--npm 10.2.4`
-* **Environment Variables Set:** `NPM_<MAJOR>_HOME`, `NPM_HOME`
-* **Notes:** Downloads npm release tarballs
+Downloads npm release tarballs.
+The default base URL is `https://registry.npmjs.org/npm/-`.
+
+You can specify versions with `--npm`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--npm 10`, `--npm 10.2`, `--npm 10.2.4`
+
+It will set the following environment variables: `NPM_<MAJOR>_HOME`, `NPM_HOME`.
 
 === pnpm
 
-* **CLI Flag:** `--pnpm`
-* **Default Base URL:** `https://github.com/pnpm/pnpm/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--pnpm 8`, `--pnpm 8.15`, `--pnpm 8.15.1`
-* **Environment Variables Set:** `PNPM_<MAJOR>_HOME`, `PNPM_HOME`
-* **Notes:** Downloads standalone pnpm binaries
+Downloads standalone pnpm binaries.
+The default base URL is `https://github.com/pnpm/pnpm/releases/download`.
+
+You can specify versions with `--pnpm`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--pnpm 8`, `--pnpm 8.15`, `--pnpm 8.15.1`
+
+It will set the following environment variables: `PNPM_<MAJOR>_HOME`, `PNPM_HOME`.
 
 === Yarn
 
-* **CLI Flag:** `--yarn`
-* **Default Base URL:** `https://github.com/yarnpkg/yarn/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--yarn 1`, `--yarn 1.22`, `--yarn 1.22.19`
-* **Environment Variables Set:** `YARN_<MAJOR>_HOME`, `YARN_HOME`
-* **Notes:** Downloads Yarn v1 releases
+Downloads Yarn v1 releases.
+The default base URL is `https://github.com/yarnpkg/yarn/releases/download`.
+
+You can specify versions with `--yarn`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--yarn 1`, `--yarn 1.22`, `--yarn 1.22.19`
+
+It will set the following environment variables: `YARN_<MAJOR>_HOME`, `YARN_HOME`.
 
 === Bun
 
-* **CLI Flag:** `--bun`
-* **Default Base URL:** `https://github.com/oven-sh/bun/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--bun 1`, `--bun 1.1`, `--bun 1.1.0`
-* **Environment Variables Set:** `BUN_<MAJOR>_HOME`, `BUN_HOME`
-* **Notes:** Downloads Oven Bun release archives
+Downloads Oven Bun release archives.
+The default base URL is `https://github.com/oven-sh/bun/releases/download`.
+
+You can specify versions with `--bun`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--bun 1`, `--bun 1.1`, `--bun 1.1.0`
+
+It will set the following environment variables: `BUN_<MAJOR>_HOME`, `BUN_HOME`.
 
 == Python Ecosystem
 
 === Python
 
-* **CLI Flag:** `--python`
-* **Default Base URL:** `https://github.com/indygreg/python-build-standalone/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--python 3`, `--python 3.11`, `--python 3.11.7`
-* **Environment Variables Set:** `PYTHON_<MAJOR>_HOME`, `PYTHON_HOME`, `PYTHONHOME`
-* **Notes:** Standalone Python builds
+Downloads standalone Python builds.
+The default base URL is `https://github.com/indygreg/python-build-standalone/releases/download`.
+
+You can specify versions with `--python`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--python 3`, `--python 3.11`, `--python 3.11.7`
+
+It will set the following environment variables: `PYTHON_<MAJOR>_HOME`, `PYTHON_HOME`, `PYTHONHOME`.
 
 === UV
 
-* **CLI Flag:** `--uv`
-* **Default Base URL:** `https://github.com/astral-sh/uv/releases/download`
-* **Version Formats:** Major versions, major.minor, or exact semver versions
-* **Examples:** `--uv 0`, `--uv 0.5`, `--uv 0.5.1`
-* **Environment Variables Set:** `UV_<MAJOR>_HOME`, `UV_HOME`
-* **Notes:** Downloads Astral UV releases
+Downloads Astral UV releases.
+The default base URL is `https://github.com/astral-sh/uv/releases/download`.
+
+You can specify versions with `--uv`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--uv 0`, `--uv 0.5`, `--uv 0.5.1`
+
+It will set the following environment variables: `UV_<MAJOR>_HOME`, `UV_HOME`.
