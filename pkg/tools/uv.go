@@ -46,7 +46,7 @@ func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome strin
 	installDir := filepath.Join(doguHome, "candidates", "uv", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "uv", filename)
 
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir); err != nil {
+	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download uv: %w", err)
 	}
 

@@ -32,5 +32,9 @@
     "uv": "http://localhost:8080/github.com/astral-sh/uv/releases/download",
     // Mirrors https://github.com/yarnpkg/yarn/releases/download
     "yarn": "http://localhost:8080/github.com/yarnpkg/yarn/releases/download"
+  },
+  "rewrite": {
+    // Rewrites redirected download URLs (e.g. Foojay JDK redirects or upstream GitHub releases) to an internal repository/artifactory
+    "https://github.com/adoptium/temurin25-binaries/releases/download/": "https://artifactory.internal/temurin25/"
   }
 }

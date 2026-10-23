@@ -50,7 +50,7 @@ func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome st
 	installDir := filepath.Join(doguHome, "candidates", "pants", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "pants", cacheFileName)
 
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin); err != nil {
+	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download pants: %w", err)
 	}
 

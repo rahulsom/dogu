@@ -47,7 +47,7 @@ func (b *Buck2Tool) Install(ctx context.Context, versionSpec string, doguHome st
 	installDir := filepath.Join(doguHome, "candidates", "buck2", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "buck2", binName)
 
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin); err != nil {
+	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download buck2: %w", err)
 	}
 

@@ -23,6 +23,39 @@ In `config.json`, tool base URLs are grouped under the `baseUrls` object, where 
 include::config-example.json[]
 ----
 
+== URL Rewriting
+
+`dogu` supports rewriting download URLs (both initial request URLs and HTTP 30x redirect locations) to route requests to internal proxies, mirrors, or Artifactory instances. This is particularly useful for tools like `java` where Foojay Disco API returns redirect URLs pointing to upstream binary releases (such as GitHub releases).
+
+URL rewrite rules can be configured in `config.json` using either a JSON object (map format) or an array of rules:
+
+=== Map Format
+
+[source,json]
+----
+{
+  "baseUrls": { ... },
+  "rewrite": {
+    "https://github.com/adoptium/temurin25-binaries/releases/download/": "https://artifactory.internal/temurin25/"
+  }
+}
+----
+
+=== Array Format
+
+[source,json]
+----
+{
+  "baseUrls": { ... },
+  "rewrite": [
+    {
+      "from": "https://github.com/adoptium/temurin25-binaries/releases/download/",
+      "to": "https://artifactory.internal/temurin25/"
+    }
+  ]
+}
+----
+
 == Programmatic Configuration Injection
 
 When using `dogu` as a Go module dependency in another project, configuration can be initialized or injected programmatically:

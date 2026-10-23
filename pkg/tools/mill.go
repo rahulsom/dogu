@@ -47,7 +47,7 @@ func (m *MillTool) Install(ctx context.Context, versionSpec string, doguHome str
 	installDir := filepath.Join(doguHome, "candidates", "mill", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "mill", fmt.Sprintf("mill-%s-%s", normVer, binaryName))
 
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, binaryName); err != nil {
+	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, binaryName, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download mill: %w", err)
 	}
 

@@ -40,7 +40,7 @@ func (a *AntTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	installDir := filepath.Join(doguHome, "candidates", "ant", versionSpec)
 	cacheFile := filepath.Join(doguHome, "cache", "ant", filename)
 
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir); err != nil {
+	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download ant: %w", err)
 	}
 

@@ -53,7 +53,7 @@ func (p *PNPMTool) Install(ctx context.Context, versionSpec string, doguHome str
 		targetBinName = "pnpm.exe"
 	}
 
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBinName); err != nil {
+	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBinName, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download pnpm: %w", err)
 	}
 
