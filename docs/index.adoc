@@ -1,5 +1,6 @@
 = dogu
 :toc: left
+:stylesheet: style.css
 :icons: font
 :source-highlighter: highlight.js
 

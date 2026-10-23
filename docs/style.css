@@ -1,0 +1,258 @@
+/* Minimalist stylesheet for dogu documentation */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg-color: #fafafa;
+  --text-color: #18181b;
+  --text-muted: #71717a;
+  --border-color: #e4e4e7;
+  --code-bg: #f4f4f5;
+  --sidebar-bg: #ffffff;
+  --link-color: #0969da;
+  --link-hover: #0349b4;
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* Layout for TOC sidebar + content */
+#header, #content, #footnotes, #footer {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+body.toc2 {
+  padding-left: 17rem;
+}
+
+body.toc2 #header,
+body.toc2 #content,
+body.toc2 #footnotes,
+body.toc2 #footer {
+  max-width: 52rem;
+  margin: 0 left;
+  padding: 0 2rem;
+}
+
+/* Sidebar Navigation (TOC) */
+#toc.toc2 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 17rem;
+  height: 100vh;
+  overflow-y: auto;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+  padding: 2rem 1.25rem;
+  margin: 0;
+  box-sizing: border-box;
+  font-size: 0.875rem;
+}
+
+#toc.toc2 #toctitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+#toc.toc2 ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+#toc.toc2 ul ul {
+  padding-left: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+#toc.toc2 li {
+  margin-bottom: 0.4rem;
+  line-height: 1.4;
+}
+
+#toc.toc2 a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+#toc.toc2 a:hover {
+  color: var(--text-color);
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: var(--text-color);
+  letter-spacing: -0.02em;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+#header h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.03em;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.4rem;
+  margin-top: 2.5rem;
+}
+
+h3 {
+  font-size: 1.2rem;
+  margin-top: 1.75rem;
+}
+
+h4 {
+  font-size: 1rem;
+}
+
+/* Paragraphs and Links */
+p {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+}
+
+a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+/* Inline Code and Code Blocks */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background-color: var(--code-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  line-height: 1.5;
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+th, td {
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+th {
+  font-weight: 600;
+  background-color: var(--sidebar-bg);
+  color: var(--text-color);
+}
+
+tr:hover td {
+  background-color: rgba(0, 0, 0, 0.015);
+}
+
+/* Lists */
+ul, ol {
+  padding-left: 1.25rem;
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+}
+
+li {
+  margin-bottom: 0.35rem;
+}
+
+/* Admonitions / Callouts */
+.admonitionblock {
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-left: 3px solid var(--text-color);
+  padding: 0.75rem 1rem;
+  background-color: var(--sidebar-bg);
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.admonitionblock td.icon {
+  font-weight: 600;
+  padding-right: 0.75rem;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+  body.toc2 {
+    padding-left: 0;
+  }
+  #toc.toc2 {
+    position: relative;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
