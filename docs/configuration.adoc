@@ -36,7 +36,7 @@ URL rewrite rules can be configured in `config.json` using either a JSON object 
 {
   "baseUrls": { ... },
   "rewrite": {
-    "https://github.com/adoptium/temurin25-binaries/releases/download/": "https://artifactory.internal/temurin25/"
+    "https://github.com/adoptium/temurin25-binaries/releases/download/": "http://localhost:8080/github.com/adoptium/temurin25-binaries/releases/download/"
   }
 }
 ----
@@ -50,7 +50,7 @@ URL rewrite rules can be configured in `config.json` using either a JSON object 
   "rewrite": [
     {
       "from": "https://github.com/adoptium/temurin25-binaries/releases/download/",
-      "to": "https://artifactory.internal/temurin25/"
+      "to": "http://localhost:8080/github.com/adoptium/temurin25-binaries/releases/download/"
     }
   ]
 }
