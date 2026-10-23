@@ -237,10 +237,7 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 		}
 	}
 
-	includePrerelease := cfg.IncludePrerelease
-	if cliPrerelease != nil {
-		includePrerelease = *cliPrerelease
-	}
+	includePrerelease := cliPrerelease != nil && *cliPrerelease
 
 	installOpts := tools.InstallOptions{
 		Force:             force,

@@ -9,7 +9,7 @@ For user-facing documentation, usage instructions, configuration guides, and sup
 
 * `cmd/dogu/`: Entry point for the `dogu` CLI binary.
 * `pkg/cli/`: CLI parsing, flags handling, execution runner, and TUI progress rendering.
-* `pkg/config/`: Configuration parsing and hierarchical `.dogu.properties` resolution.
+* `pkg/config/`: Configuration parsing and resolution.
 * `pkg/downloader/`: HTTP archive download, extraction (`.tar.gz`, `.zip`, `.tar.xz`, `.tar.zst`), and progress bars.
 * `pkg/env/`: Environment variable resolution and PATH construction for invoked commands.
 * `pkg/tools/`: Tool providers and resolution logic for Java, Node.js, Maven, Gradle, Go/Python/Rust ecosystem tools, etc.
@@ -66,14 +66,18 @@ docker run -d --rm \
   --config /app/cachew.hcl
 ----
 
-2. **Configure `.dogu.properties`:**
+2. **Configure `config.json`:**
 +
-Create a `.dogu.properties` file pointing to the local mirror (for example, in your project or working directory):
+Create a `config.json` file in `$DOGU_HOME/config.json` (or set `DOGU_CONFIGURATION`) pointing to the local mirror:
 +
-[source,properties]
+[source,json]
 ----
-maven.mirror=http://localhost:8080/archive.apache.org/dist/maven/maven-3
-node.mirror=http://localhost:8080/nodejs.org/dist
+{
+  "baseUrls": {
+    "maven": "http://localhost:8080/archive.apache.org/dist/maven/maven-3",
+    "node": "http://localhost:8080/nodejs.org/dist"
+  }
+}
 ----
 
 3. **Test with `go run cmd/dogu/main.go`:**

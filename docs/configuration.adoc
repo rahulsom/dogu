@@ -13,16 +13,14 @@ You can override default base URLs by creating a user JSON configuration file:
 
 1. **Environment Variable:** Set `DOGU_CONFIGURATION` to the path of your custom JSON configuration file.
 2. **User Home Config:** Place a `config.json` file inside `$DOGU_HOME/config.json` (defaults to `~/.dogu/config.json`).
-3. **Project Properties:** `.dogu.properties` files located in project directories (discovered hierarchically upwards) continue to be supported as project-specific overrides.
 
 == JSON Format
 
-In `config.json`, tool base URLs are grouped under the `baseUrls` object, where keys match tool names (such as `node`, `java`, `maven`) mapped to their base download URLs. You can also specify global options like `includePrerelease`:
+In `config.json`, tool base URLs are grouped under the `baseUrls` object, where keys match tool names (such as `node`, `java`, `maven`) mapped to their base download URLs:
 
 [source,json]
 ----
 {
-  "includePrerelease": false,
   "baseUrls": {
     "ant": "http://localhost:8080/archive.apache.org/dist/ant/binaries",
     "bazel": "http://localhost:8080/github.com/bazelbuild/bazel/releases/download",
@@ -44,10 +42,6 @@ In `config.json`, tool base URLs are grouped under the `baseUrls` object, where 
 }
 ----
 
-== Global Options
-
-* `includePrerelease` (or `includePrerelease=true` in `.dogu.properties`): When `false` (default), `dogu` avoids release candidates and pre-releases when resolving partially defined version specifications. When set to `true`, release candidates are included in candidate selection.
-
 == Programmatic Configuration Injection
 
 When using `dogu` as a Go module dependency in another project, configuration can be initialized or injected programmatically:
@@ -55,7 +49,6 @@ When using `dogu` as a Go module dependency in another project, configuration ca
 [source,go]
 ----
 cfg := config.NewConfig()
-cfg.IncludePrerelease = true
 cfg.BaseURLs["node"] = "https://custom-node-mirror.internal/dist"
 
 err := cli.RunWithConfig(args, cfg)

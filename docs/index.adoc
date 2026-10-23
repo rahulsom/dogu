@@ -11,7 +11,7 @@ _Dogu_ is Korean for _tools_.
 
 * **On-Demand Tool Provisioning:** Automatically downloads, unpacks, and registers candidate tool releases.
 * **Environment Variable Automation:** Sets version-specific environment variables (e.g. `JAVA_17_HOME`, `JAVA_21_HOME`, `JAVA_HOME`, `NODE_24_HOME`, `NODE_HOME`) and prepends `PATH`.
-* **Flexible Mirror Support:** Configure custom download mirror URLs in `.dogu.properties` files discovered hierarchically upwards.
+* **Flexible Mirror Support:** Configure custom download mirror URLs via `config.json` files or environment variables.
 * **Multiplatform Support:** Works across Linux, macOS, and Windows.
 
 == Usage & CLI Flags
