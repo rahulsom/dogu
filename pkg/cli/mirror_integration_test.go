@@ -122,7 +122,7 @@ func TestMirrorIntegration(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		propContent    string
+		configContent  string
 		setupFunc      func(workDir string)
 		args           []string
 		expectedOutput string
@@ -130,8 +130,8 @@ func TestMirrorIntegration(t *testing.T) {
 	}{
 		{
 			name: "java-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"java.mirror=%s/api.foojay.io/disco/v3.0/packages\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"java": "%s/api.foojay.io/disco/v3.0/packages"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--java", "17", "--", "java", "-version"},
@@ -140,8 +140,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "maven-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"maven.mirror=%s/archive.apache.org/dist/maven/maven-3\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"maven": "%s/archive.apache.org/dist/maven/maven-3"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--maven", "3.9.6", "--", "mvn", "-version"},
@@ -150,8 +150,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "sbt-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"sbt.mirror=%s/github.com/sbt/sbt/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"sbt": "%s/github.com/sbt/sbt/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--sbt", "1.10.10", "--", "sbt", "--version"},
@@ -160,8 +160,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "gradle-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"gradle.mirror=%s/services.gradle.org/distributions\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"gradle": "%s/services.gradle.org/distributions"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--gradle", "8.10.2", "--", "gradle", "--version"},
@@ -170,8 +170,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "ant-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"ant.mirror=%s/archive.apache.org/dist/ant/binaries\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"ant": "%s/archive.apache.org/dist/ant/binaries"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--ant", "1.10.14", "--", "ant", "-version"},
@@ -180,8 +180,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "mill-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"mill.mirror=%s/github.com/com-lihaoyi/mill/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"mill": "%s/github.com/com-lihaoyi/mill/releases/download"}}`,
 				cachewURL,
 			),
 			setupFunc: func(workDir string) {
@@ -196,8 +196,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "bazel-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"bazel.mirror=%s/github.com/bazelbuild/bazel/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"bazel": "%s/github.com/bazelbuild/bazel/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--bazel", "7.4.0", "--", "bazel", "--version"},
@@ -206,8 +206,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "pants-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"pants.mirror=%s/github.com/pantsbuild/pants/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"pants": "%s/github.com/pantsbuild/pants/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--pants", "2.33.1", "--", "pants", "--version"},
@@ -216,8 +216,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "buck2-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"buck2.mirror=%s/github.com/facebook/buck2/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"buck2": "%s/github.com/facebook/buck2/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--buck2", "2026-10-15", "--", "buck2", "--version"},
@@ -226,8 +226,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "node-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"node.mirror=%s/nodejs.org/dist\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"node": "%s/nodejs.org/dist"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--node", "20.18.0", "--", "node", "--version"},
@@ -236,8 +236,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "npm-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"node.mirror=%s/nodejs.org/dist\nnpm.mirror=%s/registry.npmjs.org/npm/-\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"node": "%s/nodejs.org/dist", "npm": "%s/registry.npmjs.org/npm/-"}}`,
 				cachewURL,
 				cachewURL,
 			),
@@ -247,8 +247,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "pnpm-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"pnpm.mirror=%s/github.com/pnpm/pnpm/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"pnpm": "%s/github.com/pnpm/pnpm/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--pnpm", "8.15.1", "--", "pnpm", "-v"},
@@ -257,8 +257,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "yarn-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"yarn.mirror=%s/github.com/yarnpkg/yarn/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"yarn": "%s/github.com/yarnpkg/yarn/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--yarn", "1.22.19", "--", "yarn", "-v"},
@@ -267,8 +267,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "bun-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"bun.mirror=%s/github.com/oven-sh/bun/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"bun": "%s/github.com/oven-sh/bun/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--bun", "1.1.0", "--", "bun", "--version"},
@@ -277,8 +277,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "python-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"python.mirror=%s/github.com/indygreg/python-build-standalone/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"python": "%s/github.com/indygreg/python-build-standalone/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--python", "3.12.1", "--", "python", "--version"},
@@ -287,8 +287,8 @@ func TestMirrorIntegration(t *testing.T) {
 		},
 		{
 			name: "uv-via-cachew-mirror",
-			propContent: fmt.Sprintf(
-				"uv.mirror=%s/github.com/astral-sh/uv/releases/download\n",
+			configContent: fmt.Sprintf(
+				`{"baseUrls": {"uv": "%s/github.com/astral-sh/uv/releases/download"}}`,
 				cachewURL,
 			),
 			args:           []string{"-v", "--force", "--uv", "0.1.15", "--", "uv", "--version"},
@@ -308,9 +308,12 @@ func TestMirrorIntegration(t *testing.T) {
 				tc.setupFunc(workDir)
 			}
 
-			propFile := filepath.Join(workDir, ".dogu.properties")
-			if err := os.WriteFile(propFile, []byte(tc.propContent), 0644); err != nil {
-				t.Fatalf("failed to write .dogu.properties: %v", err)
+			if err := os.MkdirAll(doguHome, 0755); err != nil {
+				t.Fatalf("failed to create doguHome: %v", err)
+			}
+			configFile := filepath.Join(doguHome, "config.json")
+			if err := os.WriteFile(configFile, []byte(tc.configContent), 0644); err != nil {
+				t.Fatalf("failed to write config.json: %v", err)
 			}
 
 			cmd := exec.Command(doguBin, tc.args...)

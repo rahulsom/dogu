@@ -8,40 +8,6 @@ import (
 	"github.com/dogu-dev/dogu/pkg/config"
 )
 
-func TestFindAndLoadConfigFile(t *testing.T) {
-	tempDir := t.TempDir()
-	subDir := filepath.Join(tempDir, "a", "b", "c")
-	if err := os.MkdirAll(subDir, 0755); err != nil {
-		t.Fatalf("failed to create subDir: %v", err)
-	}
-
-	configFile := filepath.Join(tempDir, ".dogu.properties")
-	content := []byte("java.mirror=https://mirror.example.com/java\nnode.mirror=https://mirror.example.com/node\n# comment\n")
-	if err := os.WriteFile(configFile, content, 0644); err != nil {
-		t.Fatalf("failed to write config file: %v", err)
-	}
-
-	found, err := config.FindConfigFile(subDir)
-	if err != nil {
-		t.Fatalf("expected to find config file, got error: %v", err)
-	}
-	if found != configFile {
-		t.Errorf("expected found path %s, got %s", configFile, found)
-	}
-
-	props, err := config.LoadProperties(subDir)
-	if err != nil {
-		t.Fatalf("expected to load properties, got error: %v", err)
-	}
-
-	if val := props.GetToolMirror("java"); val != "https://mirror.example.com/java" {
-		t.Errorf("expected java mirror URL, got %s", val)
-	}
-	if val := props.GetToolMirror("node"); val != "https://mirror.example.com/node" {
-		t.Errorf("expected node mirror URL, got %s", val)
-	}
-}
-
 func TestDefaultConfig(t *testing.T) {
 	cfg, err := config.DefaultConfig()
 	if err != nil {
@@ -113,24 +79,21 @@ func TestDoguConfigurationEnvOverride(t *testing.T) {
 	}
 }
 
-func TestPropertiesOverride(t *testing.T) {
+func TestWithConfigFileOption(t *testing.T) {
 	tempDir := t.TempDir()
-	configFile := filepath.Join(tempDir, ".dogu.properties")
-	content := []byte("java=https://prop-java.internal\nnode.mirror=https://prop-node.internal\n")
-	if err := os.WriteFile(configFile, content, 0644); err != nil {
-		t.Fatalf("failed to write .dogu.properties: %v", err)
+	customConfigFile := filepath.Join(tempDir, "opt-config.json")
+	content := []byte(`{"baseUrls": {"gradle": "https://custom-gradle.internal"}}`)
+	if err := os.WriteFile(customConfigFile, content, 0644); err != nil {
+		t.Fatalf("failed to write custom config: %v", err)
 	}
 
-	cfg, err := config.Load(config.WithStartDir(tempDir))
+	cfg, err := config.Load(config.WithConfigFile(customConfigFile))
 	if err != nil {
 		t.Fatalf("expected Load to succeed, got %v", err)
 	}
 
-	if val := cfg.GetBaseURL("java"); val != "https://prop-java.internal" {
-		t.Errorf("expected property overridden java URL, got '%s'", val)
-	}
-	if val := cfg.GetBaseURL("node"); val != "https://prop-node.internal" {
-		t.Errorf("expected property overridden node URL, got '%s'", val)
+	if val := cfg.GetBaseURL("gradle"); val != "https://custom-gradle.internal" {
+		t.Errorf("expected overridden gradle URL, got '%s'", val)
 	}
 }
 
@@ -140,39 +103,5 @@ func TestProgrammaticConfigInjection(t *testing.T) {
 
 	if val := customCfg.GetBaseURL("python"); val != "https://custom-python.internal" {
 		t.Errorf("expected injected python URL, got '%s'", val)
-	}
-}
-
-func TestIncludePrereleaseConfig(t *testing.T) {
-	tempDoguHome := t.TempDir()
-	userConfig := filepath.Join(tempDoguHome, "config.json")
-	content := []byte(`{"includePrerelease": true}`)
-	if err := os.WriteFile(userConfig, content, 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	t.Setenv("DOGU_HOME", tempDoguHome)
-	t.Setenv("DOGU_CONFIGURATION", "")
-
-	cfg, err := config.Load()
-	if err != nil {
-		t.Fatalf("expected Load to succeed, got %v", err)
-	}
-	if !cfg.IncludePrerelease {
-		t.Errorf("expected IncludePrerelease to be true from config.json")
-	}
-
-	tempDir := t.TempDir()
-	propFile := filepath.Join(tempDir, ".dogu.properties")
-	if err := os.WriteFile(propFile, []byte("includePrerelease=true\n"), 0644); err != nil {
-		t.Fatalf("failed to write properties: %v", err)
-	}
-
-	cfgProp, err := config.Load(config.WithStartDir(tempDir))
-	if err != nil {
-		t.Fatalf("expected Load to succeed, got %v", err)
-	}
-	if !cfgProp.IncludePrerelease {
-		t.Errorf("expected IncludePrerelease to be true from .dogu.properties")
 	}
 }
