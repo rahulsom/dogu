@@ -52,7 +52,7 @@ body.toc2 #content,
 body.toc2 #footnotes,
 body.toc2 #footer {
   max-width: 52rem;
-  margin: 0 left;
+  margin: 0;
   padding: 0 2rem;
 }
 
@@ -258,5 +258,9 @@ li {
 }
 
 #toctitle {
+  display: none;
+}
+
+#footer {
   display: none;
 }
