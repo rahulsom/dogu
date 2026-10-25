@@ -55,10 +55,16 @@
       <stop offset="100%" stop-color="#0369a1"/>
     </linearGradient>
 
-    <!-- Inner Shadow -->
+    <!-- Inner Cavity Gradient -->
     <linearGradient id="innerCavity" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#0f172a"/>
       <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+
+    <!-- Inner Wall Shadow -->
+    <linearGradient id="innerWallShadow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#0f172a"/>
     </linearGradient>
 
     <!-- Drop Shadow Filter -->
@@ -71,97 +77,113 @@
     </filter>
   </defs>
 
-  <!-- Main Art Group -->
+  <!-- Main Art Group with Drop Shadow -->
   <g filter="url(#isoDropShadow)">
 
-    <!-- ==================== TOOLS INSIDE (BACK LAYER) ==================== -->
-    <g id="iso-tools-back">
-      <!-- 1. Isometric Hammer (Sticking out top-left) -->
-      <g transform="translate(230, 180) rotate(-20)">
-        <!-- Handle in 3D -->
-        <path d="M -8 -110 L 8 -110 L 12 50 L -4 50 Z" fill="url(#isoWood)"/>
-        <path d="M 8 -110 L 14 -110 L 18 50 L 12 50 Z" fill="#7c2d12"/>
-        <path d="M -4 10 L 12 10 L 14 50 L -4 50 Z" fill="#1e293b" opacity="0.85"/>
-        <!-- Hammer Head -->
-        <path d="M -40 -125 L 20 -125 L 25 -105 L -35 -105 Z" fill="url(#isoMetalLight)"/>
-        <path d="M 20 -125 L 35 -125 L 40 -105 L 25 -105 Z" fill="url(#isoMetalDark)"/>
-        <!-- Steel Face -->
-        <ellipse cx="37.5" cy="-115" rx="4" ry="10" fill="url(#isoMetalLight)"/>
-        <!-- Claw -->
-        <path d="M -40 -125 C -55 -125 -65 -115 -70 -100 L -60 -98 C -55 -110 -48 -118 -35 -118 Z" fill="url(#isoMetalDark)"/>
-      </g>
+    <!-- ==================== 1. OPEN LID (BEHIND EVERYTHING) ==================== -->
+    <g id="iso-open-lid">
+      <!-- Open Lid Back Panel -->
+      <path d="M 180 280 L 100 230 L 290 120 L 370 170 Z" fill="url(#isoRedSide)"/>
+      <path d="M 370 170 L 290 120 L 480 210 L 560 260 Z" opacity="0.12" fill="#ffffff"/>
+      <!-- Lid Rim / Lip -->
+      <path d="M 100 230 L 290 120 L 295 123 L 105 233 Z" fill="url(#isoRedTop)"/>
+      <path d="M 100 230 L 180 280 L 180 286 L 100 236 Z" fill="url(#isoRedSide)"/>
+    </g>
 
-      <!-- 2. Isometric Screwdriver (Standing Center) -->
-      <g transform="translate(330, 140) rotate(8)">
-        <!-- Shaft -->
-        <rect x="-4" y="-30" width="8" height="110" fill="url(#isoMetalLight)"/>
-        <rect x="4" y="-30" width="3" height="110" fill="url(#isoMetalDark)"/>
-        <path d="M -4 -30 L 0 -42 L 4 -30 Z" fill="url(#isoMetalDark)"/>
-        <!-- 3D Yellow Handle -->
-        <path d="M -14 50 L 14 50 L 12 110 L -10 110 Z" fill="url(#isoYellow)"/>
-        <path d="M 14 50 L 20 50 L 18 110 L 12 110 Z" fill="#854d0e"/>
-        <!-- Rubber Grips -->
-        <rect x="-13" y="62" width="31" height="6" rx="1" fill="#0f172a"/>
-        <rect x="-12" y="78" width="30" height="6" rx="1" fill="#0f172a"/>
-        <rect x="-11" y="94" width="28" height="6" rx="1" fill="#0f172a"/>
-      </g>
+    <!-- ==================== 2. INTERIOR CAVITY (BOX FLOOR & INNER WALLS) ==================== -->
+    <g id="iso-interior-cavity">
+      <!-- Cavity Floor Polygon: Back Corner (370,170), Left (180,280), Right (520,255), Front (330,365) -->
+      <path d="M 180 280 L 370 170 L 520 255 L 330 365 Z" fill="url(#innerCavity)"/>
+      <!-- Inner Back-Left Wall Shadow -->
+      <path d="M 180 280 L 370 170 L 370 210 L 180 320 Z" fill="url(#innerWallShadow)"/>
+      <!-- Inner Back-Right Wall Shadow -->
+      <path d="M 370 170 L 520 255 L 520 295 L 370 210 Z" fill="#090d16"/>
+    </g>
 
-      <!-- 3. Isometric Adjustable Wrench (Sticking out top-right) -->
-      <g transform="translate(390, 160) rotate(35)">
-        <!-- Handle -->
-        <path d="M -8 -10 L 8 -10 L 6 110 L -6 110 Z" fill="url(#isoMetalLight)"/>
-        <path d="M 8 -10 L 12 -10 L 10 110 L 6 110 Z" fill="url(#isoMetalDark)"/>
-        <!-- Head -->
-        <path d="M -22 -45 L 18 -45 L 22 -10 L -18 -10 Z" fill="url(#isoMetalLight)"/>
-        <path d="M 18 -45 L 26 -45 L 30 -10 L 22 -10 Z" fill="url(#isoMetalDark)"/>
-        <!-- Jaw Gap -->
-        <path d="M -12 -45 L 2 -45 L 2 -25 L -12 -25 Z" fill="#1e293b"/>
-        <!-- Knurled Adjustment Screw -->
-        <rect x="-4" y="-20" width="12" height="8" fill="url(#isoMetalDark)"/>
-      </g>
+    <!-- ==================== 3. TOOLS INSIDE THE BOX ==================== -->
+    <!--
+      Tools are placed inside the cavity. Their handles go down into the cavity (below y=280-365)
+      and their upper heads stick out above the cavity top edge (above y=250), appearing IN FRONT
+      of the open lid, but BEHIND the front walls!
+    -->
+    <g id="iso-tools">
 
-      <!-- 4. Isometric Pliers (Left Center) -->
-      <g transform="translate(270, 165) rotate(-12)">
-        <!-- Handles -->
+      <!-- Tool A: Pliers (Left side, angled out) -->
+      <g transform="translate(230, 270) rotate(-22)">
+        <!-- Handles inside cavity -->
         <path d="M -14 20 C -18 50 -20 80 -12 110" stroke="url(#isoBlue)" stroke-width="10" stroke-linecap="round" fill="none"/>
         <path d="M 12 20 C 18 50 20 80 12 110" stroke="url(#isoBlue)" stroke-width="10" stroke-linecap="round" fill="none"/>
         <!-- Pivot Joint -->
         <ellipse cx="0" cy="15" rx="10" ry="8" fill="url(#isoMetalDark)"/>
         <ellipse cx="0" cy="15" rx="4" ry="3" fill="url(#isoMetalLight)"/>
-        <!-- Jaws -->
+        <!-- Jaws sticking up -->
         <path d="M -8 8 L -4 -25 L 0 15 L 4 -25 L 8 8 Z" fill="url(#isoMetalLight)"/>
       </g>
+
+      <!-- Tool B: Hammer (Center-Left, angled out-left) -->
+      <g transform="translate(290, 260) rotate(-15)">
+        <!-- Handle extending down into cavity -->
+        <path d="M -8 -80 L 8 -80 L 12 70 L -4 70 Z" fill="url(#isoWood)"/>
+        <path d="M 8 -80 L 14 -80 L 18 70 L 12 70 Z" fill="#7c2d12"/>
+        <path d="M -4 20 L 12 20 L 14 70 L -4 70 Z" fill="#1e293b" opacity="0.85"/>
+        <!-- Hammer Head sticking out above box rim -->
+        <path d="M -40 -95 L 20 -95 L 25 -75 L -35 -75 Z" fill="url(#isoMetalLight)"/>
+        <path d="M 20 -95 L 35 -95 L 40 -75 L 25 -75 Z" fill="url(#isoMetalDark)"/>
+        <!-- Steel Face -->
+        <ellipse cx="37.5" cy="-85" rx="4" ry="10" fill="url(#isoMetalLight)"/>
+        <!-- Claw -->
+        <path d="M -40 -95 C -55 -95 -65 -85 -70 -70 L -60 -68 C -55 -80 -48 -88 -35 -88 Z" fill="url(#isoMetalDark)"/>
+      </g>
+
+      <!-- Tool C: Screwdriver (Center, standing upright) -->
+      <g transform="translate(360, 240) rotate(6)">
+        <!-- Shaft & Tip sticking up -->
+        <rect x="-4" y="-80" width="8" height="110" fill="url(#isoMetalLight)"/>
+        <rect x="4" y="-80" width="3" height="110" fill="url(#isoMetalDark)"/>
+        <path d="M -4 -80 L 0 -92 L 4 -80 Z" fill="url(#isoMetalDark)"/>
+        <!-- 3D Yellow Handle inside cavity -->
+        <path d="M -14 30 L 14 30 L 12 90 L -10 90 Z" fill="url(#isoYellow)"/>
+        <path d="M 14 30 L 20 30 L 18 90 L 12 90 Z" fill="#854d0e"/>
+        <!-- Rubber Grips -->
+        <rect x="-13" y="42" width="31" height="6" rx="1" fill="#0f172a"/>
+        <rect x="-12" y="58" width="30" height="6" rx="1" fill="#0f172a"/>
+        <rect x="-11" y="74" width="28" height="6" rx="1" fill="#0f172a"/>
+      </g>
+
+      <!-- Tool D: Adjustable Wrench (Right side, angled out-right) -->
+      <g transform="translate(420, 250) rotate(28)">
+        <!-- Handle down in cavity -->
+        <path d="M -8 -30 L 8 -30 L 6 90 L -6 90 Z" fill="url(#isoMetalLight)"/>
+        <path d="M 8 -30 L 12 -30 L 10 90 L 6 90 Z" fill="url(#isoMetalDark)"/>
+        <!-- Wrench Head sticking up-right -->
+        <path d="M -22 -65 L 18 -65 L 22 -30 L -18 -30 Z" fill="url(#isoMetalLight)"/>
+        <path d="M 18 -65 L 26 -65 L 30 -30 L 22 -30 Z" fill="url(#isoMetalDark)"/>
+        <!-- Jaw Gap -->
+        <path d="M -12 -65 L 2 -65 L 2 -45 L -12 -45 Z" fill="#1e293b"/>
+        <!-- Knurled Screw -->
+        <rect x="-4" y="-40" width="12" height="8" fill="url(#isoMetalDark)"/>
+      </g>
+
     </g>
 
-    <!-- ==================== TOOLBOX BODY (ISOMETRIC 3D) ==================== -->
-    <g id="iso-toolbox-body">
+    <!-- ==================== 4. FRONT OUTER WALLS (RENDERED ON TOP OF TOOLS) ==================== -->
+    <g id="iso-front-walls">
 
-      <!-- 1. Open Lid (Angled Back-Left in Isometric) -->
-      <path d="M 180 280 L 100 230 L 290 120 L 370 170 Z" fill="url(#isoRedSide)"/>
-      <path d="M 370 170 L 290 120 L 480 210 L 560 260 Z" opacity="0.15" fill="#ffffff"/>
-      <!-- Lid Rim / Lip -->
-      <path d="M 100 230 L 290 120 L 295 123 L 105 233 Z" fill="url(#isoRedTop)"/>
-      <path d="M 100 230 L 180 280 L 180 286 L 100 236 Z" fill="url(#isoRedSide)"/>
-
-      <!-- 2. Interior Cavity Opening -->
-      <!-- Back Corner (370, 170), Left Corner (180, 280), Right Corner (520, 255), Front Rim Corner (330, 365) -->
-      <path d="M 180 280 L 370 170 L 520 255 L 330 365 Z" fill="url(#innerCavity)"/>
-
-      <!-- 3. Isometric Front-Left Face (Shadow Side) -->
+      <!-- Isometric Front-Left Face (Shadow Side) -->
       <!-- Vertices: (180, 280) -> (330, 365) -> (330, 455) -> (180, 370) -->
       <path d="M 180 280 L 330 365 L 330 455 L 180 370 Z" fill="url(#isoRedSide)"/>
 
-      <!-- 4. Isometric Front-Right Main Face (Lit Side - Text "도구" goes here) -->
+      <!-- Isometric Front-Right Main Face (Lit Side - Text "도구" goes here) -->
       <!-- Vertices: (330, 365) -> (520, 255) -> (520, 345) -> (330, 455) -->
       <path d="M 330 365 L 520 255 L 520 345 L 330 455 Z" fill="url(#isoRedFront)"/>
 
-      <!-- 5. Isometric Top Bevel Rim -->
+      <!-- Isometric Top Bevel Rim -->
       <!-- Left Rim -->
       <path d="M 175 277 L 330 362 L 330 368 L 175 283 Z" fill="url(#isoRedTop)"/>
       <!-- Right Rim -->
       <path d="M 330 362 L 525 252 L 525 258 L 330 368 Z" fill="url(#isoRedTop)"/>
 
-      <!-- 6. Corner Metal Guards / Trim (3D) -->
+      <!-- Corner Metal Guards / Trim (3D) -->
       <!-- Center Front Corner Rib -->
       <path d="M 327 363 L 333 363 L 333 457 L 327 457 Z" fill="url(#isoMetalLight)"/>
       <!-- Bottom Left Guard -->
@@ -173,7 +195,7 @@
       <!-- Bottom Right Guard -->
       <path d="M 520 332 L 500 341 L 500 354 L 520 345 Z" fill="url(#isoMetalDark)"/>
 
-      <!-- 7. Metal Latches on Front-Right Face -->
+      <!-- Metal Latches on Front-Right Face -->
       <!-- Latch 1 (Left side of front face) -->
       <g transform="translate(370, 335) matrix(0.866, -0.5, 0, 1, 0, 0)">
         <rect x="0" y="0" width="16" height="32" rx="2" fill="url(#isoMetalLight)"/>
@@ -193,17 +215,12 @@
         <circle cx="9" cy="11" r="4" fill="#1e293b"/>
       </g>
 
-      <!-- Carry Handle (Isometric Top / Front Side) -->
+      <!-- Carry Handle (Isometric Front-Left Side) -->
       <path d="M 230 310 C 220 290 260 265 270 285" stroke="url(#isoMetalLight)" stroke-width="6" stroke-linecap="round" fill="none"/>
       <rect x="224" y="304" width="8" height="12" rx="2" fill="url(#isoMetalDark)"/>
       <rect x="264" y="280" width="8" height="12" rx="2" fill="url(#isoMetalDark)"/>
 
       <!-- ==================== KOREAN TEXT "도구" IN ISOMETRIC PERSPECTIVE ==================== -->
-      <!-- Applied to the Front-Right Face using matrix transformation:
-           The front-right face goes along vector (dx=190, dy=-110), angle = -30deg.
-           Matrix transform mapping 2D plane onto isometric front-right face:
-           matrix(0.866, -0.5, 0, 0.9, 365, 385)
-      -->
       <g transform="matrix(0.866, -0.5, 0, 0.88, 362, 382)">
         <!-- Dark Badge Background on Front Face -->
         <rect x="0" y="-35" width="130" height="52" rx="8" fill="#7f1d1d" opacity="0.75"/>
