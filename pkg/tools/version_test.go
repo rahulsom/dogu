@@ -269,6 +269,23 @@ func TestInstallCandidateDirUsesFullyResolvedVersion(t *testing.T) {
 	}
 }
 
+func TestJavaCandidateDirIncludesVendorSuffix(t *testing.T) {
+	j := &JavaTool{}
+	url, fn, normVer, resolvedDist, err := j.resolveDownloadURL(t.Context(), "17", "temurin", "macos", "x64", "", false)
+	if err != nil {
+		t.Fatalf("resolveDownloadURL failed: %v", err)
+	}
+	if url == "" || fn == "" {
+		t.Errorf("expected non-empty url and filename")
+	}
+	if normVer == "17" {
+		t.Errorf("expected normVer to be resolved to full version, got %q", normVer)
+	}
+	if resolvedDist != "temurin" {
+		t.Errorf("expected resolvedDist to be temurin, got %q", resolvedDist)
+	}
+}
+
 func TestFindJDKHome(t *testing.T) {
 	// 1. Standard layout: baseDir/bin
 	tmpDir1 := t.TempDir()
