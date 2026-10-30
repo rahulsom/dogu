@@ -37,7 +37,7 @@ func (a *AntTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	filename := fmt.Sprintf("apache-ant-%s-bin.tar.gz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "ant", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "ant", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "ant", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

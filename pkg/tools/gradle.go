@@ -37,7 +37,7 @@ func (g *GradleTool) Install(ctx context.Context, versionSpec string, doguHome s
 	filename := fmt.Sprintf("gradle-%s-bin.zip", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "gradle", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "gradle", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "gradle", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

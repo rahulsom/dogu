@@ -45,7 +45,7 @@ func (p *PNPMTool) Install(ctx context.Context, versionSpec string, doguHome str
 
 	downloadURL := fmt.Sprintf("%s/v%s/%s", baseURL, normVer, binFileName)
 
-	installDir := filepath.Join(doguHome, "candidates", "pnpm", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "pnpm", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "pnpm", binFileName)
 
 	targetBinName := "pnpm"

@@ -45,7 +45,7 @@ func (b *BazelTool) Install(ctx context.Context, versionSpec string, doguHome st
 
 	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, normVer, binName)
 
-	installDir := filepath.Join(doguHome, "candidates", "bazel", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "bazel", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "bazel", binName)
 
 	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

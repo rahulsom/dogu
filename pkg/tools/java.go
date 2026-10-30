@@ -61,7 +61,7 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 		return nil, fmt.Errorf("failed to resolve java version '%s': %w", versionSpec, err)
 	}
 
-	installDir := filepath.Join(doguHome, "candidates", "java", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "java", normVersion)
 	cacheFile := filepath.Join(doguHome, "cache", "java", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

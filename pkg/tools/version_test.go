@@ -241,6 +241,34 @@ func TestSelectBestVersionWithPrereleases(t *testing.T) {
 	}
 }
 
+func TestInstallCandidateDirUsesFullyResolvedVersion(t *testing.T) {
+	// Test that installing a tool with a partial version spec creates candidate directory with fully resolved version
+	doguHome := t.TempDir()
+
+	tool, ok := Get("ant")
+	if !ok {
+		t.Fatalf("ant tool not registered")
+	}
+
+	result, err := tool.Install(t.Context(), "1.10", doguHome, "", InstallOptions{})
+	if err != nil {
+		t.Fatalf("Install failed: %v", err)
+	}
+
+	if result.NormalizedVer == "1.10" {
+		t.Fatalf("expected NormalizedVer to be resolved to full version, got %q", result.NormalizedVer)
+	}
+
+	expectedInstallDir := filepath.Join(doguHome, "candidates", "ant", result.NormalizedVer)
+	if result.InstallDir != expectedInstallDir {
+		t.Errorf("InstallDir = %q; want %q", result.InstallDir, expectedInstallDir)
+	}
+
+	if filepath.Base(result.InstallDir) == "1.10" {
+		t.Errorf("InstallDir base should be fully resolved version (%q), but got partial spec '1.10'", result.NormalizedVer)
+	}
+}
+
 func TestFindJDKHome(t *testing.T) {
 	// 1. Standard layout: baseDir/bin
 	tmpDir1 := t.TempDir()

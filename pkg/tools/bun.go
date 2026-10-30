@@ -39,7 +39,7 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	filename := fmt.Sprintf("bun-%s-%s.zip", targetOS, targetArch)
 	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, tag, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "bun", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "bun", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "bun", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

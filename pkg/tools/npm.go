@@ -42,7 +42,7 @@ func (n *NPMTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	filename := fmt.Sprintf("npm-%s.tgz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "npm", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "npm", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "npm", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
