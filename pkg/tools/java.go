@@ -56,12 +56,17 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 	osName := mapOS(runtime.GOOS)
 	archName := mapArch(runtime.GOARCH)
 
-	downloadURL, filename, normVersion, err := j.resolveDownloadURL(ctx, ver, dist, osName, archName, mirrorBaseURL, opts.IncludePrerelease)
+	downloadURL, filename, normVersion, resolvedDist, err := j.resolveDownloadURL(ctx, ver, dist, osName, archName, mirrorBaseURL, opts.IncludePrerelease)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve java version '%s': %w", versionSpec, err)
 	}
 
-	installDir := filepath.Join(doguHome, "candidates", "java", versionSpec)
+	candidateDirName := normVersion
+	if resolvedDist != "" {
+		candidateDirName = normVersion + "-" + resolvedDist
+	}
+
+	installDir := filepath.Join(doguHome, "candidates", "java", candidateDirName)
 	cacheFile := filepath.Join(doguHome, "cache", "java", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
@@ -83,7 +88,7 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 	return &InstallResult{
 		ToolName:      "java",
 		RequestedVer:  versionSpec,
-		NormalizedVer: normVersion,
+		NormalizedVer: candidateDirName,
 		InstallDir:    installDir,
 		HomeDir:       jdkHome,
 		BinDirs:       []string{binDir},
@@ -108,7 +113,7 @@ func parseJavaSpec(spec string) (version string, distribution string) {
 	return version, distribution
 }
 
-func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist string, osName string, archName string, mirrorBaseURL string, includePrerelease bool) (downloadURL string, filename string, normVersion string, err error) {
+func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist string, osName string, archName string, mirrorBaseURL string, includePrerelease bool) (downloadURL string, filename string, normVersion string, resolvedDist string, err error) {
 	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") {
 		mirrorBaseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 		distSuffix := ""
@@ -117,7 +122,7 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 		}
 		fn := fmt.Sprintf("java-%s%s-%s-%s.tar.gz", ver, distSuffix, osName, archName)
 		url := fmt.Sprintf("%s/%s", mirrorBaseURL, fn)
-		return url, fn, ver, nil
+		return url, fn, ver, dist, nil
 	}
 
 	archiveType := "tar.gz"
@@ -148,22 +153,22 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 	reqURL := fmt.Sprintf("%s?%s", endpoint, v.Encode())
 	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", "", fmt.Errorf("foojay disco api returned status %s", resp.Status)
+		return "", "", "", "", fmt.Errorf("foojay disco api returned status %s", resp.Status)
 	}
 
 	var discoResp discoResponse
 	if err := json.NewDecoder(resp.Body).Decode(&discoResp); err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
 	}
 
 	var validPkgs []discoPackage
@@ -180,11 +185,15 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 		if len(discoResp.Result) > 0 && !includePrerelease && !specIsRC {
 			validPkgs = discoResp.Result
 		} else {
-			return "", "", "", fmt.Errorf("no java package found for version=%s, dist=%s, os=%s, arch=%s", ver, dist, osName, archName)
+			return "", "", "", "", fmt.Errorf("no java package found for version=%s, dist=%s, os=%s, arch=%s", ver, dist, osName, archName)
 		}
 	}
 
 	pkg := validPkgs[0]
+	pkgDist := strings.ToLower(pkg.Distribution)
+	if pkgDist == "" {
+		pkgDist = dist
+	}
 	redirectURL := pkg.Links.PkgDownloadRedirect
 	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") && strings.HasPrefix(redirectURL, "https://") {
 		if parsedMirror, err := url.Parse(mirrorBaseURL); err == nil && parsedMirror.Host != "" {
@@ -193,7 +202,7 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 			}
 		}
 	}
-	return redirectURL, pkg.Filename, pkg.JavaVersion, nil
+	return redirectURL, pkg.Filename, pkg.JavaVersion, pkgDist, nil
 }
 
 func buildJavaResultFromDir(versionSpec string, installDir string) *InstallResult {

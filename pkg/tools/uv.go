@@ -43,7 +43,7 @@ func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome strin
 
 	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, normVer, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "uv", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "uv", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "uv", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

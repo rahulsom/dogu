@@ -37,7 +37,7 @@ func (y *YarnTool) Install(ctx context.Context, versionSpec string, doguHome str
 	filename := fmt.Sprintf("yarn-v%s.tar.gz", normVer)
 	downloadURL := fmt.Sprintf("%s/v%s/%s", baseURL, normVer, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "yarn", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "yarn", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "yarn", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

@@ -47,7 +47,7 @@ func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome st
 	downloadURL := resolvePantsDownloadURL(ctx, baseURL, normVer, osName, archName)
 
 	cacheFileName := filepath.Base(downloadURL)
-	installDir := filepath.Join(doguHome, "candidates", "pants", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "pants", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "pants", cacheFileName)
 
 	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

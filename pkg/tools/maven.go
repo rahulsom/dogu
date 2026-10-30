@@ -37,7 +37,7 @@ func (m *MavenTool) Install(ctx context.Context, versionSpec string, doguHome st
 	filename := fmt.Sprintf("apache-maven-%s-bin.tar.gz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s/binaries/%s", baseURL, normVer, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "maven", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "maven", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "maven", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

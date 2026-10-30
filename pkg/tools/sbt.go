@@ -42,7 +42,7 @@ func (s *SBTTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	filename := fmt.Sprintf("sbt-%s.%s", normVer, ext)
 	downloadURL := fmt.Sprintf("%s/v%s/%s", baseURL, normVer, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "sbt", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "sbt", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "sbt", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

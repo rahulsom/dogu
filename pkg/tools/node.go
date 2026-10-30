@@ -50,7 +50,7 @@ func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome str
 	filename := fmt.Sprintf("node-%s-%s-%s.%s", normVer, osPlatform, arch, ext)
 	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, normVer, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "node", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "node", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "node", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {

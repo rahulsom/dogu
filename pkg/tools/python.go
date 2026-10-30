@@ -44,7 +44,7 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 	filename := fmt.Sprintf("cpython-%s+%s-%s-install_only.tar.gz", normVer, "20240107", target)
 	downloadURL := fmt.Sprintf("%s/20240107/%s", baseURL, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "python", versionSpec)
+	installDir := filepath.Join(doguHome, "candidates", "python", normVer)
 	cacheFile := filepath.Join(doguHome, "cache", "python", filename)
 
 	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
