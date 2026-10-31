@@ -1,6 +1,8 @@
 = dogu
 :source-highlighter: highlight.js
 
+image::images/toolbox.png[도구 toolbox,width=320]
+
 `dogu` is a multiplatform CLI developer tool manager written in Go.
 
 For user-facing documentation, usage instructions, configuration guides, and supported tool references, please visit the https://rahulsom.github.io/dogu/[dogu Documentation Site].

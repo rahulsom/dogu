@@ -57,8 +57,10 @@ jobs:
 
       - name: Build docs
         run: |
-          mkdir -p build/docs
-          asciidoctor -D build/docs docs/*.adoc
+          mkdir -p build/docs/images
+          cp images/toolbox.png images/favicon.ico build/docs/images/
+          cp docs/style.css build/docs/
+          asciidoctor -a favicon=images/favicon.ico -D build/docs docs/*.adoc
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

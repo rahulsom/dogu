@@ -4,6 +4,8 @@
 :icons: font
 :source-highlighter: highlight.js
 
+image::images/toolbox.png[도구 toolbox,width=320]
+
 `dogu` is a multiplatform command-line tool written in Go that seamlessly provisions and configures developer toolchains.
 _Dogu_ is Korean for _tools_.
 

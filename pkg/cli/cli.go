@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +17,9 @@ import (
 	"github.com/dogu-dev/dogu/pkg/tools"
 )
 
+//go:embed toolbox.txt
+var toolboxArt string
+
 type toolHelp struct {
 	name        string
 	description string
@@ -29,15 +33,30 @@ type ecosystemHelp struct {
 
 // PrintUsage prints usage instructions including the list of supported tools grouped by ecosystem.
 func PrintUsage(out *os.File) {
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))       // Hot Pink for Main Headers
-	ecoTitleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))       // Bright Cyan for Ecosystem Titles
-	toolNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42"))       // Vibrant Green for Tool Names
-	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))                     // Bright text for descriptions
-	exampleLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))              // Muted Gray for "Examples:" label
-	exampleValStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("117"))                // Soft Cyan/Blue for example flags
-	flagNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))       // Warm Yellow/Amber for Flags
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))   // Hot Pink for Main Headers
+	ecoTitleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))  // Bright Cyan for Ecosystem Titles
+	toolNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42"))  // Vibrant Green for Tool Names
+	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))                // Bright text for descriptions
+	exampleLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))        // Muted Gray for "Examples:" label
+	exampleValStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("117"))          // Soft Cyan/Blue for example flags
+	flagNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214")) // Warm Yellow/Amber for Flags
 
 	var sb strings.Builder
+
+	// Explicit ANSI colors keep the toolbox palette independent of help heading styles.
+	sb.WriteString(strings.NewReplacer(
+		"{{steel}}", "\x1b[38;2;173;193;204m",
+		"{{wood}}", "\x1b[38;2;216;163;101m",
+		"{{handle}}", "\x1b[38;2;82;108;121m",
+		"{{teal}}", "\x1b[38;2;57;165;185m",
+		"{{yellow}}", "\x1b[38;2;242;188;85m",
+		"{{rim}}", "\x1b[38;2;247;124;97m",
+		"{{panel}}", "\x1b[38;2;133;47;45;48;2;239;102;80m",
+		"{{side}}", "\x1b[38;2;116;47;45;48;2;173;48;44m",
+		"{{latch}}", "\x1b[38;2;41;61;72;48;2;214;225;228m",
+		"{{label}}", "\x1b[38;2;255;240;211;48;2;239;102;80m",
+		"{{reset}}", "\x1b[0m",
+	).Replace(toolboxArt))
 
 	sb.WriteString(headerStyle.Render("Usage:") + "\n")
 	sb.WriteString("  dogu [-v|--verbose] [--force] [--prerelease] [tools...] -- <command> [args...]\n\n")
