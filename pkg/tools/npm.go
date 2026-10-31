@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type NPMTool struct{}
@@ -22,52 +18,33 @@ func (n *NPMTool) Name() string {
 }
 
 func (n *NPMTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "npm", versionSpec, opts.IncludePrerelease); ok {
-			res := buildResultFromDir("npm", versionSpec, existingDir)
-			for _, b := range res.BinDirs {
-				ensureNPMWrappers(b)
-			}
-			return res, nil
+	postNPM := func(res *InstallResult) error {
+		for _, b := range res.BinDirs {
+			ensureNPMWrappers(b)
 		}
+		return nil
 	}
 
-	baseURL := "https://registry.npmjs.org/npm/-"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
+	if res, ok, err := checkExistingCandidate(doguHome, "npm", versionSpec, opts, postNPM); ok || err != nil {
+		return res, err
 	}
 
+	baseURL := resolveBaseURL("https://registry.npmjs.org/npm/-", mirrorBaseURL)
 	normVer := resolveNPMToolVersion(ctx, "npm", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
 
 	filename := fmt.Sprintf("npm-%s.tgz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "npm", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "npm", filename)
-
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download npm: %w", err)
-	}
-
-	npmHome := downloader.FindSubDirWithDir(installDir, "bin")
-	binDir := filepath.Join(npmHome, "bin")
-	ensureNPMWrappers(binDir)
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("npm", majorVer): npmHome,
-		env.FormatEnvKey("npm", ""):        npmHome,
-	}
-
-	return &InstallResult{
+	return installArchiveTool(ctx, ArchiveInstallConfig{
 		ToolName:      "npm",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       npmHome,
-		BinDirs:       []string{binDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   downloadURL,
+		FileName:      filename,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		PostInstall:   postNPM,
+	})
 }
 
 func resolveNPMToolVersion(ctx context.Context, pkgName string, versionSpec string, mirrorBaseURL string, includePrerelease bool) string {

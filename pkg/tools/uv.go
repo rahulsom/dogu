@@ -3,12 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"runtime"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type UVTool struct{}
@@ -22,17 +17,11 @@ func (u *UVTool) Name() string {
 }
 
 func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "uv", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("uv", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "uv", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
-	baseURL := "https://github.com/astral-sh/uv/releases/download"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
-
+	baseURL := resolveBaseURL("https://github.com/astral-sh/uv/releases/download", mirrorBaseURL)
 	normVer := resolveUVVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	target := mapUVTarget()
@@ -43,33 +32,18 @@ func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome strin
 
 	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, normVer, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "uv", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "uv", filename)
-
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download uv: %w", err)
-	}
-
-	uvHome := downloader.FindSubDirWithDir(installDir, "uv")
-	if fi, err := filepath.Glob(filepath.Join(installDir, "*", "uv")); err == nil && len(fi) > 0 {
-		uvHome = filepath.Dir(fi[0])
-	}
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("uv", majorVer): uvHome,
-		env.FormatEnvKey("uv", ""):        uvHome,
-	}
-
-	return &InstallResult{
+	return installArchiveTool(ctx, ArchiveInstallConfig{
 		ToolName:      "uv",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       uvHome,
-		BinDirs:       []string{uvHome},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   downloadURL,
+		FileName:      filename,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		FindDirs: func(installDir string) (string, []string) {
+			return findDirWithBinary(installDir, "uv")
+		},
+	})
 }
 
 func resolveUVVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {

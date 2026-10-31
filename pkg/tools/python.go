@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type PythonTool struct{}
@@ -23,57 +22,43 @@ func (p *PythonTool) Name() string {
 }
 
 func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "python", versionSpec, opts.IncludePrerelease); ok {
-			res := buildResultFromDir("python", versionSpec, existingDir)
-			for _, b := range res.BinDirs {
-				ensurePythonSymlink(b)
-			}
-			return res, nil
+	postPython := func(res *InstallResult) error {
+		for _, b := range res.BinDirs {
+			ensurePythonSymlink(b)
 		}
+		return nil
 	}
 
-	baseURL := "https://github.com/indygreg/python-build-standalone/releases/download"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
+	if res, ok, err := checkExistingCandidate(doguHome, "python", versionSpec, opts, postPython); ok || err != nil {
+		return res, err
 	}
 
+	baseURL := resolveBaseURL("https://github.com/indygreg/python-build-standalone/releases/download", mirrorBaseURL)
 	normVer := resolvePythonVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	target := mapPythonTarget()
 	filename := fmt.Sprintf("cpython-%s+%s-%s-install_only.tar.gz", normVer, "20240107", target)
 	downloadURL := fmt.Sprintf("%s/20240107/%s", baseURL, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "python", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "python", filename)
-
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download python: %w", err)
-	}
-
-	pythonHome := downloader.FindSubDirWithDir(installDir, "bin")
-	binDir := filepath.Join(pythonHome, "bin")
-	if runtime.GOOS == "windows" {
-		binDir = pythonHome
-	}
-	ensurePythonSymlink(binDir)
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("python", majorVer): pythonHome,
-		env.FormatEnvKey("python", ""):        pythonHome,
-		"PYTHONHOME":                        pythonHome,
-	}
-
-	return &InstallResult{
+	return installArchiveTool(ctx, ArchiveInstallConfig{
 		ToolName:      "python",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       pythonHome,
-		BinDirs:       []string{binDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   downloadURL,
+		FileName:      filename,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		ExtraHomeEnv:  []string{"PYTHONHOME"},
+		FindDirs: func(installDir string) (string, []string) {
+			pythonHome := downloader.FindSubDirWithDir(installDir, "bin")
+			binDir := filepath.Join(pythonHome, "bin")
+			if runtime.GOOS == "windows" {
+				binDir = pythonHome
+			}
+			return pythonHome, []string{binDir}
+		},
+		PostInstall: postPython,
+	})
 }
 
 func resolvePythonVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {

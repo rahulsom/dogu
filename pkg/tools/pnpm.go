@@ -3,12 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"runtime"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type PNPMTool struct{}
@@ -22,56 +17,33 @@ func (p *PNPMTool) Name() string {
 }
 
 func (p *PNPMTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "pnpm", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("pnpm", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "pnpm", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
 	normVer := resolveNPMToolVersion(ctx, "pnpm", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
-
-	baseURL := "https://github.com/pnpm/pnpm/releases/download"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
+	baseURL := resolveBaseURL("https://github.com/pnpm/pnpm/releases/download", mirrorBaseURL)
 
 	osName := mapPNPMOS()
 	archName := mapPNPMArch()
 
 	binFileName := fmt.Sprintf("pnpm-%s-%s", osName, archName)
-	if osName == "win" {
-		binFileName += ".exe"
-	}
-
-	downloadURL := fmt.Sprintf("%s/v%s/%s", baseURL, normVer, binFileName)
-
-	installDir := filepath.Join(doguHome, "candidates", "pnpm", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "pnpm", binFileName)
-
 	targetBinName := "pnpm"
 	if osName == "win" {
+		binFileName += ".exe"
 		targetBinName = "pnpm.exe"
 	}
 
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBinName, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download pnpm: %w", err)
-	}
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("pnpm", majorVer): installDir,
-		env.FormatEnvKey("pnpm", ""):        installDir,
-	}
-
-	return &InstallResult{
+	return installBinaryTool(ctx, BinaryInstallConfig{
 		ToolName:      "pnpm",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       installDir,
-		BinDirs:       []string{installDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   fmt.Sprintf("%s/v%s/%s", baseURL, normVer, binFileName),
+		CacheFileName: binFileName,
+		TargetBin:     targetBinName,
+		DoguHome:      doguHome,
+		Opts:          opts,
+	})
 }
 
 func mapPNPMOS() string {

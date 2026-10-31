@@ -524,6 +524,16 @@ func FetchGitHubReleases(ctx context.Context, owner, repo string) ([]string, err
 	return atomVersions, nil
 }
 
+// ResolveGitHubVersion fetches tags/releases for owner/repo and finds the best match for versionSpec.
+func ResolveGitHubVersion(ctx context.Context, owner, repo, versionSpec string, includePrerelease bool) string {
+	if versions, err := FetchGitHubReleases(ctx, owner, repo); err == nil && len(versions) > 0 {
+		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
+			return CleanVersion(best)
+		}
+	}
+	return CleanVersion(versionSpec)
+}
+
 // FetchApacheMavenVersions retrieves version strings from Apache Maven archive index.
 func FetchApacheMavenVersions(ctx context.Context, baseURL string) ([]string, error) {
 	if baseURL == "" {

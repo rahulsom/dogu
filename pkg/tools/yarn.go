@@ -3,11 +3,6 @@ package tools
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type YarnTool struct{}
@@ -21,45 +16,23 @@ func (y *YarnTool) Name() string {
 }
 
 func (y *YarnTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "yarn", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("yarn", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "yarn", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
 	normVer := resolveNPMToolVersion(ctx, "yarn", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
-
-	baseURL := "https://github.com/yarnpkg/yarn/releases/download"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
+	baseURL := resolveBaseURL("https://github.com/yarnpkg/yarn/releases/download", mirrorBaseURL)
 
 	filename := fmt.Sprintf("yarn-v%s.tar.gz", normVer)
 	downloadURL := fmt.Sprintf("%s/v%s/%s", baseURL, normVer, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "yarn", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "yarn", filename)
-
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download yarn: %w", err)
-	}
-
-	yarnHome := downloader.FindSubDirWithDir(installDir, "bin")
-	binDir := filepath.Join(yarnHome, "bin")
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("yarn", majorVer): yarnHome,
-		env.FormatEnvKey("yarn", ""):        yarnHome,
-	}
-
-	return &InstallResult{
+	return installArchiveTool(ctx, ArchiveInstallConfig{
 		ToolName:      "yarn",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       yarnHome,
-		BinDirs:       []string{binDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   downloadURL,
+		FileName:      filename,
+		DoguHome:      doguHome,
+		Opts:          opts,
+	})
 }

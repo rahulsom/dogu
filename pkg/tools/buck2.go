@@ -3,12 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"runtime"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type Buck2Tool struct{}
@@ -22,17 +17,11 @@ func (b *Buck2Tool) Name() string {
 }
 
 func (b *Buck2Tool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "buck2", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("buck2", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "buck2", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
-	baseURL := "https://github.com/facebook/buck2/releases/download"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
-
+	baseURL := resolveBaseURL("https://github.com/facebook/buck2/releases/download", mirrorBaseURL)
 	normVer := resolveBuck2Version(ctx, versionSpec, opts.IncludePrerelease)
 
 	arch, sys := mapBuck2Target()
@@ -42,40 +31,21 @@ func (b *Buck2Tool) Install(ctx context.Context, versionSpec string, doguHome st
 		targetBin = "buck2.exe"
 	}
 
-	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, normVer, binName)
-
-	installDir := filepath.Join(doguHome, "candidates", "buck2", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "buck2", binName)
-
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download buck2: %w", err)
-	}
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("buck2", majorVer): installDir,
-		env.FormatEnvKey("buck2", ""):        installDir,
-		"BUCK2_HOME":                        installDir,
-	}
-
-	return &InstallResult{
+	return installBinaryTool(ctx, BinaryInstallConfig{
 		ToolName:      "buck2",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       installDir,
-		BinDirs:       []string{installDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   fmt.Sprintf("%s/%s/%s", baseURL, normVer, binName),
+		CacheFileName: binName,
+		TargetBin:     targetBin,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		ExtraHomeEnv:  []string{"BUCK2_HOME"},
+	})
 }
 
 func resolveBuck2Version(ctx context.Context, versionSpec string, includePrerelease bool) string {
-	if versions, err := FetchGitHubReleases(ctx, "facebook", "buck2"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
-			return CleanVersion(best)
-		}
-	}
-	return CleanVersion(versionSpec)
+	return ResolveGitHubVersion(ctx, "facebook", "buck2", versionSpec, includePrerelease)
 }
 
 func mapBuck2Target() (string, string) {

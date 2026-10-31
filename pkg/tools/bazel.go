@@ -3,12 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"runtime"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type BazelTool struct{}
@@ -22,17 +17,11 @@ func (b *BazelTool) Name() string {
 }
 
 func (b *BazelTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "bazel", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("bazel", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "bazel", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
-	baseURL := "https://github.com/bazelbuild/bazel/releases/download"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
-
+	baseURL := resolveBaseURL("https://github.com/bazelbuild/bazel/releases/download", mirrorBaseURL)
 	normVer := resolveBazelVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	osName, archName := mapBazelTarget()
@@ -43,40 +32,21 @@ func (b *BazelTool) Install(ctx context.Context, versionSpec string, doguHome st
 		targetBin = "bazel.exe"
 	}
 
-	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, normVer, binName)
-
-	installDir := filepath.Join(doguHome, "candidates", "bazel", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "bazel", binName)
-
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download bazel: %w", err)
-	}
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("bazel", majorVer): installDir,
-		env.FormatEnvKey("bazel", ""):        installDir,
-		"BAZEL_HOME":                        installDir,
-	}
-
-	return &InstallResult{
+	return installBinaryTool(ctx, BinaryInstallConfig{
 		ToolName:      "bazel",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       installDir,
-		BinDirs:       []string{installDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   fmt.Sprintf("%s/%s/%s", baseURL, normVer, binName),
+		CacheFileName: binName,
+		TargetBin:     targetBin,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		ExtraHomeEnv:  []string{"BAZEL_HOME"},
+	})
 }
 
 func resolveBazelVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
-	if versions, err := FetchGitHubReleases(ctx, "bazelbuild", "bazel"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
-			return CleanVersion(best)
-		}
-	}
-	return CleanVersion(versionSpec)
+	return ResolveGitHubVersion(ctx, "bazelbuild", "bazel", versionSpec, includePrerelease)
 }
 
 func mapBazelTarget() (string, string) {

@@ -9,9 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type PantsTool struct{}
@@ -25,17 +22,11 @@ func (p *PantsTool) Name() string {
 }
 
 func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "pants", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("pants", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "pants", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
-	baseURL := "https://github.com/pantsbuild/pants/releases/download"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
-
+	baseURL := resolveBaseURL("https://github.com/pantsbuild/pants/releases/download", mirrorBaseURL)
 	normVer := resolvePantsVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	osName, archName := mapPantsTarget()
@@ -45,31 +36,19 @@ func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome st
 	}
 
 	downloadURL := resolvePantsDownloadURL(ctx, baseURL, normVer, osName, archName)
-
 	cacheFileName := filepath.Base(downloadURL)
-	installDir := filepath.Join(doguHome, "candidates", "pants", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "pants", cacheFileName)
 
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, targetBin, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download pants: %w", err)
-	}
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("pants", majorVer): installDir,
-		env.FormatEnvKey("pants", ""):        installDir,
-		"PANTS_HOME":                         installDir,
-	}
-
-	return &InstallResult{
+	return installBinaryTool(ctx, BinaryInstallConfig{
 		ToolName:      "pants",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       installDir,
-		BinDirs:       []string{installDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   downloadURL,
+		CacheFileName: cacheFileName,
+		TargetBin:     targetBin,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		ExtraHomeEnv:  []string{"PANTS_HOME"},
+	})
 }
 
 func resolvePantsVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
