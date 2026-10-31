@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/dogu-dev/dogu/pkg/downloader"
 	"github.com/dogu-dev/dogu/pkg/env"
 )
 
@@ -66,34 +65,20 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 		candidateDirName = normVersion + "-" + resolvedDist
 	}
 
-	installDir := filepath.Join(doguHome, "candidates", "java", candidateDirName)
-	cacheFile := filepath.Join(doguHome, "cache", "java", filename)
-
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download and extract java: %w", err)
-	}
-
-	jdkHome := findJDKHome(installDir)
-	binDir := filepath.Join(jdkHome, "bin")
-
-	majorVersion := env.ExtractMajorVersion(ver)
-	majorKey := env.FormatEnvKey("java", majorVersion)
-	javaHomeKey := env.FormatEnvKey("java", "")
-
-	envVars := map[string]string{
-		majorKey:    jdkHome,
-		javaHomeKey: jdkHome,
-	}
-
-	return &InstallResult{
-		ToolName:      "java",
-		RequestedVer:  versionSpec,
-		NormalizedVer: candidateDirName,
-		InstallDir:    installDir,
-		HomeDir:       jdkHome,
-		BinDirs:       []string{binDir},
-		EnvVars:       envVars,
-	}, nil
+	return installArchiveTool(ctx, ArchiveInstallConfig{
+		ToolName:         "java",
+		VersionSpec:      versionSpec,
+		NormalizedVer:    ver,
+		CandidateDirName: candidateDirName,
+		DownloadURL:      downloadURL,
+		FileName:         filename,
+		DoguHome:         doguHome,
+		Opts:             opts,
+		FindDirs: func(installDir string) (string, []string) {
+			jdkHome := findJDKHome(installDir)
+			return jdkHome, []string{filepath.Join(jdkHome, "bin")}
+		},
+	})
 }
 
 func parseJavaSpec(spec string) (version string, distribution string) {

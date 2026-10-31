@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type NodeTool struct{}
@@ -24,17 +23,11 @@ func (n *NodeTool) Name() string {
 }
 
 func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "node", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("node", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "node", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
-	baseURL := "https://nodejs.org/dist"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
-
+	baseURL := resolveBaseURL("https://nodejs.org/dist", mirrorBaseURL)
 	normVer, err := resolveNodeFullVersion(ctx, baseURL, versionSpec, opts.IncludePrerelease)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve node version '%s': %w", versionSpec, err)
@@ -50,36 +43,25 @@ func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome str
 	filename := fmt.Sprintf("node-%s-%s-%s.%s", normVer, osPlatform, arch, ext)
 	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, normVer, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "node", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "node", filename)
-
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download node from %s: %w", downloadURL, err)
-	}
-
-	nodeHome := downloader.FindSubDirWithDir(installDir, "bin")
-	binDir := filepath.Join(nodeHome, "bin")
-	if runtime.GOOS == "windows" {
-		if _, err := filepath.Glob(filepath.Join(nodeHome, "node.exe")); err == nil {
-			binDir = nodeHome
-		}
-	}
-
-	majorVer := env.ExtractMajorVersion(versionSpec)
-	envVars := map[string]string{
-		env.FormatEnvKey("node", majorVer): nodeHome,
-		env.FormatEnvKey("node", ""):        nodeHome,
-	}
-
-	return &InstallResult{
+	return installArchiveTool(ctx, ArchiveInstallConfig{
 		ToolName:      "node",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       nodeHome,
-		BinDirs:       []string{binDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   downloadURL,
+		FileName:      filename,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		FindDirs: func(installDir string) (string, []string) {
+			nodeHome := downloader.FindSubDirWithDir(installDir, "bin")
+			binDir := filepath.Join(nodeHome, "bin")
+			if runtime.GOOS == "windows" {
+				if _, err := filepath.Glob(filepath.Join(nodeHome, "node.exe")); err == nil {
+					binDir = nodeHome
+				}
+			}
+			return nodeHome, []string{binDir}
+		},
+	})
 }
 
 func resolveNodeFullVersion(ctx context.Context, baseURL string, spec string, includePrerelease bool) (string, error) {

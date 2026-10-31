@@ -3,11 +3,6 @@ package tools
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type AntTool struct{}
@@ -21,48 +16,26 @@ func (a *AntTool) Name() string {
 }
 
 func (a *AntTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "ant", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("ant", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "ant", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
-	baseURL := "https://archive.apache.org/dist/ant/binaries"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
-
+	baseURL := resolveBaseURL("https://archive.apache.org/dist/ant/binaries", mirrorBaseURL)
 	normVer := resolveAntVersion(ctx, versionSpec, baseURL, opts.IncludePrerelease)
 
 	filename := fmt.Sprintf("apache-ant-%s-bin.tar.gz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "ant", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "ant", filename)
-
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download ant: %w", err)
-	}
-
-	antHome := downloader.FindSubDirWithDir(installDir, "bin")
-	binDir := filepath.Join(antHome, "bin")
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("ant", majorVer): antHome,
-		env.FormatEnvKey("ant", ""):        antHome,
-		"ANT_HOME":                        antHome,
-	}
-
-	return &InstallResult{
+	return installArchiveTool(ctx, ArchiveInstallConfig{
 		ToolName:      "ant",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       antHome,
-		BinDirs:       []string{binDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   downloadURL,
+		FileName:      filename,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		ExtraHomeEnv:  []string{"ANT_HOME"},
+	})
 }
 
 func resolveAntVersion(ctx context.Context, versionSpec string, baseURL string, includePrerelease bool) string {

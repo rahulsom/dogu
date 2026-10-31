@@ -3,11 +3,6 @@ package tools
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type GradleTool struct{}
@@ -21,48 +16,26 @@ func (g *GradleTool) Name() string {
 }
 
 func (g *GradleTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "gradle", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("gradle", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "gradle", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
-	baseURL := "https://services.gradle.org/distributions"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
-
+	baseURL := resolveBaseURL("https://services.gradle.org/distributions", mirrorBaseURL)
 	normVer := resolveGradleVersion(ctx, versionSpec, mirrorBaseURL, opts.IncludePrerelease)
 
 	filename := fmt.Sprintf("gradle-%s-bin.zip", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
 
-	installDir := filepath.Join(doguHome, "candidates", "gradle", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "gradle", filename)
-
-	if err := downloader.DownloadAndExtract(ctx, downloadURL, cacheFile, installDir, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download gradle: %w", err)
-	}
-
-	gradleHome := downloader.FindSubDirWithDir(installDir, "bin")
-	binDir := filepath.Join(gradleHome, "bin")
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("gradle", majorVer): gradleHome,
-		env.FormatEnvKey("gradle", ""):        gradleHome,
-		"GRADLE_HOME":                        gradleHome,
-	}
-
-	return &InstallResult{
+	return installArchiveTool(ctx, ArchiveInstallConfig{
 		ToolName:      "gradle",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       gradleHome,
-		BinDirs:       []string{binDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   downloadURL,
+		FileName:      filename,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		ExtraHomeEnv:  []string{"GRADLE_HOME"},
+	})
 }
 
 func resolveGradleVersion(ctx context.Context, versionSpec string, mirrorBaseURL string, includePrerelease bool) string {

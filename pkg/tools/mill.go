@@ -3,12 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"runtime"
-	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
-	"github.com/dogu-dev/dogu/pkg/env"
 )
 
 type MillTool struct{}
@@ -22,17 +17,11 @@ func (m *MillTool) Name() string {
 }
 
 func (m *MillTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "mill", versionSpec, opts.IncludePrerelease); ok {
-			return buildResultFromDir("mill", versionSpec, existingDir), nil
-		}
+	if res, ok, err := checkExistingCandidate(doguHome, "mill", versionSpec, opts, nil); ok || err != nil {
+		return res, err
 	}
 
-	baseURL := "https://github.com/com-lihaoyi/mill/releases/download"
-	if mirrorBaseURL != "" {
-		baseURL = strings.TrimSuffix(mirrorBaseURL, "/")
-	}
-
+	baseURL := resolveBaseURL("https://github.com/com-lihaoyi/mill/releases/download", mirrorBaseURL)
 	normVer := resolveMillVersion(ctx, versionSpec, opts.IncludePrerelease)
 
 	assetName := normVer
@@ -42,39 +31,20 @@ func (m *MillTool) Install(ctx context.Context, versionSpec string, doguHome str
 		binaryName = "mill.bat"
 	}
 
-	downloadURL := fmt.Sprintf("%s/%s/%s", baseURL, normVer, assetName)
-
-	installDir := filepath.Join(doguHome, "candidates", "mill", normVer)
-	cacheFile := filepath.Join(doguHome, "cache", "mill", fmt.Sprintf("mill-%s-%s", normVer, binaryName))
-
-	if err := downloader.SaveSingleBinary(ctx, downloadURL, cacheFile, installDir, binaryName, downloader.WithRewriteRule(opts.RewriteRules)); err != nil {
-		return nil, fmt.Errorf("failed to download mill: %w", err)
-	}
-
-	majorVer := env.ExtractMajorVersion(normVer)
-	envVars := map[string]string{
-		env.FormatEnvKey("mill", majorVer): installDir,
-		env.FormatEnvKey("mill", ""):        installDir,
-		"MILL_HOME":                         installDir,
-		"MILL_VERSION":                      normVer,
-	}
-
-	return &InstallResult{
+	return installBinaryTool(ctx, BinaryInstallConfig{
 		ToolName:      "mill",
-		RequestedVer:  versionSpec,
+		VersionSpec:   versionSpec,
 		NormalizedVer: normVer,
-		InstallDir:    installDir,
-		HomeDir:       installDir,
-		BinDirs:       []string{installDir},
-		EnvVars:       envVars,
-	}, nil
+		DownloadURL:   fmt.Sprintf("%s/%s/%s", baseURL, normVer, assetName),
+		CacheFileName: fmt.Sprintf("mill-%s-%s", normVer, binaryName),
+		TargetBin:     binaryName,
+		DoguHome:      doguHome,
+		Opts:          opts,
+		ExtraHomeEnv:  []string{"MILL_HOME"},
+		ExtraEnv:      map[string]string{"MILL_VERSION": normVer},
+	})
 }
 
 func resolveMillVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
-	if versions, err := FetchGitHubReleases(ctx, "com-lihaoyi", "mill"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
-			return CleanVersion(best)
-		}
-	}
-	return CleanVersion(versionSpec)
+	return ResolveGitHubVersion(ctx, "com-lihaoyi", "mill", versionSpec, includePrerelease)
 }
