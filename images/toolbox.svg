@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="680" viewBox="0 0 800 680" fill="none">
+  <title>도구 toolbox</title>
+  <desc>A red open toolbox seen at a slight angle, holding a hammer, wrench, screwdriver, and pliers. The Korean word 도구 is written on its front.</desc>
+  <defs>
+    <linearGradient id="front" x1="150" y1="350" x2="460" y2="560" gradientUnits="userSpaceOnUse"><stop stop-color="#EF6650"/><stop offset="1" stop-color="#CA3E33"/></linearGradient>
+    <linearGradient id="side" x1="480" y1="400" x2="665" y2="390" gradientUnits="userSpaceOnUse"><stop stop-color="#AD302C"/><stop offset="1" stop-color="#D24838"/></linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2=".4"><stop stop-color="#E3EDF0"/><stop offset=".5" stop-color="#ADC1CC"/><stop offset="1" stop-color="#78929F"/></linearGradient>
+  </defs>
+  <ellipse cx="400" cy="620" rx="245" ry="34" fill="#24394A" opacity=".10"/>
+  <!-- Back wall and dark interior establish the three-quarter view. -->
+  <path d="M128 329 233 281 588 325 483 373Z" fill="#852F2D" stroke="#293D48" stroke-width="8" stroke-linejoin="round"/>
+  <path d="m146 329 89-33 332 36-88 31Z" fill="#3D3336"/>
+  <!-- Hammer, with a wooden shaft and a forked steel claw. -->
+  <g transform="rotate(-22 245 280)" stroke="#293D48" stroke-width="7" stroke-linejoin="round">
+    <path d="M230 179h29l-3 205q-12 14-25-1Z" fill="#D8A365"/>
+    <path d="M241 220v137" stroke="#B77C43" stroke-width="5" stroke-linecap="round"/>
+    <path d="M188 141h73q35 0 57 27l-7 16-34-14-17 16h-50v14h-30v-58Z" fill="url(#steel)"/>
+    <path d="m286 160 27 16" stroke="#607E8D" stroke-width="5"/>
+  </g>
+  <!-- Open-ended wrench. -->
+  <g transform="rotate(17 378 252)" stroke="#293D48" stroke-width="7" stroke-linejoin="round">
+    <path d="M359 204c-27-12-32-47-15-67l10 30 26 7 18-22-10-30c30 7 42 45 19 69l-18 19-2 155c0 21-33 22-34 0Z" fill="url(#steel)"/>
+    <path d="m373 226-3 111" stroke="#EDF4F5" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <!-- Blue-handled screwdriver. -->
+  <g transform="rotate(-10 467 267)" stroke="#293D48" stroke-width="7" stroke-linejoin="round">
+    <path d="m458 232 3-110 6-19 7 19 2 110Z" fill="url(#steel)"/>
+    <path d="M450 227q17-9 34 0l3 83q-2 22-19 22t-21-22Z" fill="#39A5B9"/>
+    <path d="M459 246v56m18-56v56" stroke="#20788D" stroke-width="5" stroke-linecap="round"/>
+    <path d="M448 229h38" stroke="#293D48"/>
+  </g>
+  <!-- Pliers: exposed jaws, pivot, and two yellow grips. -->
+  <g transform="translate(-65 15) rotate(25 554 286)" stroke="#293D48" stroke-width="7" stroke-linejoin="round">
+    <path d="m533 246-9-60 16-19 14 58 12-58 16 19-9 60-20 25Z" fill="url(#steel)"/>
+    <path d="m543 257-22 83q-3 13 8 17 12 4 17-9l15-65 14 64q4 14 16 10 11-4 8-16l-28-86Z" fill="#F2BC55"/>
+    <circle cx="554" cy="252" r="14" fill="#9BB2BE"/>
+    <circle cx="554" cy="252" r="4" fill="#293D48" stroke="none"/>
+  </g>
+  <!-- Carry bar runs along the box centerline, supported at both ends. -->
+  <path d="M182 335V263Q182 247 198 249L521 289Q537 291 537 307V376" stroke="#253B46" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m199 249 322 40" stroke="#8399A2" stroke-width="8" stroke-linecap="round"/>
+  <path d="m296 261 124 16" stroke="#253B46" stroke-width="27" stroke-linecap="round"/>
+  <path d="m303 258 110 14" stroke="#526C79" stroke-width="6" stroke-linecap="round"/>
+  <!-- Body: broad front face and visible right end. -->
+  <path d="m128 329 355 44v242l-329-48q-20-3-21-25Z" fill="url(#front)" stroke="#293D48" stroke-width="8" stroke-linejoin="round"/>
+  <path d="m483 373 105-48-9 225q-1 16-17 24l-79 41Z" fill="url(#side)" stroke="#293D48" stroke-width="8" stroke-linejoin="round"/>
+  <path d="m128 329 355 44 105-48v27l-105 49-354-45Z" fill="#F77C61" stroke="#293D48" stroke-width="8" stroke-linejoin="round"/>
+  <path d="m483 401 105-49" stroke="#A3332E" stroke-width="5"/>
+  <path d="m150 532 308 45" stroke="#AA352E" stroke-width="5" stroke-linecap="round"/>
+  <!-- Front latch and end grip. -->
+  <path d="m192 364 35 4v43l-35-4Z" fill="#D6E1E4" stroke="#293D48" stroke-width="6" stroke-linejoin="round"/>
+  <path d="m202 382 15 2" stroke="#738C98" stroke-width="5" stroke-linecap="round"/>
+  <path d="m515 436 42-19v32l-42 19Z" fill="#742F2D" stroke="#293D48" stroke-width="6" stroke-linejoin="round"/>
+  <path d="m524 443 24-11" stroke="#EF795E" stroke-width="6" stroke-linecap="round"/>
+  <!-- Outlined Hangul lettering keeps 도구 portable without a font dependency. -->
+  <g transform="matrix(1 .135 0 1 268 432)" stroke="#FFF0D3" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter" aria-label="도구">
+    <path d="M5 4h45M5 4v28h45M28 34v20M0 56h57"/>
+    <path d="M79 4h49v28M76 38h57M105 40v28"/>
+  </g>
+  <g fill="#FBB095" stroke="#89322E" stroke-width="3"><circle cx="156" cy="377" r="4"/><circle cx="460" cy="416" r="4"/><circle cx="460" cy="589" r="4"/><circle cx="158" cy="544" r="4"/></g>
+</svg>

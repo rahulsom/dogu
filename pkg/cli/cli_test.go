@@ -24,6 +24,21 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 	}
 
 	output := string(out)
+	art, _, _ := strings.Cut(output, "Usage:")
+	for _, sequence := range []string{"\x1b[38;2;173;193;204m", "\x1b[38;2;216;163;101m", "\x1b[38;2;82;108;121m", "\x1b[38;2;57;165;185m", "\x1b[38;2;242;188;85m", "\x1b[38;2;247;124;97m", "\x1b[38;2;133;47;45;48;2;239;102;80m", "\x1b[38;2;116;47;45;48;2;173;48;44m", "\x1b[38;2;41;61;72;48;2;214;225;228m", "\x1b[38;2;255;240;211;48;2;239;102;80m"} {
+		if !strings.Contains(art, sequence) {
+			t.Errorf("expected ANSI color %q in toolbox art", sequence)
+		}
+	}
+	if !strings.HasSuffix(strings.TrimSpace(art), "\x1b[0m") {
+		t.Error("expected toolbox art to reset ANSI colors before usage")
+	}
+	if strings.Contains(art, "{{") {
+		t.Error("expected all toolbox color placeholders to be replaced")
+	}
+	if !strings.Contains(output, "D O G U") || strings.Index(output, "D O G U") > strings.Index(output, "Usage:") {
+		t.Errorf("expected toolbox art before usage in --help output, got: %s", output)
+	}
 	if !strings.Contains(output, "Usage:") || !strings.Contains(output, "[tools...]") {
 		t.Errorf("expected summarized Usage with [tools...] in --help output, got: %s", output)
 	}

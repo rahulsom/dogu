@@ -1,0 +1,16 @@
+{{steel}}        ______             __       /|{{reset}}
+{{steel}}       / ____/            / /      / |{{reset}}
+{{steel}}      /_/  /\         __ / /      / /  /\{{reset}}
+           {{wood}}\ \{{steel}}       /  V /      / /  / /{{reset}}
+            {{wood}}\ \{{steel}}      \  /      {{teal}}| |{{steel}}  / /{{reset}}
+{{handle}}        .----{{wood}}\-\{{handle}}------{{steel}}\/{{handle}}-------{{teal}}|-|{{handle}}-{{yellow}}/ /{{handle}}--.{{reset}}
+{{handle}}       / .===={{wood}}\=\{{handle}}======\======={{teal}}|=|{{handle}}{{yellow}}/=/{{handle}}==. \{{reset}}
+{{handle}}      / /      {{wood}}\ \{{handle}}     {{steel}}/{{handle}}      {{yellow}}/ {{steel}}o{{yellow}} /{{handle}}    \ \{{reset}}
+{{handle}}     /_/________{{wood}}\_\{{handle}}___{{steel}}/{{handle}}______/__/_______\_\{{reset}}
+{{rim}}    /____________________________________/{{side}}|{{reset}}
+    {{panel}}|  {{latch}}[__]{{panel}}                              |{{side}} |{{reset}}
+    {{panel}}|                                    |{{side}} |{{reset}}
+    {{panel}}|             {{label}}D O G U{{panel}}                |{{side}} |{{reset}}
+    {{panel}}|                                    |{{side}} /{{reset}}
+    {{panel}}|____________________________________|{{side}}/{{reset}}
+
