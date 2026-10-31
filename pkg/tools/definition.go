@@ -17,6 +17,7 @@ const (
 	gradleSource
 	githubSource
 	npmSource
+	indexSource
 )
 
 type versionSource struct {
@@ -34,6 +35,8 @@ func (s versionSource) fetch(ctx context.Context, baseURL, mirrorURL string) ([]
 		return FetchGradleVersions(ctx, mirrorURL)
 	case githubSource:
 		return FetchGitHubReleases(ctx, s.owner, s.repository)
+	case indexSource:
+		return fetchIndexVersions(ctx, baseURL)
 	case npmSource:
 		return FetchNPMVersions(ctx, s.packageName, mirrorURL)
 	default:

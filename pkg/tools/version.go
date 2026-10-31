@@ -435,6 +435,10 @@ func FetchPyPIVersions(ctx context.Context, pkgName string) ([]string, error) {
 
 // FetchGitHubReleases retrieves version strings from GitHub repo releases or Atom feed.
 func FetchGitHubReleases(ctx context.Context, owner, repo string) ([]string, error) {
+	return fetchGitHubReleases(ctx, owner, repo, true)
+}
+
+func fetchGitHubReleases(ctx context.Context, owner, repo string, requireAssets bool) ([]string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	var versions []string
@@ -464,7 +468,7 @@ func FetchGitHubReleases(ctx context.Context, owner, repo string) ([]string, err
 		resp.Body.Close()
 
 		for _, r := range releases {
-			if len(r.Assets) == 0 {
+			if requireAssets && len(r.Assets) == 0 {
 				continue
 			}
 			v := r.TagName
