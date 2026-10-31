@@ -72,6 +72,9 @@ func PrintUsage(out *os.File) {
 					description: "Major versions, exact versions, or vendor distribution suffixes (-zulu, -tem)",
 					examples:    "--java 21, --java 17-zulu, --java 25.0.3.0+9-tem",
 				},
+				{name: "groovy", description: "Major, major.minor, or exact versions", examples: "--groovy 4.0"},
+				{name: "kotlin", description: "Major, major.minor, or exact versions", examples: "--kotlin 2.1"},
+				{name: "scala", description: "Major, major.minor, or exact versions", examples: "--scala 3.3"},
 				{
 					name:        "maven",
 					description: "Major versions, major.minor, or exact semver versions",
@@ -165,6 +168,18 @@ func PrintUsage(out *os.File) {
 			},
 		},
 	}
+
+	ecosystems = append(ecosystems, ecosystemHelp{
+		name: "Additional Languages",
+		tools: []toolHelp{
+			{name: "go", description: "Major, major.minor, or exact versions", examples: "--go 1.24"},
+			{name: "rust", description: "Major, major.minor, or exact versions", examples: "--rust 1.85"},
+			{name: "ghc", description: "Major, major.minor, or exact versions", examples: "--ghc 9.6"},
+			{name: "r", description: "Major, major.minor, or exact versions", examples: "--r 4.4"},
+			{name: "julia", description: "Major, major.minor, or exact versions", examples: "--julia 1.11"},
+			{name: "elm", description: "Major, major.minor, or exact versions", examples: "--elm 0.19.1"},
+		},
+	})
 
 	for _, eco := range ecosystems {
 		sb.WriteString("  " + ecoTitleStyle.Render(eco.name) + "\n")

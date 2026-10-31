@@ -1,7 +1,7 @@
 # Tool providers
 
 `catalog.go` contains typed definitions for Ant, Maven, Gradle, SBT, Yarn,
-Bazel, Buck2, and Mill. `definition.go` implements their common workflow:
+Bazel, Buck2, Mill, Groovy, Kotlin, Scala, and Elm. `definition.go` implements their common workflow:
 reuse an installed candidate, resolve a version, expand release naming rules,
 and call the archive or single-binary installer in `common.go`.
 The exported provider types remain small adapters so callers can still use
@@ -33,3 +33,10 @@ adding a configuration language for it.
 When adding or migrating a definition, cover its release naming on the relevant
 platforms and use local fixtures to verify version resolution, extracted or
 binary payloads, cached installation metadata, and forced reinstallation.
+
+Go and Julia select host archives from their official JSON release indexes in
+`languages.go`. Rust standalone installers and GHC bindists run their setup
+commands after extraction. R is built from CRAN sources. These three providers
+support Linux and macOS and require the prerequisites documented in
+`docs/tools.adoc`; failed setup removes the candidate so it cannot be reused.
+Elm's gzip-compressed executable uses the single-binary installer.

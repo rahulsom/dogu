@@ -53,4 +53,29 @@ var (
 		cacheName: "mill-{version}-{binary}", binary: "mill", windowsSuffix: ".bat",
 		homeEnv: []string{"MILL_HOME"}, extraEnv: map[string]string{"MILL_VERSION": "{version}"},
 	}
+	groovyDefinition = toolDefinition{
+		name: "groovy", baseURL: "https://archive.apache.org/dist/groovy",
+		source: versionSource{kind: indexSource},
+		asset:  "apache-groovy-binary-{version}.zip", downloadPath: "{version}/distribution/{asset}",
+		homeEnv: []string{"GROOVY_HOME"},
+	}
+	kotlinDefinition = toolDefinition{
+		name: "kotlin", baseURL: "https://github.com/JetBrains/kotlin/releases/download",
+		source: versionSource{kind: githubSource, owner: "JetBrains", repository: "kotlin"},
+		asset:  "kotlin-compiler-{version}.zip", downloadPath: "v{version}/{asset}",
+		homeEnv: []string{"KOTLIN_HOME"},
+	}
+	scalaDefinition = toolDefinition{
+		name: "scala", baseURL: "https://github.com/scala/scala/releases/download",
+		source: versionSource{kind: githubSource, owner: "scala", repository: "scala"},
+		asset:  "scala-{version}.zip", downloadPath: "v{version}/{asset}",
+		homeEnv: []string{"SCALA_HOME"},
+	}
+	elmDefinition = toolDefinition{
+		name: "elm", baseURL: "https://github.com/elm/compiler/releases/download",
+		source: versionSource{kind: githubSource, owner: "elm", repository: "compiler"},
+		asset:  "binary-for-{os}-64-bit.gz", downloadPath: "{version}/{asset}",
+		binary: "elm", windowsSuffix: ".exe",
+		platform: platformMapping{linux: "linux", darwin: "mac", windows: "windows"},
+	}
 )

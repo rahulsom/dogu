@@ -659,6 +659,15 @@ func SaveSingleBinary(ctx context.Context, downloadURL string, cacheFile string,
 		return err
 	}
 
+	if strings.HasSuffix(strings.ToLower(cacheFile), ".gz") && !strings.HasSuffix(strings.ToLower(cacheFile), ".tar.gz") {
+		zr, err := gzip.NewReader(in)
+		if err != nil {
+			return err
+		}
+		defer zr.Close()
+		_, err = io.Copy(out, zr)
+		return err
+	}
 	_, err = io.Copy(out, in)
 	return err
 }
