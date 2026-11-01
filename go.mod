@@ -1,13 +1,13 @@
 module github.com/dogu-dev/dogu
 
-go 1.24.3
+go 1.25
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v1.0.0
-	github.com/klauspost/compress v1.18.7
+	github.com/klauspost/compress v1.20.3
 	github.com/ulikunitz/xz v0.5.17
 )
 
