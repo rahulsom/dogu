@@ -14,7 +14,9 @@ For user-facing documentation, usage instructions, configuration guides, and sup
 * `pkg/config/`: Configuration parsing and resolution.
 * `pkg/downloader/`: HTTP archive download, extraction (`.tar.gz`, `.zip`, `.tar.xz`, `.tar.zst`), and progress bars.
 * `pkg/env/`: Environment variable resolution and PATH construction for invoked commands.
+* `pkg/selfupdate/`: GitHub release version checking, update suggestions, and self-update engine.
 * `pkg/tools/`: Tool providers and resolution logic for Java, Node.js, Maven, Gradle, Go/Python/Rust ecosystem tools, etc.
+* `pkg/version/`: Version definition, module build info inspection, and binary distribution detection.
 * `docs/`: Source AsciiDoc files for the user documentation published to GitHub Pages.
 * `testdata/`: Test data fixtures, including Cachew configuration for mirror integration tests.
 
