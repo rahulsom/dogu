@@ -9,6 +9,43 @@ image::images/toolbox.png[도구 toolbox,width=320]
 `dogu` is a multiplatform command-line tool written in Go that seamlessly provisions and configures developer toolchains.
 _Dogu_ is Korean for _tools_.
 
+== Installation
+
+The installer downloads the matching archive from the latest GitHub release
+and installs `dogu` in `$DOGU_HOME/bin`. If `DOGU_HOME` is not set, this
+defaults to `~/.dogu/bin`.
+
+[source,bash]
+----
+curl -fsSL https://raw.githubusercontent.com/rahulsom/dogu/main/install.sh | bash
+----
+
+The Unix-like installer requires `curl`, `jq`, and `tar`. It prints the command
+to add the install directory to the current shell's `PATH` if the directory
+isn't already there. To choose another install directory, set
+`DOGU_INSTALL_DIR` before running the script.
+
+In Windows PowerShell, download and run the installer. It installs the
+executable in `$DOGU_HOME\bin` (defaulting to `~/.dogu/bin`) and adds that
+directory to your user `PATH`:
+
+[source,powershell]
+----
+$installer = Join-Path $env:TEMP 'install-dogu.ps1'
+Invoke-WebRequest https://raw.githubusercontent.com/rahulsom/dogu/main/install.ps1 -OutFile $installer
+try {
+    & $installer
+}
+finally {
+    Remove-Item $installer -ErrorAction SilentlyContinue
+}
+----
+
+The PowerShell installer updates `PATH` for the current session and future
+terminals. Review the
+link:https://github.com/rahulsom/dogu/blob/main/install.ps1[installer script]
+before running it if you want to inspect what it does.
+
 == Overview & Features
 
 * **On-Demand Tool Provisioning:** Automatically downloads, unpacks, and registers candidate tool releases.
