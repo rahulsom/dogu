@@ -46,6 +46,10 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 		t.Errorf("expected Supported Tools header in --help output, got: %s", output)
 	}
 
+	if !strings.Contains(output, "self-update") {
+		t.Errorf("expected self-update in --help output, got: %s", output)
+	}
+
 	for _, eco := range []string{"Java / JVM Ecosystem", "Generic Build Tools", "Node.js / JavaScript Ecosystem", "Python Ecosystem"} {
 		if !strings.Contains(output, eco) {
 			t.Errorf("expected ecosystem %s in --help output, got: %s", eco, output)
@@ -206,5 +210,25 @@ func TestVerboseMode(t *testing.T) {
 		if !strings.Contains(output, "v26.11.0") {
 			t.Errorf("expected sub-command output v26.11.0, got: %s", output)
 		}
+	}
+}
+
+func TestSelfUpdateNonBinaryDistribution(t *testing.T) {
+	tempDir := t.TempDir()
+	doguBin := filepath.Join(tempDir, "dogu")
+
+	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("failed to build dogu binary: %v", err)
+	}
+
+	cmd := exec.Command(doguBin, "self-update")
+	cmd.Env = append(os.Environ(), "DOGU_FORCE_BINARY_DISTRIBUTION=false")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("expected error running self-update for unversioned binary, but succeeded: %s", string(out))
+	}
+	if !strings.Contains(string(out), "self-update is only available for official binary distributions") {
+		t.Errorf("expected binary distribution error, got: %s", string(out))
 	}
 }

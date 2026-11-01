@@ -14,7 +14,10 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/dogu-dev/dogu/pkg/config"
 	"github.com/dogu-dev/dogu/pkg/env"
+	"github.com/dogu-dev/dogu/pkg/selfupdate"
 	"github.com/dogu-dev/dogu/pkg/tools"
+	"github.com/dogu-dev/dogu/pkg/version"
+	"time"
 )
 
 //go:embed toolbox.txt
@@ -59,7 +62,8 @@ func PrintUsage(out *os.File) {
 	).Replace(toolboxArt))
 
 	sb.WriteString(headerStyle.Render("Usage:") + "\n")
-	sb.WriteString("  dogu [-v|--verbose] [--force] [--prerelease] [tools...] -- <command> [args...]\n\n")
+	sb.WriteString("  dogu [-v|--verbose] [--force] [--prerelease] [tools...] -- <command> [args...]\n")
+	sb.WriteString("  dogu self-update\n\n")
 
 	sb.WriteString(headerStyle.Render("Supported Tools:") + "\n\n")
 
@@ -190,6 +194,9 @@ func PrintUsage(out *os.File) {
 		sb.WriteString("\n")
 	}
 
+	sb.WriteString(headerStyle.Render("Commands:") + "\n")
+	sb.WriteString(fmt.Sprintf("  %s        %s\n\n", flagNameStyle.Render("self-update"), descStyle.Render("Update dogu binary to the latest released version")))
+
 	sb.WriteString(headerStyle.Render("Flags:") + "\n")
 	sb.WriteString(fmt.Sprintf("  %s  %s\n", flagNameStyle.Render("-v, --verbose"), descStyle.Render("Enable verbose logging")))
 	sb.WriteString(fmt.Sprintf("  %s    %s\n", flagNameStyle.Render("-f, --force"), descStyle.Render("Force re-downloading candidate versions even if already installed")))
@@ -215,6 +222,17 @@ func Run(args []string) error {
 
 // RunWithConfig parses CLI args, provisions tools using the provided config, updates environment, and executes sub-command.
 func RunWithConfig(args []string, cfg *config.Config) error {
+	if len(args) > 0 && args[0] == "self-update" {
+		ctx := context.Background()
+		curVer := version.GetVersion()
+		return selfupdate.SelfUpdate(ctx, curVer, selfupdate.DefaultGitHubOwner, selfupdate.DefaultGitHubRepo)
+	}
+
+	// In binary distributions, check for an available update to suggest dogu self-update
+	if version.IsBinaryDistribution() {
+		defer checkAndSuggestUpdate()
+	}
+
 	doubleDashIdx := -1
 	for i, arg := range args {
 		if arg == "--" {
@@ -348,6 +366,21 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 
 	log.Debug("Executing sub-command", "cmd", resolvedCmdName, "args", cmdFlags)
 	return cmd.Run()
+}
+
+func checkAndSuggestUpdate() {
+	curVer := version.GetVersion()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	rel, available, err := selfupdate.CheckForUpdate(ctx, curVer, selfupdate.DefaultGitHubOwner, selfupdate.DefaultGitHubRepo)
+	if err == nil && available && rel != nil {
+		latestVer := rel.TagName
+		if latestVer == "" {
+			latestVer = rel.Name
+		}
+		selfupdate.SuggestUpdateNotification(os.Stderr, curVer, latestVer)
+	}
 }
 
 func resolveExecutable(cmdName string, envSlice []string) string {

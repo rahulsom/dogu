@@ -27,6 +27,15 @@ Run any command prefixed with `dogu` and the desired tool or CLI flags:
 dogu [-v|--verbose] [--force] [tools...] -- <command> [args...]
 ----
 
+To update `dogu` itself to the latest released version:
+
+[source,bash]
+----
+dogu self-update
+----
+
+NOTE: Self-update and version checking are enabled exclusively for official binary distributions (not when compiling/running directly from Go source code). When running as a binary distribution, `dogu` will also check GitHub for newer releases and suggest running `dogu self-update`.
+
 === Flags
 
 |===
