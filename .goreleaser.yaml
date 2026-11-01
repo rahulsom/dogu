@@ -33,6 +33,7 @@ builds:
         goarch: arm
     ldflags:
       - -s -w
+      - -X github.com/dogu-dev/dogu/pkg/version.Version=v{{ .Version }}
 
 archives:
   - id: dogu
