@@ -1,11 +1,14 @@
 package cli_test
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -57,9 +60,11 @@ func getOrStartCachew(t *testing.T, repoRoot string) string {
 		"ghcr.io/block/cachew:latest",
 		"--config", "/app/cachew.hcl",
 	)
-	out, err := runCmd.CombinedOutput()
+	var stderr bytes.Buffer
+	runCmd.Stderr = &stderr
+	out, err := runCmd.Output()
 	if err != nil {
-		t.Fatalf("failed to start cachew container: %v, output: %s", err, string(out))
+		t.Fatalf("failed to start cachew container: %v, stdout: %s, stderr: %s", err, string(out), stderr.String())
 	}
 	containerID := strings.TrimSpace(string(out))
 
@@ -105,6 +110,59 @@ func getOrStartCachew(t *testing.T, repoRoot string) string {
 	}
 
 	return baseURL
+}
+
+func TestGetOrStartCachew(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("mock Docker command requires a Unix shell")
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/_liveness" {
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	for _, tc := range []struct {
+		name   string
+		stderr string
+	}{
+		{name: "cached image"},
+		{name: "uncached image", stderr: "Unable to find image locally\nPulling from block/cachew\nDownloaded newer image\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			binDir := t.TempDir()
+			script := `#!/bin/sh
+case "$1" in
+	info) exit 0 ;;
+	run)
+		printf '%s' "$DOCKER_TEST_STDERR" >&2
+		printf 'cachew-container-id\n'
+		;;
+	port)
+		[ "$2" = "cachew-container-id" ] || exit 1
+		printf '%s\n' "$DOCKER_TEST_ADDRESS"
+		;;
+	rm)
+		[ "$3" = "cachew-container-id" ] || exit 1
+		;;
+	*) exit 1 ;;
+esac
+`
+			if err := os.WriteFile(filepath.Join(binDir, "docker"), []byte(script), 0755); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+			t.Setenv("CACHEW_URL", "")
+			t.Setenv("DOCKER_TEST_STDERR", tc.stderr)
+			t.Setenv("DOCKER_TEST_ADDRESS", server.Listener.Addr().String())
+
+			if got := getOrStartCachew(t, findRepoRoot(t)); got != server.URL {
+				t.Fatalf("getOrStartCachew() = %q, want %q", got, server.URL)
+			}
+		})
+	}
 }
 
 func TestMirrorIntegration(t *testing.T) {
