@@ -114,3 +114,30 @@ docker run --rm -v $(pwd):/documents \
     --out-file index.html \
     docs/index.adoc
 ----
+
+== Top level commands
+
+* `dogu version` prints the current dogu version.
+* `dogu list-versions <tool> [version-prefix] [--limit N | --all]` lists the
+  newest 20 available releases, one per line. Use `--all` for the complete list,
+  `--limit 50` to change the limit, or a version prefix to narrow the results
+  (for example, `dogu list-versions java 21`). Truncation notices go to stderr.
+  For example, `dogu list-versions node`. Discovery uses the same release sources
+  as installation and configured mirrors where supported by the provider.
+* `dogu autocomplete [shell]` prints a completion script. Without an argument,
+  it detects the shell from `SHELL` (or `COMSPEC`). Supported shells are `bash`,
+  `zsh`, `fish`, and `powershell` (`pwsh` is also accepted).
+
+Load completions in your shell configuration, for example:
+
+[source,bash]
+----
+# Bash
+source <(dogu autocomplete bash)
+# Zsh (after compinit)
+source <(dogu autocomplete zsh)
+# Fish
+dogu autocomplete fish | source
+# PowerShell
+dogu autocomplete powershell | Out-String | Invoke-Expression
+----
