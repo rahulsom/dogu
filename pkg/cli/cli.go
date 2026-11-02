@@ -23,26 +23,15 @@ import (
 //go:embed toolbox.txt
 var toolboxArt string
 
-type toolHelp struct {
-	name        string
-	description string
-	examples    string
-}
-
 type ecosystemHelp struct {
 	name  string
-	tools []toolHelp
+	tools string
 }
 
 // PrintUsage prints usage instructions including the list of supported tools grouped by ecosystem.
 func PrintUsage(out *os.File) {
-	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))   // Hot Pink for Main Headers
-	ecoTitleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))  // Bright Cyan for Ecosystem Titles
-	toolNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42"))  // Vibrant Green for Tool Names
-	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))                // Bright text for descriptions
-	exampleLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))        // Muted Gray for "Examples:" label
-	exampleValStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("117"))          // Soft Cyan/Blue for example flags
-	flagNameStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214")) // Warm Yellow/Amber for Flags
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))
+	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("117"))
 
 	var sb strings.Builder
 
@@ -61,152 +50,57 @@ func PrintUsage(out *os.File) {
 		"{{reset}}", "\x1b[0m",
 	).Replace(toolboxArt))
 
+	sb.WriteString("Run commands with the tool versions you need.\n\n")
 	sb.WriteString(headerStyle.Render("Usage:") + "\n")
-	sb.WriteString("  dogu [-v|--verbose] [--force] [--prerelease] [tools...] -- <command> [args...]\n")
-	sb.WriteString("  dogu self-update\n\n")
-
-	sb.WriteString(headerStyle.Render("Supported Tools:") + "\n\n")
-
-	ecosystems := []ecosystemHelp{
-		{
-			name: "Java / JVM Ecosystem",
-			tools: []toolHelp{
-				{
-					name:        "java",
-					description: "Major versions, exact versions, or vendor distribution suffixes (-zulu, -tem)",
-					examples:    "--java 21, --java 17-zulu, --java 25.0.3.0+9-tem",
-				},
-				{name: "groovy", description: "Major, major.minor, or exact versions", examples: "--groovy 4.0"},
-				{name: "kotlin", description: "Major, major.minor, or exact versions", examples: "--kotlin 2.1"},
-				{name: "scala", description: "Major, major.minor, or exact versions", examples: "--scala 3.3"},
-				{
-					name:        "maven",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--maven 3, --maven 3.9, --maven 3.9.6",
-				},
-				{
-					name:        "sbt",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--sbt 1, --sbt 1.10, --sbt 1.10.10",
-				},
-				{
-					name:        "gradle",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--gradle 8, --gradle 8.10, --gradle 8.10.2",
-				},
-			},
-		},
-		{
-			name: "Generic Build Tools",
-			tools: []toolHelp{
-				{
-					name:        "ant",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--ant 1, --ant 1.10, --ant 1.10.14",
-				},
-				{
-					name:        "mill",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--mill 0, --mill 0.12, --mill 0.12.5",
-				},
-				{
-					name:        "bazel",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--bazel 7, --bazel 7.4, --bazel 7.4.0",
-				},
-				{
-					name:        "pants",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--pants 2, --pants 2.33, --pants 2.33.1",
-				},
-				{
-					name:        "buck2",
-					description: "Release dates or version tags",
-					examples:    "--buck2 2026, --buck2 2026-10, --buck2 2026-10-15",
-				},
-			},
-		},
-		{
-			name: "Node.js / JavaScript Ecosystem",
-			tools: []toolHelp{
-				{
-					name:        "node",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--node 20, --node 22.11, --node 22.11.0",
-				},
-				{
-					name:        "npm",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--npm 10, --npm 10.2, --npm 10.2.4",
-				},
-				{
-					name:        "pnpm",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--pnpm 8, --pnpm 8.15, --pnpm 8.15.1",
-				},
-				{
-					name:        "yarn",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--yarn 1, --yarn 1.22, --yarn 1.22.19",
-				},
-				{
-					name:        "bun",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--bun 1, --bun 1.1, --bun 1.1.0",
-				},
-			},
-		},
-		{
-			name: "Python Ecosystem",
-			tools: []toolHelp{
-				{
-					name:        "python",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--python 3, --python 3.11, --python 3.11.7",
-				},
-				{
-					name:        "uv",
-					description: "Major versions, major.minor, or exact semver versions",
-					examples:    "--uv 0, --uv 0.5, --uv 0.5.1",
-				},
-			},
-		},
-	}
-
-	ecosystems = append(ecosystems, ecosystemHelp{
-		name: "Additional Languages",
-		tools: []toolHelp{
-			{name: "go", description: "Major, major.minor, or exact versions", examples: "--go 1.24"},
-			{name: "rust", description: "Major, major.minor, or exact versions", examples: "--rust 1.85"},
-			{name: "ghc", description: "Major, major.minor, or exact versions", examples: "--ghc 9.6"},
-			{name: "r", description: "Major, major.minor, or exact versions", examples: "--r 4.4"},
-			{name: "julia", description: "Major, major.minor, or exact versions", examples: "--julia 1.11"},
-			{name: "elm", description: "Major, major.minor, or exact versions", examples: "--elm 0.19.1"},
-		},
-	})
-
-	for _, eco := range ecosystems {
-		sb.WriteString("  " + ecoTitleStyle.Render(eco.name) + "\n")
-		for _, tool := range eco.tools {
-			sb.WriteString(fmt.Sprintf("    • %s: %s\n", toolNameStyle.Render(tool.name), descStyle.Render(tool.description)))
-			sb.WriteString(fmt.Sprintf("      %s %s\n", exampleLabelStyle.Render("Examples:"), exampleValStyle.Render(tool.examples)))
-		}
-		sb.WriteString("\n")
-	}
-
-	sb.WriteString(headerStyle.Render("Commands:") + "\n")
-	sb.WriteString(fmt.Sprintf("  %s        %s\n\n", flagNameStyle.Render("self-update"), descStyle.Render("Update dogu binary to the latest released version")))
-
-	sb.WriteString(headerStyle.Render("Flags:") + "\n")
-	sb.WriteString(fmt.Sprintf("  %s  %s\n", flagNameStyle.Render("-v, --verbose"), descStyle.Render("Enable verbose logging")))
-	sb.WriteString(fmt.Sprintf("  %s    %s\n", flagNameStyle.Render("-f, --force"), descStyle.Render("Force re-downloading candidate versions even if already installed")))
-	sb.WriteString(fmt.Sprintf("  %s %s\n", flagNameStyle.Render("--prerelease"), descStyle.Render("Include release candidates/pre-releases when resolving partial versions")))
-	sb.WriteString(fmt.Sprintf("  %s     %s\n\n", flagNameStyle.Render("-h, --help"), descStyle.Render("Show usage information")))
+	sb.WriteString("  dogu [options] [--<tool> <version> ...] -- <command> [args...]\n")
+	sb.WriteString("  dogu self-update\n")
+	sb.WriteString("  dogu --help\n\n")
+	sb.WriteString("  Tools are downloaded as needed and reused on later runs.\n")
+	sb.WriteString("  Use -- to separate dogu options from the command and its arguments.\n\n")
 
 	sb.WriteString(headerStyle.Render("Examples:") + "\n")
-	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --java 21 --maven 3.9 --node 22 -- mvn clean test")))
-	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --python 3.11 --uv 0.5 -- pytest")))
-	sb.WriteString(fmt.Sprintf("  %s\n", exampleValStyle.Render("dogu --node 20 --pnpm 8.15 -- pnpm install")))
+	for _, example := range []string{
+		"dogu --node 22 -- node --version",
+		"dogu --java 21 --maven 3.9 -- mvn clean test",
+		"dogu --python 3.11 --uv 0.5 -- uv run pytest",
+		"dogu --node 22 --pnpm 8.15 -- pnpm install",
+	} {
+		sb.WriteString("  " + valueStyle.Render(example) + "\n")
+	}
+
+	sb.WriteString("\n" + headerStyle.Render("Options:") + "\n")
+	for _, option := range [][2]string{
+		{"-h, --help", "Show this help"},
+		{"-v, --verbose", "Show debug logs"},
+		{"-f, --force", "Download tools again, even if already installed"},
+		{"--prerelease", "Include prereleases when matching partial versions"},
+		{"--no-prerelease", "Exclude prereleases (default)"},
+	} {
+		sb.WriteString("  " + valueStyle.Render(fmt.Sprintf("%-18s", option[0])) + option[1] + "\n")
+	}
+
+	sb.WriteString("\n" + headerStyle.Render("Supported tools:") + "\n")
+	sb.WriteString("  Select one or more with --<tool> <version> or --<tool>=<version>.\n\n")
+	for _, ecosystem := range []ecosystemHelp{
+		{"Java / JVM", "java, groovy, kotlin, scala, maven, sbt, gradle"},
+		{"Build tools", "ant, mill, bazel, pants, buck2"},
+		{"JavaScript", "node, npm, pnpm, yarn, bun"},
+		{"Python", "python, uv"},
+		{"Other languages", "go, rust, ghc, r, julia, elm"},
+	} {
+		sb.WriteString(fmt.Sprintf("  %-18s%s\n", ecosystem.name, ecosystem.tools))
+	}
+
+	sb.WriteString("\n" + headerStyle.Render("Versions:") + "\n")
+	sb.WriteString("  Use a major, major.minor, or exact version (e.g. 22, 22.11, 22.11.0).\n")
+	sb.WriteString("  Partial versions select the newest matching installed version, or\n")
+	sb.WriteString("  the newest matching release if none is installed.\n")
+	sb.WriteString("  Java also accepts vendor suffixes: --java 17-zulu, --java 21-tem.\n")
+	sb.WriteString("  Buck2 accepts release dates or tags: --buck2 2026-10-15.\n")
+
+	sb.WriteString("\n" + headerStyle.Render("Commands:") + "\n")
+	sb.WriteString("  " + valueStyle.Render(fmt.Sprintf("%-18s", "self-update")) + "Update dogu to the latest release\n")
+	sb.WriteString("                    Available for official binary distributions.\n")
 
 	fmt.Fprint(out, sb.String())
 }

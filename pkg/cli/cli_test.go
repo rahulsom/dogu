@@ -24,7 +24,7 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 	}
 
 	output := string(out)
-	art, _, _ := strings.Cut(output, "Usage:")
+	art, _, _ := strings.Cut(output, "Run commands with the tool versions you need.")
 	for _, sequence := range []string{"\x1b[38;2;173;193;204m", "\x1b[38;2;216;163;101m", "\x1b[38;2;82;108;121m", "\x1b[38;2;57;165;185m", "\x1b[38;2;242;188;85m", "\x1b[38;2;247;124;97m", "\x1b[38;2;133;47;45;48;2;239;102;80m", "\x1b[38;2;116;47;45;48;2;173;48;44m", "\x1b[38;2;41;61;72;48;2;214;225;228m", "\x1b[38;2;255;240;211;48;2;239;102;80m"} {
 		if !strings.Contains(art, sequence) {
 			t.Errorf("expected ANSI color %q in toolbox art", sequence)
@@ -39,18 +39,30 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 	if !strings.Contains(output, "D O G U") || strings.Index(output, "D O G U") > strings.Index(output, "Usage:") {
 		t.Errorf("expected toolbox art before usage in --help output, got: %s", output)
 	}
-	if !strings.Contains(output, "Usage:") || !strings.Contains(output, "[tools...]") {
-		t.Errorf("expected summarized Usage with [tools...] in --help output, got: %s", output)
+	if !strings.Contains(output, "Usage:") || !strings.Contains(output, "[--<tool> <version> ...]") {
+		t.Errorf("expected summarized Usage with tool version flags in --help output, got: %s", output)
 	}
-	if !strings.Contains(output, "Supported Tools:") {
+	if !strings.Contains(output, "Supported tools:") {
 		t.Errorf("expected Supported Tools header in --help output, got: %s", output)
+	}
+
+	for _, guidance := range []string{
+		"Use -- to separate", "--<tool>=<version>", "--no-prerelease",
+		"newest matching installed version", "--java 17-zulu", "--buck2 2026-10-15",
+	} {
+		if !strings.Contains(output, guidance) {
+			t.Errorf("expected guidance %q in help", guidance)
+		}
+	}
+	if strings.Index(output, "Examples:") > strings.Index(output, "Supported tools:") {
+		t.Error("expected actionable examples before the tool catalog")
 	}
 
 	if !strings.Contains(output, "self-update") {
 		t.Errorf("expected self-update in --help output, got: %s", output)
 	}
 
-	for _, eco := range []string{"Java / JVM Ecosystem", "Generic Build Tools", "Node.js / JavaScript Ecosystem", "Python Ecosystem"} {
+	for _, eco := range []string{"Java / JVM", "Build tools", "JavaScript", "Python", "Other languages"} {
 		if !strings.Contains(output, eco) {
 			t.Errorf("expected ecosystem %s in --help output, got: %s", eco, output)
 		}
