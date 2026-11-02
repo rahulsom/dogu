@@ -54,6 +54,9 @@ func PrintUsage(out *os.File) {
 	sb.WriteString(headerStyle.Render("Usage:") + "\n")
 	sb.WriteString("  dogu [options] [--<tool> <version> ...] -- <command> [args...]\n")
 	sb.WriteString("  dogu self-update\n")
+	sb.WriteString("  dogu version\n")
+	sb.WriteString("  dogu list-versions <tool> [version-prefix] [--limit N | --all]\n")
+	sb.WriteString("  dogu autocomplete [bash|zsh|fish|powershell]\n")
 	sb.WriteString("  dogu --help\n\n")
 	sb.WriteString("  Tools are downloaded as needed and reused on later runs.\n")
 	sb.WriteString("  Use -- to separate dogu options from the command and its arguments.\n\n")
@@ -99,14 +102,30 @@ func PrintUsage(out *os.File) {
 	sb.WriteString("  Buck2 accepts release dates or tags: --buck2 2026-10-15.\n")
 
 	sb.WriteString("\n" + headerStyle.Render("Commands:") + "\n")
-	sb.WriteString("  " + valueStyle.Render(fmt.Sprintf("%-18s", "self-update")) + "Update dogu to the latest release\n")
-	sb.WriteString("                    Available for official binary distributions.\n")
+	commands := [][2]string{
+		{"self-update", "Update dogu to the latest release (official binaries only)"},
+		{"version", "Print the dogu version"},
+		{"list-versions <tool> [version-prefix] [--limit N | --all]", "List available versions (newest 20 by default)"},
+		{"autocomplete [shell]", "Generate a shell completion script"},
+	}
+	width := 0
+	for _, command := range commands {
+		if len(command[0]) > width {
+			width = len(command[0])
+		}
+	}
+	for _, command := range commands {
+		sb.WriteString("  " + valueStyle.Render(fmt.Sprintf("%-*s", width, command[0])) + "  " + command[1] + "\n")
+	}
 
 	fmt.Fprint(out, sb.String())
 }
 
 // Run parses CLI args, provisions tools, updates environment, and executes sub-command.
 func Run(args []string) error {
+	if handled, err := runInfoCommand(args, nil); handled {
+		return err
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load dogu configuration: %w", err)
@@ -116,6 +135,9 @@ func Run(args []string) error {
 
 // RunWithConfig parses CLI args, provisions tools using the provided config, updates environment, and executes sub-command.
 func RunWithConfig(args []string, cfg *config.Config) error {
+	if handled, err := runInfoCommand(args, cfg); handled {
+		return err
+	}
 	if len(args) > 0 && args[0] == "self-update" {
 		ctx := context.Background()
 		curVer := version.GetVersion()
