@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -20,11 +21,17 @@ func TestAutocomplete(t *testing.T) {
 				}
 			}
 			if shell == "bash" || shell == "/bin/zsh" {
-				cmd := exec.Command(shell, "-n")
-				cmd.Stdin = strings.NewReader(out.String())
-				if output, err := cmd.CombinedOutput(); err != nil {
-					t.Fatalf("invalid shell script: %v: %s", err, output)
-				}
+				t.Run("syntax", func(t *testing.T) {
+					shellPath, err := exec.LookPath(filepath.Base(shell))
+					if err != nil {
+						t.Skipf("shell unavailable for syntax check: %v", err)
+					}
+					cmd := exec.Command(shellPath, "-n")
+					cmd.Stdin = strings.NewReader(out.String())
+					if output, err := cmd.CombinedOutput(); err != nil {
+						t.Fatalf("invalid shell script: %v: %s", err, output)
+					}
+				})
 			}
 		})
 	}
