@@ -36,7 +36,10 @@ jobs:
             cachew-v1-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Run tests through Cachew
-        run: ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox -- -race -cover ./...
+        run: >-
+          ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox
+          --packages="./..." --rerun-fails=2 --rerun-fails-abort-on-data-race
+          -- -race -cover
 
       - name: Save Cachew downloads
         if: always() && steps.cachew-cache.outcome == 'success'
