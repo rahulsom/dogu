@@ -47,6 +47,16 @@ func listVersions(ctx context.Context, name, mirror string) ([]string, error) {
 		}
 	}
 	switch name {
+	case "ruby", "lua":
+		releases, err := sourceLanguageReleases(ctx, name, mirror)
+		if err != nil {
+			return nil, err
+		}
+		var versions []string
+		for _, release := range releases {
+			versions = append(versions, release.version)
+		}
+		return versions, nil
 	case "npm", "pnpm":
 		return FetchNPMVersions(ctx, name, mirror)
 	case "bun":

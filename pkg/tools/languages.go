@@ -51,6 +51,8 @@ type JuliaTool struct{}
 type RustTool struct{}
 type GHCTool struct{}
 type RTool struct{}
+type RubyTool struct{}
+type LuaTool struct{}
 
 func init() {
 	Register(&GoTool{})
@@ -58,16 +60,40 @@ func init() {
 	Register(&RustTool{})
 	Register(&GHCTool{})
 	Register(&RTool{})
+	Register(&RubyTool{})
+	Register(&LuaTool{})
 }
 func (*GoTool) Name() string    { return "go" }
 func (*JuliaTool) Name() string { return "julia" }
 func (*RustTool) Name() string  { return "rust" }
 func (*GHCTool) Name() string   { return "ghc" }
 func (*RTool) Name() string     { return "r" }
+func (*RubyTool) Name() string  { return "ruby" }
+func (*LuaTool) Name() string   { return "lua" }
 
 // Go and Julia publish machine-readable indexes containing the actual archive
 // names. Select only archives for this host rather than guessing release paths.
 type languageRelease struct{ version, url, filename string }
+
+func sourceLanguageReleases(ctx context.Context, name, mirror string) ([]languageRelease, error) {
+	base, index := "https://www.lua.org/ftp", "/"
+	pattern := `(?i:href)="(lua-([0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?)\.tar\.gz)"`
+	if name == "ruby" {
+		base, index = "https://cache.ruby-lang.org/pub/ruby", "/index.txt"
+		pattern = `/pub/ruby/([0-9]+\.[0-9]+/ruby-([0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?)\.tar\.gz)`
+	}
+	base = resolveBaseURL(base, mirror)
+	data, err := fetchReleaseData(ctx, base+index)
+	if err != nil {
+		return nil, err
+	}
+	var releases []languageRelease
+	for _, m := range regexp.MustCompile(pattern).FindAllSubmatch(data, -1) {
+		path := string(m[1])
+		releases = append(releases, languageRelease{string(m[2]), base + "/" + path, filepath.Base(path)})
+	}
+	return releases, nil
+}
 
 func installIndexedLanguage(ctx context.Context, name, spec, home, mirror string, opts InstallOptions) (*InstallResult, error) {
 	envKeys := []string(nil)
@@ -188,7 +214,27 @@ func installConfiguredLanguage(ctx context.Context, name, spec, home, mirror str
 	}
 	base = resolveBaseURL(base, mirror)
 	version := CleanVersion(spec)
-	if name == "rust" {
+	var sourceRelease languageRelease
+	if name == "ruby" || name == "lua" {
+		releases, e := sourceLanguageReleases(ctx, name, mirror)
+		if e != nil {
+			return nil, e
+		}
+		var versions []string
+		for _, release := range releases {
+			versions = append(versions, release.version)
+		}
+		version, e = SelectBestVersion(versions, spec, opts.IncludePrerelease)
+		if e != nil {
+			return nil, e
+		}
+		for _, release := range releases {
+			if release.version == version {
+				sourceRelease = release
+				break
+			}
+		}
+	} else if name == "rust" {
 		versions, e := fetchGitHubReleases(ctx, "rust-lang", "rust", false)
 		if e == nil {
 			if v, e := SelectBestVersion(versions, spec, opts.IncludePrerelease); e == nil {
@@ -260,7 +306,11 @@ func installConfiguredLanguage(ctx context.Context, name, spec, home, mirror str
 		return nil, e
 	}
 	defer os.RemoveAll(work)
-	if e = downloader.DownloadAndExtract(ctx, base+"/"+path, filepath.Join(home, "cache", name, filename), work, downloader.WithRewriteRule(opts.RewriteRules)); e != nil {
+	downloadURL := base + "/" + path
+	if sourceRelease.url != "" {
+		downloadURL, filename = sourceRelease.url, sourceRelease.filename
+	}
+	if e = downloader.DownloadAndExtract(ctx, downloadURL, filepath.Join(home, "cache", name, filename), work, downloader.WithRewriteRule(opts.RewriteRules)); e != nil {
 		return nil, e
 	}
 	entries, e := os.ReadDir(work)
@@ -306,13 +356,25 @@ func installConfiguredLanguage(ctx context.Context, name, spec, home, mirror str
 	}
 	if name == "rust" {
 		err = run("sh", "./install.sh", "--prefix="+dest, "--disable-ldconfig")
+	} else if name == "lua" {
+		target := "linux"
+		if runtime.GOOS == "darwin" {
+			target = "macosx"
+		}
+		err = run("make", target)
+		if err == nil {
+			err = run("make", "install", "INSTALL_TOP="+dest)
+		}
 	} else {
 		args := []string{"./configure", "--prefix=" + dest}
 		if name == "r" {
 			args = append(args, "--with-x=no")
 		}
+		if name == "ruby" {
+			args = append(args, "--disable-install-doc")
+		}
 		err = run("sh", args...)
-		if err == nil && name == "r" {
+		if err == nil && (name == "r" || name == "ruby") {
 			err = run("make")
 		}
 		if err == nil {
@@ -335,6 +397,12 @@ func (*GHCTool) Install(ctx context.Context, spec, home, mirror string, opts Ins
 }
 func (*RTool) Install(ctx context.Context, spec, home, mirror string, opts InstallOptions) (*InstallResult, error) {
 	return installConfiguredLanguage(ctx, "r", spec, home, mirror, opts)
+}
+func (*RubyTool) Install(ctx context.Context, spec, home, mirror string, opts InstallOptions) (*InstallResult, error) {
+	return installConfiguredLanguage(ctx, "ruby", spec, home, mirror, opts)
+}
+func (*LuaTool) Install(ctx context.Context, spec, home, mirror string, opts InstallOptions) (*InstallResult, error) {
+	return installConfiguredLanguage(ctx, "lua", spec, home, mirror, opts)
 }
 
 func configuredLanguageEnv(name, version, home string) map[string]string {

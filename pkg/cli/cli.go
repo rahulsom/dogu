@@ -89,7 +89,7 @@ func PrintUsage(out *os.File) {
 		{"Build tools", "ant, mill, bazel, pants, buck2"},
 		{"JavaScript", "node, npm, pnpm, yarn, bun"},
 		{"Python", "python, uv"},
-		{"Other languages", "go, rust, ghc, r, julia, elm"},
+		{"Other languages", "go, rust, ghc, r, julia, elm, ruby, lua"},
 	} {
 		sb.WriteString(fmt.Sprintf("  %-18s%s\n", ecosystem.name, ecosystem.tools))
 	}
