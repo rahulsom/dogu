@@ -27,7 +27,7 @@ jobs:
 
       - name: Restore Cachew downloads
         id: cachew-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: build/cachew
           key: cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -43,7 +43,7 @@ jobs:
 
       - name: Save Cachew downloads
         if: always() && steps.cachew-cache.outcome == 'success'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: build/cachew
           key: ${{ steps.cachew-cache.outputs.cache-primary-key }}
