@@ -141,3 +141,40 @@ dogu autocomplete fish | source
 # PowerShell
 dogu autocomplete powershell | Out-String | Invoke-Expression
 ----
+
+
+== Running tests
+
+Run the local suite (release discovery uses trusted local HTTPS fixtures):
+
+[source,bash]
+----
+go test -race -cover ./...
+----
+
+To download and execute real tool releases through a Cachew container:
+
+[source,bash]
+----
+./scripts/test-with-cachew.sh
+----
+
+This requires Docker. The script mounts `build/cachew` as Cachew's disk cache,
+waits for the container, runs the tests, then stops it before returning. Set
+`CACHEW_STATE_DIR` to use another directory. Cached downloads survive later runs.
+To run against an existing Cachew instance instead:
+
+[source,bash]
+----
+DOGU_INTEGRATION=1 CACHEW_URL=http://127.0.0.1:8080 go test -race -cover ./...
+----
+
+Integration tests route dogu's downloads, release discovery, and HTTP redirects
+through Cachew without a direct upstream fallback. Unit tests use local fixtures.
+A cache miss still requires Cachew to reach the upstream HTTPS service.
+Programs launched by dogu (such as sbt) can make their own network requests.
+
+CI and release tests restore the Cachew state directory with GitHub Actions Cache,
+run one shared container, and save the updated directory after shutdown, including
+when tests fail. Cache entries expire according to Cachew's upstream caching policy
+and the disk backend's seven-day maximum TTL; GitHub cache retention also applies.

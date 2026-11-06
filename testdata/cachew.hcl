@@ -1,4 +1,4 @@
-state = "/tmp/cachew"
+state = "/var/cache/cachew"
 bind  = "0.0.0.0:8080"
 url   = "http://localhost:8080/"
 
@@ -15,8 +15,10 @@ opa {
 
 metadata "memory" {}
 
-cache "memory" {
-  limit-mb = 512
+// Persist both objects and their TTL database in the mounted state directory.
+cache "disk" {
+  limit-mb = 4096
+  max-ttl = "168h"
 }
 
 strategy "host" "https://archive.apache.org" {}
@@ -30,3 +32,5 @@ strategy "host" "https://api.github.com" {}
 strategy "host" "https://pypi.org" {}
 strategy "host" "https://api.foojay.io" {}
 strategy "host" "https://cdn.azul.com" {}
+strategy "host" "https://release-assets.githubusercontent.com" {}
+strategy "host" "https://downloads.gradle.org" {}
