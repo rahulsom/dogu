@@ -42,8 +42,8 @@ func TestToolIntegrations(t *testing.T) {
 		},
 		{
 			name:           "maven",
-			args:           []string{"--maven", "3.9.6", "--", "mvn", "-version"},
-			expectedOutput: "3.9.6",
+			args:           []string{"--maven", "3.9.16", "--", "mvn", "-version"},
+			expectedOutput: "3.9.16",
 		},
 		{
 			name:           "npm",
@@ -160,6 +160,10 @@ func TestToolIntegrations(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			// The archive host is unreachable from the CI network. Exercise live
+			// Apache distributions via the active CDN; archive behavior has fixtures.
+			cfg.BaseURLs["ant"] = "https://dlcdn.apache.org/ant/binaries"
+			cfg.BaseURLs["maven"] = "https://dlcdn.apache.org/maven/maven-3"
 			for tool, upstream := range cfg.BaseURLs {
 				cfg.BaseURLs[tool] = cachewURL + "/" + strings.TrimPrefix(upstream, "https://")
 			}

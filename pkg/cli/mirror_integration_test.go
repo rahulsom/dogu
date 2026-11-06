@@ -207,12 +207,12 @@ func TestMirrorIntegration(t *testing.T) {
 		{
 			name: "maven-via-cachew-mirror",
 			configContent: fmt.Sprintf(
-				`{"baseUrls": {"maven": "%s/archive.apache.org/dist/maven/maven-3"}}`,
+				`{"baseUrls": {"maven": "%s/dlcdn.apache.org/maven/maven-3"}}`,
 				cachewURL,
 			),
-			args:           []string{"-v", "--force", "--maven", "3.9.6", "--", "mvn", "-version"},
-			expectedOutput: "3.9.6",
-			expectedMirror: fmt.Sprintf("%s/archive.apache.org/dist/maven/maven-3", cachewURL),
+			args:           []string{"-v", "--force", "--maven", "3.9.16", "--", "mvn", "-version"},
+			expectedOutput: "3.9.16",
+			expectedMirror: fmt.Sprintf("%s/dlcdn.apache.org/maven/maven-3", cachewURL),
 		},
 		{
 			name: "sbt-via-cachew-mirror",
@@ -237,12 +237,12 @@ func TestMirrorIntegration(t *testing.T) {
 		{
 			name: "ant-via-cachew-mirror",
 			configContent: fmt.Sprintf(
-				`{"baseUrls": {"ant": "%s/archive.apache.org/dist/ant/binaries"}}`,
+				`{"baseUrls": {"ant": "%s/dlcdn.apache.org/ant/binaries"}}`,
 				cachewURL,
 			),
-			args:           []string{"-v", "--force", "--ant", "1.10.14", "--", "ant", "-version"},
-			expectedOutput: "1.10.14",
-			expectedMirror: fmt.Sprintf("%s/archive.apache.org/dist/ant/binaries", cachewURL),
+			args:           []string{"-v", "--force", "--ant", "1.10.18", "--", "ant", "-version"},
+			expectedOutput: "1.10.18",
+			expectedMirror: fmt.Sprintf("%s/dlcdn.apache.org/ant/binaries", cachewURL),
 		},
 		{
 			name: "mill-via-cachew-mirror",

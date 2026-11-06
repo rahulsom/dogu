@@ -33,6 +33,7 @@ jobs:
           key: cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-
+            cachew-v1-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Run tests through Cachew
         run: ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox -- -race -cover ./...

@@ -34,3 +34,4 @@ strategy "host" "https://api.foojay.io" {}
 strategy "host" "https://cdn.azul.com" {}
 strategy "host" "https://release-assets.githubusercontent.com" {}
 strategy "host" "https://downloads.gradle.org" {}
+strategy "host" "https://dlcdn.apache.org" {}

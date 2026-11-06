@@ -171,7 +171,10 @@ DOGU_INTEGRATION=1 CACHEW_URL=http://127.0.0.1:8080 go test -race -cover ./...
 
 Integration tests route dogu's downloads, release discovery, and HTTP redirects
 through Cachew without a direct upstream fallback. Unit tests use local fixtures.
-A cache miss still requires Cachew to reach the upstream HTTPS service.
+The live Ant and Maven tests use Apache's active `dlcdn.apache.org` mirror;
+archive-host behavior is covered by local fixtures because the archive host can
+be unreachable from CI. A cache miss still requires Cachew to reach the upstream
+HTTPS service.
 Programs launched by dogu (such as sbt) can make their own network requests.
 
 CI and release tests restore the Cachew state directory with GitHub Actions Cache,
