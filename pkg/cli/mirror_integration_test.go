@@ -44,8 +44,7 @@ func getOrStartCachew(t *testing.T, repoRoot string) string {
 	// Verify docker command and daemon availability
 	cmd := exec.Command("docker", "info")
 	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon is not running; skipping mirror integration tests")
-		return ""
+		t.Fatalf("Cachew integration tests require Docker or CACHEW_URL: %v", err)
 	}
 
 	configPath := filepath.Join(repoRoot, "testdata", "cachew.hcl")
@@ -54,12 +53,18 @@ func getOrStartCachew(t *testing.T, repoRoot string) string {
 	}
 
 	// Start cachew container with an ephemeral host port
-	runCmd := exec.Command("docker", "run", "-d", "--rm",
-		"-p", "0:8080",
+	args := []string{"run", "-d", "--rm",
+		"-p", "127.0.0.1::8080",
+		"-e", "USER=cachew",
+		"-v", fmt.Sprintf("%s:/var/cache/cachew", t.TempDir()),
 		"-v", fmt.Sprintf("%s:/app/cachew.hcl:ro", configPath),
-		"ghcr.io/block/cachew:latest",
-		"--config", "/app/cachew.hcl",
-	)
+	}
+	// Keep bind-mounted cache files owned by the test user for cleanup.
+	if os.Getuid() >= 0 {
+		args = append(args, "--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()))
+	}
+	args = append(args, "ghcr.io/block/cachew:latest", "--config", "/app/cachew.hcl")
+	runCmd := exec.Command("docker", args...)
 	var stderr bytes.Buffer
 	runCmd.Stderr = &stderr
 	out, err := runCmd.Output()
@@ -69,7 +74,7 @@ func getOrStartCachew(t *testing.T, repoRoot string) string {
 	containerID := strings.TrimSpace(string(out))
 
 	t.Cleanup(func() {
-		_ = exec.Command("docker", "rm", "-f", containerID).Run()
+		_ = exec.Command("docker", "stop", "--time", "30", containerID).Run()
 	})
 
 	// Query mapped port
@@ -166,13 +171,16 @@ esac
 }
 
 func TestMirrorIntegration(t *testing.T) {
+	if os.Getenv("DOGU_INTEGRATION") != "1" {
+		t.Skip("set DOGU_INTEGRATION=1 to run live download integration tests")
+	}
 	repoRoot := findRepoRoot(t)
 	cachewURL := getOrStartCachew(t, repoRoot)
 
 	tempDir := t.TempDir()
 	doguBin := filepath.Join(tempDir, "dogu")
 
-	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
+	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/testdata/cachew-dogu")
 	buildCmd.Dir = repoRoot
 	if err := buildCmd.Run(); err != nil {
 		t.Fatalf("failed to build dogu binary: %v", err)
@@ -199,12 +207,12 @@ func TestMirrorIntegration(t *testing.T) {
 		{
 			name: "maven-via-cachew-mirror",
 			configContent: fmt.Sprintf(
-				`{"baseUrls": {"maven": "%s/archive.apache.org/dist/maven/maven-3"}}`,
+				`{"baseUrls": {"maven": "%s/dlcdn.apache.org/maven/maven-3"}}`,
 				cachewURL,
 			),
-			args:           []string{"-v", "--force", "--maven", "3.9.6", "--", "mvn", "-version"},
-			expectedOutput: "3.9.6",
-			expectedMirror: fmt.Sprintf("%s/archive.apache.org/dist/maven/maven-3", cachewURL),
+			args:           []string{"-v", "--force", "--maven", "3.9.16", "--", "mvn", "-version"},
+			expectedOutput: "3.9.16",
+			expectedMirror: fmt.Sprintf("%s/dlcdn.apache.org/maven/maven-3", cachewURL),
 		},
 		{
 			name: "sbt-via-cachew-mirror",
@@ -229,12 +237,12 @@ func TestMirrorIntegration(t *testing.T) {
 		{
 			name: "ant-via-cachew-mirror",
 			configContent: fmt.Sprintf(
-				`{"baseUrls": {"ant": "%s/archive.apache.org/dist/ant/binaries"}}`,
+				`{"baseUrls": {"ant": "%s/dlcdn.apache.org/ant/binaries"}}`,
 				cachewURL,
 			),
-			args:           []string{"-v", "--force", "--ant", "1.10.14", "--", "ant", "-version"},
-			expectedOutput: "1.10.14",
-			expectedMirror: fmt.Sprintf("%s/archive.apache.org/dist/ant/binaries", cachewURL),
+			args:           []string{"-v", "--force", "--ant", "1.10.18", "--", "ant", "-version"},
+			expectedOutput: "1.10.18",
+			expectedMirror: fmt.Sprintf("%s/dlcdn.apache.org/ant/binaries", cachewURL),
 		},
 		{
 			name: "mill-via-cachew-mirror",
@@ -376,7 +384,7 @@ func TestMirrorIntegration(t *testing.T) {
 
 			cmd := exec.Command(doguBin, tc.args...)
 			cmd.Dir = workDir
-			cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome, "HOME="+workDir)
+			cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome, "HOME="+workDir, "CACHEW_URL="+cachewURL, "DOGU_CONFIGURATION=")
 
 			out, err := cmd.CombinedOutput()
 			output := string(out)

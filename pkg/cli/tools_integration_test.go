@@ -1,7 +1,10 @@
 package cli_test
 
 import (
+	"encoding/json"
 	"os"
+
+	"github.com/dogu-dev/dogu/pkg/config"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -9,10 +12,14 @@ import (
 )
 
 func TestToolIntegrations(t *testing.T) {
+	if os.Getenv("DOGU_INTEGRATION") != "1" {
+		t.Skip("set DOGU_INTEGRATION=1 to run live download integration tests")
+	}
+	cachewURL := getOrStartCachew(t, findRepoRoot(t))
 	tempDir := t.TempDir()
 	doguBin := filepath.Join(tempDir, "dogu")
 
-	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
+	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/testdata/cachew-dogu")
 	if err := buildCmd.Run(); err != nil {
 		t.Fatalf("failed to build dogu binary: %v", err)
 	}
@@ -35,8 +42,8 @@ func TestToolIntegrations(t *testing.T) {
 		},
 		{
 			name:           "maven",
-			args:           []string{"--maven", "3.9.6", "--", "mvn", "-version"},
-			expectedOutput: "3.9.6",
+			args:           []string{"--maven", "3.9.16", "--", "mvn", "-version"},
+			expectedOutput: "3.9.16",
 		},
 		{
 			name:           "npm",
@@ -149,13 +156,32 @@ func TestToolIntegrations(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			doguHome := t.TempDir()
+			cfg, err := config.DefaultConfig()
+			if err != nil {
+				t.Fatal(err)
+			}
+			// The archive host is unreachable from the CI network. Exercise live
+			// Apache distributions via the active CDN; archive behavior has fixtures.
+			cfg.BaseURLs["ant"] = "https://dlcdn.apache.org/ant/binaries"
+			cfg.BaseURLs["maven"] = "https://dlcdn.apache.org/maven/maven-3"
+			for tool, upstream := range cfg.BaseURLs {
+				cfg.BaseURLs[tool] = cachewURL + "/" + strings.TrimPrefix(upstream, "https://")
+			}
+			data, err := json.Marshal(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(doguHome, "config.json"), data, 0644); err != nil {
+				t.Fatal(err)
+			}
+
 			_ = os.WriteFile(filepath.Join(doguHome, "BUILDROOT"), []byte(""), 0644)
 			if tc.setupFunc != nil {
 				tc.setupFunc(doguHome)
 			}
 			cmd := exec.Command(doguBin, tc.args...)
 			cmd.Dir = doguHome
-			cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+			cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome, "CACHEW_URL="+cachewURL, "DOGU_CONFIGURATION=")
 
 			out, err := cmd.CombinedOutput()
 			output := string(out)

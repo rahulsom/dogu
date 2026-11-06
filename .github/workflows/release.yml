@@ -22,8 +22,25 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      - name: Run tests
-        run: go run gotest.tools/gotestsum@latest --format testdox -- -race -cover ./...
+      - name: Restore Cachew downloads
+        id: cachew-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/cachew
+          key: cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-
+            cachew-v1-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Run tests through Cachew
+        run: ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox -- -race -cover ./...
+
+      - name: Save Cachew downloads
+        if: always() && steps.cachew-cache.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: build/cachew
+          key: ${{ steps.cachew-cache.outputs.cache-primary-key }}
 
   release:
     name: Publish Release Binaries
