@@ -15,7 +15,7 @@ func TestAutocomplete(t *testing.T) {
 			if err := writeAutocomplete(&out, shell); err != nil {
 				t.Fatal(err)
 			}
-			for _, word := range []string{"list-versions", "autocomplete", "--node", "java"} {
+			for _, word := range []string{"list-versions", "autocomplete", "--node", "java", "--ruby", "--lua"} {
 				if !strings.Contains(out.String(), word) {
 					t.Errorf("missing %s", word)
 				}

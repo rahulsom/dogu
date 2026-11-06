@@ -40,3 +40,8 @@ commands after extraction. R is built from CRAN sources. These three providers
 support Linux and macOS and require the prerequisites documented in
 `docs/tools.adoc`; failed setup removes the candidate so it cannot be reused.
 Elm's gzip-compressed executable uses the single-binary installer.
+
+Ruby and Lua also use the configured-language workflow in `languages.go`.
+Their official source indexes drive both installation and version listing.
+Ruby runs configure and make; Lua uses the Linux or macOS make target and
+installs with `INSTALL_TOP` pointing to its candidate directory.
