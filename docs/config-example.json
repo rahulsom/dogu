@@ -8,10 +8,14 @@
     "buck2": "http://localhost:8080/github.com/facebook/buck2/releases/download",
     // Mirrors https://github.com/oven-sh/bun/releases/download
     "bun": "http://localhost:8080/github.com/oven-sh/bun/releases/download",
+    // Mirrors https://download.clojure.org/install
+    "clojure": "http://localhost:8080/download.clojure.org/install",
     // Mirrors https://services.gradle.org/distributions
     "gradle": "http://localhost:8080/services.gradle.org/distributions",
     // Mirrors https://api.foojay.io/disco/v3.0/packages
     "java": "http://localhost:8080/api.foojay.io/disco/v3.0/packages",
+    // Mirrors https://github.com/technomancy/leiningen/releases/download
+    "leiningen": "http://localhost:8080/github.com/technomancy/leiningen/releases/download",
     // Mirrors https://archive.apache.org/dist/maven/maven-3
     "maven": "http://localhost:8080/archive.apache.org/dist/maven/maven-3",
     // Mirrors https://github.com/com-lihaoyi/mill/releases/download

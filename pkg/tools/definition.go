@@ -14,6 +14,7 @@ type versionSourceKind uint8
 const (
 	apacheAntSource versionSourceKind = iota
 	apacheMavenSource
+	clojureSource
 	gradleSource
 	githubSource
 	npmSource
@@ -31,6 +32,8 @@ func (s versionSource) fetch(ctx context.Context, baseURL, mirrorURL string) ([]
 		return FetchApacheAntVersions(ctx, baseURL)
 	case apacheMavenSource:
 		return FetchApacheMavenVersions(ctx, baseURL)
+	case clojureSource:
+		return fetchClojureVersions(ctx, baseURL)
 	case gradleSource:
 		return FetchGradleVersions(ctx, mirrorURL)
 	case githubSource:

@@ -75,6 +75,24 @@ E.g. `--gradle 8`, `--gradle 8.10`, `--gradle 8.10.2`
 
 It will set the following environment variables: `GRADLE_<MAJOR>_HOME`, `GRADLE_HOME`.
 
+=== Clojure CLI
+
+Downloads the official Clojure CLI tools archive and installs its `clojure` and
+`clj` launchers. Requires Java; installation currently supports Linux and macOS.
+
+Use `--clojure` with a major, major.minor, or exact tools version, such as
+`--clojure 1.12` or `--clojure 1.12.0.1530`. Sets `CLOJURE_HOME` and
+`CLOJURE_<MAJOR>_HOME`.
+
+=== Leiningen
+
+Downloads the standalone Leiningen jar and provides the `lein` launcher.
+Requires Java.
+
+Use `--leiningen` with a major, major.minor, or exact version, such as
+`--leiningen 2.13` or `--leiningen 2.13.0`. Sets `LEININGEN_HOME`,
+`LEININGEN_<MAJOR>_HOME`, and `LEIN_HOME`.
+
 == Generic Build Tools
 
 === Apache Ant
@@ -250,6 +268,7 @@ These providers install within `$DOGU_HOME` without requesting administrator acc
 
 [source,bash]
 ----
+dogu --java 21 --clojure 1.12 -- lein test
 dogu --go 1.24 -- go version
 dogu --rust 1.85 -- cargo --version
 dogu --ghc 9.6 -- ghc --version

@@ -65,6 +65,7 @@ func PrintUsage(out *os.File) {
 	for _, example := range []string{
 		"dogu --node 22 -- node --version",
 		"dogu --java 21 --maven 3.9 -- mvn clean test",
+		"dogu --java 21 --clojure 1.12 -- lein test",
 		"dogu --python 3.11 --uv 0.5 -- uv run pytest",
 		"dogu --node 22 --pnpm 8.15 -- pnpm install",
 	} {
@@ -85,7 +86,7 @@ func PrintUsage(out *os.File) {
 	sb.WriteString("\n" + headerStyle.Render("Supported tools:") + "\n")
 	sb.WriteString("  Select one or more with --<tool> <version> or --<tool>=<version>.\n\n")
 	for _, ecosystem := range []ecosystemHelp{
-		{"Java / JVM", "java, groovy, kotlin, scala, maven, sbt, gradle"},
+		{"Java / JVM", "java, groovy, kotlin, scala, maven, sbt, gradle, clojure, leiningen"},
 		{"Build tools", "ant, mill, bazel, pants, buck2"},
 		{"JavaScript", "node, npm, pnpm, yarn, bun"},
 		{"Python", "python, uv"},
