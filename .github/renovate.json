@@ -17,5 +17,6 @@
         "/^github\\.com/charmbracelet//"
       ]
     }
-  ]
+  ],
+  "automerge": true
 }
