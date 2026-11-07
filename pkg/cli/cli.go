@@ -91,6 +91,7 @@ func PrintUsage(out *os.File) {
 		{"JavaScript", "node, npm, pnpm, yarn, bun"},
 		{"Python", "python, uv"},
 		{"Other languages", "go, rust, ghc, r, julia, elm, ruby, lua"},
+		{"Diagramming tools", "asciitosvg, barby, rqrcode, bytefield-svg, d2, dbml-renderer\n                    ditaa, erd, gnuplot, graphviz, lilypond, mermaid-cli\n                    penrose, plantuml, js-sequence-diagrams, jsyntrax, vega-lite, vega"},
 	} {
 		sb.WriteString(fmt.Sprintf("  %-18s%s\n", ecosystem.name, ecosystem.tools))
 	}
@@ -256,7 +257,11 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 		// Prepend binDirs so the LAST requested tool version appears FIRST in PATH
 		binDirs = append(res.BinDirs, binDirs...)
 		for k, v := range res.EnvVars {
-			extraEnv[k] = v
+			if (k == "GEM_PATH" || k == "NODE_PATH") && extraEnv[k] != "" {
+				extraEnv[k] = v + string(os.PathListSeparator) + extraEnv[k]
+			} else {
+				extraEnv[k] = v
+			}
 		}
 	}
 

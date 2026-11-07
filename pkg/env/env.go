@@ -63,7 +63,11 @@ func BuildEnvMap(currentEnv []string, binPaths []string, extraEnv map[string]str
 	}
 
 	for k, v := range extraEnv {
-		envMap[k] = v
+		if (k == "GEM_PATH" || k == "NODE_PATH") && envMap[k] != "" {
+			envMap[k] = v + string(os.PathListSeparator) + envMap[k]
+		} else {
+			envMap[k] = v
+		}
 	}
 
 	if len(binPaths) > 0 {
