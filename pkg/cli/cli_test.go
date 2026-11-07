@@ -62,13 +62,13 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 		t.Errorf("expected self-update in --help output, got: %s", output)
 	}
 
-	for _, eco := range []string{"Java / JVM", "Build tools", "JavaScript", "Python", "Other languages"} {
+	for _, eco := range []string{"Java / JVM", "Build tools", "JavaScript", "Python", "Other languages", "Diagramming tools"} {
 		if !strings.Contains(output, eco) {
 			t.Errorf("expected ecosystem %s in --help output, got: %s", eco, output)
 		}
 	}
 
-	for _, tool := range []string{"java", "node", "maven", "sbt", "gradle", "mill", "bazel", "pants", "ant", "buck2", "npm", "yarn", "pnpm", "bun", "python", "uv", "groovy", "kotlin", "scala", "clojure", "leiningen", "go", "rust", "ghc", "r", "julia", "elm", "ruby", "lua"} {
+	for _, tool := range []string{"java", "node", "maven", "sbt", "gradle", "mill", "bazel", "pants", "ant", "buck2", "npm", "yarn", "pnpm", "bun", "python", "uv", "groovy", "kotlin", "scala", "clojure", "leiningen", "go", "rust", "ghc", "r", "julia", "elm", "ruby", "lua", "asciitosvg", "barby", "rqrcode", "bytefield-svg", "d2", "dbml-renderer", "ditaa", "erd", "gnuplot", "graphviz", "lilypond", "mermaid-cli", "penrose", "plantuml", "js-sequence-diagrams", "jsyntrax", "vega-lite", "vega"} {
 		if !strings.Contains(output, tool) {
 			t.Errorf("expected tool %s in supported tools list, got: %s", tool, output)
 		}

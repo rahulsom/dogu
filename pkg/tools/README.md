@@ -46,3 +46,15 @@ Ruby and Lua also use the configured-language workflow in `languages.go`.
 Their official source indexes drive both installation and version listing.
 Ruby runs configure and make; Lua uses the Linux or macOS make target and
 installs with `INSTALL_TOP` pointing to its candidate directory.
+
+`diagrams.go` registers the diagramming category. Providers use private npm,
+RubyGems, Go, or Cabal prefixes, official binary/jar distributions, browser
+source archives, or configured source builds. A completion marker distinguishes
+successful setup from partial candidates; failures remove the candidate.
+Package-manager prerequisites must already be on the installer's PATH because
+CLI provisioning is concurrent. Barby and RQRCode expose GEM_PATH, npm tools
+expose NODE_PATH and local executables, and JS Sequence Diagrams supplies browser
+assets without inventing a CLI. See `docs/tools.adoc` for commands and platform
+requirements. `diagrams_test.go` uses in-memory release responses and fake package
+managers to check discovery, resolved versions, reuse, jars, source builds, and
+failure cleanup without installing third-party tools.

@@ -67,3 +67,17 @@ func TestBuildEnvMap(t *testing.T) {
 		t.Errorf("expected PATH to start with prepended bin paths, got %s", resMap["PATH"])
 	}
 }
+
+func TestBuildEnvMapPreservesLibrarySearchPaths(t *testing.T) {
+	result := env.BuildEnvMap([]string{"GEM_PATH=/existing/gems", "NODE_PATH=/existing/modules"}, nil, map[string]string{"GEM_PATH": "/selected/gems", "NODE_PATH": "/selected/modules"})
+	values := map[string]string{}
+	for _, value := range result {
+		parts := strings.SplitN(value, "=", 2)
+		values[parts[0]] = parts[1]
+	}
+	for _, key := range []string{"GEM_PATH", "NODE_PATH"} {
+		if !strings.Contains(values[key], "/selected/") || !strings.Contains(values[key], "/existing/") {
+			t.Fatalf("%s: %s", key, values[key])
+		}
+	}
+}
