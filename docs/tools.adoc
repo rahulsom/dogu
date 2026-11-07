@@ -266,6 +266,98 @@ Ruby uses `https://cache.ruby-lang.org/pub/ruby` (`index.txt` for discovery);
 Lua uses `https://www.lua.org/ftp` for discovery and source downloads.
 These providers install within `$DOGU_HOME` without requesting administrator access.
 
+== Diagramming and Visualization
+
+The following tools cover text-based diagrams, charts, and visualizations.
+This is a reference category; these tools do not currently have dedicated
+Dogu provider flags. Some entries are libraries or extensions that require
+their ecosystem's package manager and runtime.
+
+[cols="1,2,3"]
+|===
+|Tool |Type |Description
+
+|link:https://github.com/asciitosvg/asciitosvg[asciitosvg]
+|CLI
+|Converts ASCII diagrams to SVG.
+
+|link:http://blockdiag.com/en/actdiag/index.html[actdiag]
+|Python tool
+|Generates activity-diagram images.
+
+|link:https://rubygems.org/gems/barby[Barby]
+|Ruby library
+|Generates barcodes.
+
+|link:https://rubygems.org/gems/rqrcode[rqrcode]
+|Ruby library
+|Generates QR codes.
+
+|link:http://blockdiag.com/en/blockdiag/introduction.html#setup[blockdiag]
+|Python tool
+|Generates block diagrams.
+
+|link:https://github.com/Deep-Symmetry/bytefield-svg[bytefield-svg]
+|JavaScript library
+|Creates SVG diagrams of binary data layouts.
+
+|link:https://d2lang.com/[D2]
+|CLI
+|Creates diagrams from text.
+
+|link:https://github.com/softwaretechnik-berlin/dbml-renderer[dbml-renderer]
+|CLI / library
+|Renders database diagrams from DBML.
+
+|link:https://ditaa.sourceforge.net/[ditaa]
+|CLI
+|Converts ASCII art diagrams into bitmap or vector graphics.
+
+|link:https://github.com/BurntSushi/erd[erd]
+|CLI
+|Draws entity-relationship diagrams.
+
+|link:https://sourceforge.net/projects/gnuplot/files/gnuplot/[gnuplot]
+|CLI
+|Produces plots and graphs from data.
+
+|link:https://graphviz.gitlab.io/[Graphviz]
+|CLI
+|Renders graph descriptions into diagrams.
+
+|link:https://docs.asciidoctor.org/diagram-extension/latest/diagram_types/lilypond/[LilyPond]
+|Asciidoctor extension
+|Typesets music notation in AsciiDoc diagrams.
+
+|link:https://github.com/mermaid-js/mermaid-cli[Mermaid CLI]
+|CLI
+|Renders Mermaid diagrams to images.
+
+|link:https://penrose.cs.cmu.edu/[Penrose]
+|Diagramming system
+|Creates mathematical diagrams from declarative descriptions.
+
+|link:https://plantuml.com/[PlantUML]
+|CLI
+|Creates UML and other diagrams from text.
+
+|link:https://bramp.github.io/js-sequence-diagrams/[js-sequence-diagrams]
+|JavaScript library
+|Renders sequence diagrams from text.
+
+|link:https://atp-mipt.github.io/jsyntrax/[jsyntrax]
+|Python tool
+|Generates railroad syntax diagrams.
+
+|link:https://vega.github.io/vega-lite/[Vega-Lite]
+|JavaScript library
+|Creates declarative statistical visualizations.
+
+|link:https://vega.github.io/vega/[Vega]
+|JavaScript library
+|Grammar and runtime for interactive visualizations.
+|===
+
 [source,bash]
 ----
 dogu --java 21 --clojure 1.12 -- lein test
