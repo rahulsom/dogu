@@ -15,6 +15,18 @@ var (
 		asset:  "apache-maven-{version}-bin.tar.gz", downloadPath: "{version}/binaries/{asset}",
 		homeEnv: []string{"M2_HOME", "MAVEN_HOME"},
 	}
+	clojureDefinition = toolDefinition{
+		name: "clojure", baseURL: "https://download.clojure.org/install",
+		source: versionSource{kind: clojureSource},
+		asset:  "clojure-tools-{version}.tar.gz", downloadPath: "{asset}",
+		homeEnv: []string{"CLOJURE_HOME"},
+	}
+	leiningenDefinition = toolDefinition{
+		name: "leiningen", baseURL: "https://github.com/technomancy/leiningen/releases/download",
+		source: versionSource{kind: githubSource, owner: "technomancy", repository: "leiningen"},
+		asset:  "leiningen-{version}-standalone.jar", downloadPath: "{version}/{asset}",
+		homeEnv: []string{"LEIN_HOME"},
+	}
 	gradleDefinition = toolDefinition{
 		name: "gradle", baseURL: "https://services.gradle.org/distributions",
 		source: versionSource{kind: gradleSource},

@@ -1,7 +1,8 @@
 # Tool providers
 
-`catalog.go` contains typed definitions for Ant, Maven, Gradle, SBT, Yarn,
-Bazel, Buck2, Mill, Groovy, Kotlin, Scala, and Elm. `definition.go` implements their common workflow:
+`catalog.go` contains typed definitions for Ant, Maven, Clojure CLI, Leiningen,
+Gradle, SBT, Yarn, Bazel, Buck2, Mill, Groovy, Kotlin, Scala, and Elm.
+`definition.go` implements their common workflow:
 reuse an installed candidate, resolve a version, expand release naming rules,
 and call the archive or single-binary installer in `common.go`.
 The exported provider types remain small adapters so callers can still use
@@ -26,9 +27,9 @@ installs derive the normalized version and major-version environment keys from
 the selected candidate directory rather than the requested version range.
 
 Providers with custom discovery or setup remain ordinary Go implementations:
-Java, Node, Python, Pants, Bun, UV, npm, and pnpm. Extend the catalog when a
-provider fits its existing rules; keep specialized behavior in Go rather than
-adding a configuration language for it.
+Java, Node, Python, Pants, Bun, UV, npm, pnpm, Clojure CLI, and Leiningen.
+Extend the catalog when a provider fits its existing rules; keep specialized
+behavior in Go rather than adding a configuration language for it.
 
 When adding or migrating a definition, cover its release naming on the relevant
 platforms and use local fixtures to verify version resolution, extracted or

@@ -41,7 +41,7 @@ func ListVersions(ctx context.Context, name, mirror string) ([]string, error) {
 }
 
 func listVersions(ctx context.Context, name, mirror string) ([]string, error) {
-	for _, d := range []toolDefinition{antDefinition, mavenDefinition, gradleDefinition, sbtDefinition, yarnDefinition, bazelDefinition, buck2Definition, millDefinition, groovyDefinition, kotlinDefinition, scalaDefinition, elmDefinition} {
+	for _, d := range []toolDefinition{antDefinition, mavenDefinition, clojureDefinition, leiningenDefinition, gradleDefinition, sbtDefinition, yarnDefinition, bazelDefinition, buck2Definition, millDefinition, groovyDefinition, kotlinDefinition, scalaDefinition, elmDefinition} {
 		if d.name == name {
 			return d.source.fetch(ctx, resolveBaseURL(d.baseURL, mirror), mirror)
 		}

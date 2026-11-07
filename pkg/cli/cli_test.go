@@ -68,7 +68,7 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 		}
 	}
 
-	for _, tool := range []string{"java", "node", "maven", "sbt", "gradle", "mill", "bazel", "pants", "ant", "buck2", "npm", "yarn", "pnpm", "bun", "python", "uv", "groovy", "kotlin", "scala", "go", "rust", "ghc", "r", "julia", "elm", "ruby", "lua"} {
+	for _, tool := range []string{"java", "node", "maven", "sbt", "gradle", "mill", "bazel", "pants", "ant", "buck2", "npm", "yarn", "pnpm", "bun", "python", "uv", "groovy", "kotlin", "scala", "clojure", "leiningen", "go", "rust", "ghc", "r", "julia", "elm", "ruby", "lua"} {
 		if !strings.Contains(output, tool) {
 			t.Errorf("expected tool %s in supported tools list, got: %s", tool, output)
 		}
@@ -78,7 +78,7 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 		t.Errorf("expected Examples in --help output, got: %s", output)
 	}
 
-	for _, e2e := range []string{"mvn clean test", "pytest", "pnpm install"} {
+	for _, e2e := range []string{"mvn clean test", "lein test", "pytest", "pnpm install"} {
 		if !strings.Contains(output, e2e) {
 			t.Errorf("expected end-to-end example %s in --help output, got: %s", e2e, output)
 		}
