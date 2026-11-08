@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -70,7 +72,7 @@ func TestCheckExistingCandidate(t *testing.T) {
 	}
 
 	// Hit existing candidate
-	res, ok, err := checkExistingCandidate(doguHome, "dummy", "1.0", InstallOptions{}, nil)
+	res, ok, err := checkExistingCandidate(t.Context(), doguHome, "dummy", "1.0", InstallOptions{}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -82,11 +84,80 @@ func TestCheckExistingCandidate(t *testing.T) {
 	}
 
 	// Force mode ignores existing
-	res, ok, err = checkExistingCandidate(doguHome, "dummy", "1.0", InstallOptions{Force: true}, nil)
+	res, ok, err = checkExistingCandidate(t.Context(), doguHome, "dummy", "1.0", InstallOptions{Force: true}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if ok || res != nil {
 		t.Errorf("expected ok=false with Force=true")
+	}
+}
+
+func TestExistingCandidateExactAndPartial(t *testing.T) {
+	home := t.TempDir()
+	for _, version := range []string{"1", "1.2", "1.2.3", "1.10.0", "2.0.0-rc1", "2.0.0"} {
+		if err := os.MkdirAll(filepath.Join(home, "candidates", "dummy", version, "bin"), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tc := range []struct{ spec, want string }{
+		{"1", "1.10.0"},
+		{"1.2", "1.2.3"},
+		{"1.2.3", "1.2.3"},
+		{"2.0.0-rc1", "2.0.0-rc1"},
+		{"", "2.0.0"},
+	} {
+		dir, ok := findExistingCandidate(home, "dummy", tc.spec, false)
+		if !ok || filepath.Base(dir) != tc.want {
+			t.Fatalf("spec=%q: %s, %v; want %s", tc.spec, dir, ok, tc.want)
+		}
+	}
+}
+
+func TestCachedAssetsAreVersionScoped(t *testing.T) {
+	for _, binary := range []bool{false, true} {
+		t.Run(fmt.Sprintf("binary=%v", binary), func(t *testing.T) {
+			home := t.TempDir()
+			filename := "tool.tar.gz"
+			if binary {
+				filename = "tool"
+			}
+			downloads := 0
+			diagramHTTP(t, func(r *http.Request) (string, int) {
+				downloads++
+				version := filepath.Base(filepath.Dir(r.URL.Path))
+				payload := []byte(version)
+				if !binary {
+					payload = definitionArchive(t, filename, "tool/bin/tool", payload)
+				}
+				return string(payload), 200
+			})
+			for _, version := range []string{"1.0.0", "2.0.0"} {
+				url := "https://downloads.example.test/" + version + "/" + filename
+				var res *InstallResult
+				var err error
+				if binary {
+					res, err = installBinaryTool(t.Context(), BinaryInstallConfig{
+						ToolName: "dummy", NormalizedVer: version, DoguHome: home,
+						DownloadURL: url, CacheFileName: filename, TargetBin: "tool",
+					})
+				} else {
+					res, err = installArchiveTool(t.Context(), ArchiveInstallConfig{
+						ToolName: "dummy", NormalizedVer: version, DoguHome: home,
+						DownloadURL: url, FileName: filename,
+					})
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := os.ReadFile(filepath.Join(res.BinDirs[0], "tool"))
+				if err != nil || string(got) != version {
+					t.Fatalf("installed %s payload = %q, %v", version, got, err)
+				}
+			}
+			if downloads != 2 {
+				t.Fatalf("downloads=%d; distinct versions must not share cached payloads", downloads)
+			}
+		})
 	}
 }

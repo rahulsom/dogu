@@ -44,12 +44,14 @@ func listVersions(ctx context.Context, name, mirror string) ([]string, error) {
 	if d, ok := diagramDefinition(name); ok {
 		return d.versions(ctx, mirror)
 	}
-	for _, d := range []toolDefinition{antDefinition, mavenDefinition, clojureDefinition, leiningenDefinition, gradleDefinition, sbtDefinition, yarnDefinition, bazelDefinition, buck2Definition, millDefinition, groovyDefinition, kotlinDefinition, scalaDefinition, elmDefinition} {
+	for _, d := range []toolDefinition{antDefinition, mavenDefinition, clojureDefinition, leiningenDefinition, gradleDefinition, sbtDefinition, yarnDefinition, bazelDefinition, buck2Definition, millDefinition, groovyDefinition, kotlinDefinition, elmDefinition} {
 		if d.name == name {
 			return d.source.fetch(ctx, resolveBaseURL(d.baseURL, mirror), mirror)
 		}
 	}
 	switch name {
+	case "scala":
+		return listScalaVersions(ctx)
 	case "ruby", "lua":
 		releases, err := sourceLanguageReleases(ctx, name, mirror)
 		if err != nil {
@@ -69,15 +71,17 @@ func listVersions(ctx context.Context, name, mirror string) ([]string, error) {
 	case "pants":
 		return FetchPyPIVersions(ctx, "pantsbuild.pants")
 	case "python":
-		// Release tags identify build dates; asset names identify Python versions.
-		data, err := fetchReleaseData(ctx, "https://api.github.com/repos/indygreg/python-build-standalone/releases?per_page=100")
+		releases, err := fetchPythonReleases(ctx)
 		if err != nil {
 			return nil, err
 		}
-		matches := regexp.MustCompile(`cpython-([0-9]+\.[0-9]+\.[0-9]+(?:[abrc]+[0-9]+)?)-`).FindAllSubmatch(data, -1)
 		var versions []string
-		for _, m := range matches {
-			versions = append(versions, string(m[1]))
+		for _, release := range releases {
+			for _, asset := range release.Assets {
+				if version := pythonAssetVersion(asset.Name); version != "" {
+					versions = append(versions, version)
+				}
+			}
 		}
 		return versions, nil
 	case "node":
@@ -104,6 +108,9 @@ func listVersions(ctx context.Context, name, mirror string) ([]string, error) {
 		}
 		var versions []string
 		for _, p := range response.Result {
+			if p.Filename == "" || p.Links.PkgDownloadRedirect == "" {
+				continue
+			}
 			dist := p.Distribution
 			if dist == "temurin" {
 				dist = "tem"
@@ -160,4 +167,16 @@ func listVersions(ctx context.Context, name, mirror string) ([]string, error) {
 		return versions, nil
 	}
 	return nil, fmt.Errorf("version discovery unavailable for %s", name)
+}
+
+func listScalaVersions(ctx context.Context) ([]string, error) {
+	scala2, err := FetchGitHubReleases(ctx, "scala", "scala")
+	if err != nil {
+		return nil, err
+	}
+	scala3, err := FetchGitHubReleases(ctx, "scala", "scala3")
+	if err != nil {
+		return nil, err
+	}
+	return append(scala2, scala3...), nil
 }

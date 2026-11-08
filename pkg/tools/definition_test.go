@@ -26,7 +26,7 @@ func TestCatalogAssets(t *testing.T) {
 		os, arch, asset, path, binary, cache string
 	}{
 		{antDefinition, "linux", "amd64", "apache-ant-1.2.3-bin.tar.gz", "apache-ant-1.2.3-bin.tar.gz", "", "apache-ant-1.2.3-bin.tar.gz"},
-		{mavenDefinition, "darwin", "arm64", "apache-maven-1.2.3-bin.tar.gz", "1.2.3/binaries/apache-maven-1.2.3-bin.tar.gz", "", "apache-maven-1.2.3-bin.tar.gz"},
+		{mavenDefinition, "darwin", "arm64", "apache-maven-1.2.3-bin.tar.gz", "maven-1/1.2.3/binaries/apache-maven-1.2.3-bin.tar.gz", "", "apache-maven-1.2.3-bin.tar.gz"},
 		{gradleDefinition, "windows", "amd64", "gradle-1.2.3-bin.zip", "gradle-1.2.3-bin.zip", "", "gradle-1.2.3-bin.zip"},
 		{sbtDefinition, "linux", "amd64", "sbt-1.2.3.tgz", "v1.2.3/sbt-1.2.3.tgz", "", "sbt-1.2.3.tgz"},
 		{sbtDefinition, "windows", "arm64", "sbt-1.2.3.zip", "v1.2.3/sbt-1.2.3.zip", "", "sbt-1.2.3.zip"},
@@ -97,7 +97,13 @@ func TestDefinitionInstall(t *testing.T) {
 				}
 				switch r.URL.Path {
 				case "/mirror/":
-					_, _ = io.WriteString(w, `apache-ant-1.2.3-bin.tar.gz <a href="1.2.3/">1.2.3</a>`)
+					if d.name == "maven" {
+						_, _ = io.WriteString(w, `<a href="maven-1/">1</a>`)
+					} else {
+						_, _ = io.WriteString(w, `apache-ant-1.2.3-bin.tar.gz <a href="1.2.3/">1.2.3</a>`)
+					}
+				case "/mirror/maven-1/":
+					_, _ = io.WriteString(w, `<a href="1.2.3/">1.2.3</a>`)
 				case "/mirror/versions/all":
 					_, _ = io.WriteString(w, `[{"version":"1.2.3"}]`)
 				case "/mirror/yarn":
@@ -114,11 +120,11 @@ func TestDefinitionInstall(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fresh, err := tool.Install(t.Context(), "1.2", home, server.URL+"/mirror/", InstallOptions{})
+			fresh, err := tool.Install(t.Context(), "", home, server.URL+"/mirror/", InstallOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if fresh.NormalizedVer != "1.2.3" || fresh.RequestedVer != "1.2" {
+			if fresh.NormalizedVer != "1.2.3" || fresh.RequestedVer != "" {
 				t.Fatalf("unexpected result: %+v", fresh)
 			}
 			for _, key := range d.homeEnv {
@@ -211,13 +217,17 @@ func TestDefinitionVersionSelection(t *testing.T) {
 		want       string
 	}{
 		{"1.2", false, "1.2.3"}, {"1", false, "1.2.3"}, {"1", true, "1.3.0-rc.1"}, {"v9.8.7", false, "9.8.7"},
+		{"", false, "1.2.3"}, {"", true, "1.3.0-rc.1"},
 	} {
-		if got := d.resolveVersion(context.Background(), tc.spec, server.URL, tc.prerelease); got != tc.want {
-			t.Errorf("resolve(%q, %v) = %q, want %q", tc.spec, tc.prerelease, got, tc.want)
+		if got, err := d.resolveVersion(context.Background(), tc.spec, server.URL, tc.prerelease); err != nil || got != tc.want {
+			t.Errorf("resolve(%q, %v) = %q, %v; want %q", tc.spec, tc.prerelease, got, err, tc.want)
 		}
 	}
 	server.Close()
-	if got := d.resolveVersion(t.Context(), "v9.8.7", server.URL, false); got != "9.8.7" {
+	if got, err := d.resolveVersion(t.Context(), "v9.8.7", server.URL, false); err != nil || got != "9.8.7" {
 		t.Fatalf("fallback = %q", got)
+	}
+	if _, err := d.resolveVersion(t.Context(), "", server.URL, false); err == nil {
+		t.Fatal("latest discovery must not silently fall back on failure")
 	}
 }

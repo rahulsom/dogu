@@ -10,9 +10,9 @@ var (
 		homeEnv: []string{"ANT_HOME"},
 	}
 	mavenDefinition = toolDefinition{
-		name: "maven", baseURL: "https://archive.apache.org/dist/maven/maven-3",
+		name: "maven", baseURL: "https://archive.apache.org/dist/maven",
 		source: versionSource{kind: apacheMavenSource},
-		asset:  "apache-maven-{version}-bin.tar.gz", downloadPath: "{version}/binaries/{asset}",
+		asset:  "apache-maven-{version}-bin.tar.gz", downloadPath: "maven-{major}/{version}/binaries/{asset}",
 		homeEnv: []string{"M2_HOME", "MAVEN_HOME"},
 	}
 	clojureDefinition = toolDefinition{

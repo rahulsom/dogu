@@ -64,14 +64,9 @@ type toolDefinition struct {
 	extraEnv                         map[string]string
 }
 
-func (d toolDefinition) resolveVersion(ctx context.Context, spec, mirrorURL string, prerelease bool) string {
+func (d toolDefinition) resolveVersion(ctx context.Context, spec, mirrorURL string, prerelease bool) (string, error) {
 	versions, err := d.source.fetch(ctx, resolveBaseURL(d.baseURL, mirrorURL), mirrorURL)
-	if err == nil {
-		if best, err := SelectBestVersion(versions, spec, prerelease); err == nil {
-			return CleanVersion(best)
-		}
-	}
-	return CleanVersion(spec)
+	return resolveDiscoveredVersion(versions, err, spec, prerelease)
 }
 
 // expand returns the naming rules for a specific platform without consulting the
@@ -96,7 +91,7 @@ func (d toolDefinition) expand(version, goos, goarch string) (asset, path, binar
 	if binary != "" {
 		binary += suffix
 	}
-	replace := strings.NewReplacer("{version}", version, "{os}", osName, "{arch}", arch, "{ext}", ext, "{suffix}", suffix, "{binary}", binary)
+	replace := strings.NewReplacer("{version}", version, "{major}", strings.Split(version, ".")[0], "{os}", osName, "{arch}", arch, "{ext}", ext, "{suffix}", suffix, "{binary}", binary)
 	asset = replace.Replace(d.asset)
 	path = strings.ReplaceAll(replace.Replace(d.downloadPath), "{asset}", asset)
 	cache = asset
@@ -112,7 +107,10 @@ func (d toolDefinition) expand(version, goos, goarch string) (asset, path, binar
 
 func (d toolDefinition) Install(ctx context.Context, spec, doguHome, mirrorURL string, opts InstallOptions) (*InstallResult, error) {
 	if !opts.Force {
-		if dir, ok := findExistingCandidate(doguHome, d.name, spec, opts.IncludePrerelease); ok {
+		if dir, unlock, ok, err := lockExistingCandidate(ctx, doguHome, d.name, spec, opts.IncludePrerelease); err != nil {
+			return nil, err
+		} else if ok {
+			defer unlock()
 			version := filepath.Base(dir)
 			_, _, _, _, extraEnv := d.expand(version, runtime.GOOS, runtime.GOARCH)
 			res := buildResultFromDir(d.name, spec, dir)
@@ -127,9 +125,33 @@ func (d toolDefinition) Install(ctx context.Context, spec, doguHome, mirrorURL s
 			return res, nil
 		}
 	}
-	version := d.resolveVersion(ctx, spec, mirrorURL, opts.IncludePrerelease)
+	var version string
+	var mavenArchive string
+	var mavenDirect bool
+	var err error
+	if d.name == "maven" {
+		baseURL := resolveBaseURL(d.baseURL, mirrorURL)
+		versions, archive, direct, fetchErr := fetchApacheMavenRelease(ctx, baseURL, spec)
+		mavenArchive, mavenDirect = archive, direct
+		version, err = resolveDiscoveredVersion(versions, fetchErr, spec, opts.IncludePrerelease)
+	} else {
+		version, err = d.resolveVersion(ctx, spec, mirrorURL, opts.IncludePrerelease)
+	}
+	if err != nil {
+		return nil, err
+	}
 	asset, path, binary, cache, extraEnv := d.expand(version, runtime.GOOS, runtime.GOARCH)
-	url := resolveBaseURL(d.baseURL, mirrorURL) + "/" + path
+	base := resolveBaseURL(d.baseURL, mirrorURL)
+	if d.name == "maven" {
+		if !mavenDirect {
+			mavenArchive = strings.TrimRight(mavenArchive, "/") + "/maven-" + mavenSpecMajor(version)
+		}
+		path = mavenArchivePath(mavenArchive, version, asset)
+	}
+	url := base + "/" + path
+	if d.name == "maven" {
+		url = path
+	}
 	if d.binary != "" {
 		return installBinaryTool(ctx, BinaryInstallConfig{
 			ToolName: d.name, VersionSpec: spec, NormalizedVer: version,

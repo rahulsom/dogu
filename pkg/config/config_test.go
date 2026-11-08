@@ -54,7 +54,7 @@ func TestDoguHomeConfigOverride(t *testing.T) {
 		t.Errorf("expected overridden java URL, got '%s'", val)
 	}
 	// Verify unset properties retain default values
-	if val := cfg.GetBaseURL("maven"); val != "https://archive.apache.org/dist/maven/maven-3" {
+	if val := cfg.GetBaseURL("maven"); val != "https://archive.apache.org/dist/maven" {
 		t.Errorf("expected default maven URL, got '%s'", val)
 	}
 }

@@ -14,6 +14,13 @@ import (
 )
 
 var versionNumRegex = regexp.MustCompile(`[0-9]+`)
+var partialVersionRegex = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)?$`)
+var prereleaseSpecRegex = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-.+`)
+var goPseudoVersionRegex = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+-[0-9]{14}-[0-9a-f]{12}$`)
+var numericPrereleaseRegex = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+(?:[.-]|$)`)
+var prereleaseKeywordRegex = regexp.MustCompile(`(?i)(^|[.-])(rc|alpha|beta|dev|milestone|preview|snapshot|nightly|next|canary|cr|pre)(?:[0-9]|[.-]|$)|[0-9](?:rc|alpha|beta|dev|milestone|preview|snapshot|nightly|next|canary|cr|pre)[0-9]`)
+var milestoneRegex = regexp.MustCompile(`(?i)[-.]m[0-9]+`)
+var pythonPrereleaseRegex = regexp.MustCompile(`(?i)[0-9]+[ab][0-9]+`)
 
 // CleanVersion removes common prefixes and distribution suffixes from a version string.
 func CleanVersion(v string) string {
@@ -36,8 +43,11 @@ func CleanVersion(v string) string {
 
 // MatchVersion checks whether candidateVersion satisfies versionSpec.
 func MatchVersion(candidateVersion string, versionSpec string) bool {
-	if candidateVersion == "" || versionSpec == "" {
+	if candidateVersion == "" {
 		return false
+	}
+	if versionSpec == "" {
+		return true
 	}
 
 	candClean := CleanVersion(candidateVersion)
@@ -51,6 +61,9 @@ func MatchVersion(candidateVersion string, versionSpec string) bool {
 
 	if candClean == specClean || candClean == specVersionOnly {
 		return true
+	}
+	if prereleaseSpecRegex.MatchString(specClean) {
+		return false
 	}
 
 	// Check dotted or dashed prefix matching: e.g. "1.1" matches "1.1.0", "3" matches "3.9.6"
@@ -68,27 +81,30 @@ func IsRC(v string) bool {
 	}
 	clean := CleanVersion(v)
 	lower := strings.ToLower(clean)
-
-	rcKeywords := []string{
-		"rc", "alpha", "beta", "dev", "milestone", "preview",
-		"snapshot", "nightly", "next", "canary", "cr",
+	if goPseudoVersionRegex.MatchString(lower) {
+		return false
+	}
+	// Java distribution names are not prerelease identifiers.
+	for _, vendor := range []string{"tem", "temurin", "zulu", "microsoft", "corretto", "oracle", "liberica", "openlogic", "sap_machine", "graalvm", "jetbrains", "semeru", "dragonwell", "bisheng"} {
+		lower = strings.TrimSuffix(lower, "-"+vendor)
+	}
+	if numericPrereleaseRegex.MatchString(lower) {
+		return true
 	}
 
-	for _, kw := range rcKeywords {
-		if strings.Contains(lower, kw) {
-			return true
-		}
+	if prereleaseKeywordRegex.MatchString(lower) {
+		return true
 	}
 
 	if strings.Contains(lower, "-ea") || strings.HasSuffix(lower, "ea") {
 		return true
 	}
 
-	if regexp.MustCompile(`(?i)[-.]m[0-9]+`).MatchString(lower) {
+	if milestoneRegex.MatchString(lower) {
 		return true
 	}
 
-	if regexp.MustCompile(`(?i)[0-9]+[ab][0-9]+`).MatchString(lower) {
+	if pythonPrereleaseRegex.MatchString(lower) {
 		return true
 	}
 
@@ -105,10 +121,10 @@ func getMainNumericParts(v string) []int {
 				cut = idx
 			}
 		}
-		if idx := regexp.MustCompile(`(?i)[-.]m[0-9]+`).FindStringIndex(lower); idx != nil && idx[0] < cut {
+		if idx := milestoneRegex.FindStringIndex(lower); idx != nil && idx[0] < cut {
 			cut = idx[0]
 		}
-		if idx := regexp.MustCompile(`(?i)[0-9]+[ab][0-9]+`).FindStringIndex(lower); idx != nil {
+		if idx := pythonPrereleaseRegex.FindStringIndex(lower); idx != nil {
 			match := lower[idx[0]:idx[1]]
 			for i, ch := range match {
 				if ch == 'a' || ch == 'b' || ch == 'A' || ch == 'B' {
@@ -242,6 +258,22 @@ func SelectBestVersion(versions []string, spec string, includePrerelease bool) (
 	})
 
 	return matches[len(matches)-1], nil
+}
+
+// resolveDiscoveredVersion preserves explicit-version fallback, but an empty
+// spec must resolve successfully before an installer can construct a URL.
+func resolveDiscoveredVersion(versions []string, fetchErr error, spec string, prerelease bool) (string, error) {
+	if fetchErr == nil {
+		best, err := SelectBestVersion(versions, spec, prerelease)
+		if err == nil {
+			return CleanVersion(best), nil
+		}
+		fetchErr = err
+	}
+	if spec == "" {
+		return "", fmt.Errorf("resolve latest version: %w", fetchErr)
+	}
+	return CleanVersion(spec), nil
 }
 
 // FetchNPMVersions retrieves all published version strings for an npm package.
@@ -540,49 +572,98 @@ func ResolveGitHubVersion(ctx context.Context, owner, repo, versionSpec string, 
 
 // FetchApacheMavenVersions retrieves version strings from Apache Maven archive index.
 func FetchApacheMavenVersions(ctx context.Context, baseURL string) ([]string, error) {
+	versions, _, _, err := fetchApacheMavenRelease(ctx, baseURL, "")
+	return versions, err
+}
+
+func fetchApacheMavenRelease(ctx context.Context, baseURL, spec string) ([]string, string, bool, error) {
 	if baseURL == "" {
-		baseURL = "https://archive.apache.org/dist/maven/maven-3"
+		baseURL = "https://archive.apache.org/dist/maven"
 	}
-	baseURL = strings.TrimSuffix(baseURL, "/")
-
-	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/", nil)
+	originalBase := strings.TrimRight(baseURL, "/")
+	baseURL = mavenArchiveRoot(baseURL)
+	data, err := fetchReleaseData(ctx, baseURL+"/")
 	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("apache maven archive returned status %s", resp.Status)
-	}
-
-	dirRegex := regexp.MustCompile(`href="([0-9]+\.[0-9]+\.[0-9]+)/?"`)
-	scanner := bufio.NewScanner(resp.Body)
-	versionMap := make(map[string]bool)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		matches := dirRegex.FindAllStringSubmatch(line, -1)
-		for _, m := range matches {
-			if len(m) > 1 {
-				versionMap[m[1]] = true
+		if originalBase != baseURL {
+			directData, directErr := fetchReleaseData(ctx, originalBase+"/")
+			if directErr == nil {
+				if versions := mavenVersionsInIndex(directData); len(versions) > 0 {
+					return versions, originalBase, true, nil
+				}
 			}
 		}
+		if major := mavenSpecMajor(spec); major != "" {
+			archive := baseURL + "/maven-" + major
+			index, indexErr := fetchReleaseData(ctx, archive+"/")
+			if indexErr == nil {
+				return mavenVersionsInIndex(index), baseURL, false, nil
+			}
+			return nil, baseURL, false, indexErr
+		}
+		return nil, baseURL, false, err
 	}
-
+	majors := regexp.MustCompile(`href="(maven-[0-9]+)/?"`).FindAllSubmatch(data, -1)
+	if len(majors) == 0 {
+		return mavenVersionsInIndex(data), baseURL, true, nil
+	}
+	wantedMajor := mavenSpecMajor(spec)
 	var versions []string
-	for v := range versionMap {
-		versions = append(versions, v)
+	var selectedArchive string
+	foundMajor := false
+	for _, entry := range majors {
+		archiveName := string(entry[1])
+		major := strings.TrimPrefix(archiveName, "maven-")
+		if wantedMajor != "" && major != wantedMajor {
+			continue
+		}
+		foundMajor = true
+		archive := baseURL + "/" + archiveName
+		index, err := fetchReleaseData(ctx, archive+"/")
+		if err != nil {
+			return nil, baseURL, false, err
+		}
+		versions = append(versions, mavenVersionsInIndex(index)...)
+		selectedArchive = baseURL
 	}
-
-	if len(versions) == 0 {
-		return nil, fmt.Errorf("no versions found at apache maven archive %s", baseURL)
+	if wantedMajor != "" && !foundMajor {
+		index, err := fetchReleaseData(ctx, baseURL+"/maven-"+wantedMajor+"/")
+		if err != nil {
+			return nil, baseURL, false, err
+		}
+		versions = append(versions, mavenVersionsInIndex(index)...)
+		selectedArchive = baseURL
 	}
+	if wantedMajor == "" && len(majors) > 0 && len(versions) == 0 {
+		return nil, baseURL, false, fmt.Errorf("no versions found at apache maven archive %s", baseURL)
+	}
+	if selectedArchive == "" {
+		selectedArchive = baseURL
+	}
+	return versions, selectedArchive, false, nil
+}
 
-	return versions, nil
+func mavenVersionsInIndex(data []byte) []string {
+	dirRegex := regexp.MustCompile(`href="([0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?)/?"`)
+	var versions []string
+	seen := map[string]bool{}
+	for _, match := range dirRegex.FindAllSubmatch(data, -1) {
+		if len(match) > 1 && !seen[string(match[1])] {
+			seen[string(match[1])] = true
+			versions = append(versions, string(match[1]))
+		}
+	}
+	return versions
+}
+
+func mavenSpecMajor(spec string) string {
+	match := regexp.MustCompile(`^[0-9]+`).FindString(CleanVersion(spec))
+	return match
+}
+
+func mavenArchiveRoot(base string) string {
+	return regexp.MustCompile(`/maven-[0-9]+$`).ReplaceAllString(strings.TrimRight(base, "/"), "")
+}
+
+func mavenArchivePath(archive, version, asset string) string {
+	return strings.TrimRight(archive, "/") + "/" + version + "/binaries/" + asset
 }

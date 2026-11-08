@@ -147,7 +147,7 @@ func installIndexedLanguage(ctx context.Context, name, spec, home, mirror string
 	if name == "go" {
 		envKeys = []string{"GOROOT"}
 	}
-	if res, ok, err := checkExistingCandidate(home, name, spec, opts, func(r *InstallResult) error {
+	if res, ok, err := checkExistingCandidate(ctx, home, name, spec, opts, func(r *InstallResult) error {
 		r.NormalizedVer = filepath.Base(r.InstallDir)
 		r.EnvVars = buildEnvVars(name, r.NormalizedVer, r.HomeDir, envKeys, nil)
 		return nil
@@ -245,7 +245,7 @@ func installConfiguredLanguage(ctx context.Context, name, spec, home, mirror str
 	if runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64" {
 		return nil, fmt.Errorf("unsupported %s architecture %s", name, runtime.GOARCH)
 	}
-	if r, ok, e := checkExistingCandidate(home, name, spec, opts, func(r *InstallResult) error {
+	if r, ok, e := checkExistingCandidate(ctx, home, name, spec, opts, func(r *InstallResult) error {
 		r.NormalizedVer = filepath.Base(r.InstallDir)
 		r.EnvVars = configuredLanguageEnv(name, r.NormalizedVer, r.HomeDir)
 		return nil
@@ -257,7 +257,11 @@ func installConfiguredLanguage(ctx context.Context, name, spec, home, mirror str
 		base = "https://downloads.haskell.org/~ghc"
 	}
 	if name == "r" {
-		base = "https://cran.r-project.org/src/base/R-" + strings.Split(CleanVersion(spec), ".")[0]
+		major := strings.Split(CleanVersion(spec), ".")[0]
+		if major == "" {
+			major = "4"
+		}
+		base = "https://cran.r-project.org/src/base/R-" + major
 	}
 	base = resolveBaseURL(base, mirror)
 	version := CleanVersion(spec)
@@ -283,18 +287,18 @@ func installConfiguredLanguage(ctx context.Context, name, spec, home, mirror str
 		}
 	} else if name == "rust" {
 		versions, e := fetchGitHubReleases(ctx, "rust-lang", "rust", false)
-		if e == nil {
-			if v, e := SelectBestVersion(versions, spec, opts.IncludePrerelease); e == nil {
-				version = CleanVersion(v)
-			}
+		version, e = resolveDiscoveredVersion(versions, e, spec, opts.IncludePrerelease)
+		if e != nil {
+			return nil, e
 		}
 	} else if name == "ghc" {
 		versions, e := fetchIndexVersions(ctx, base)
 		if e != nil {
 			return nil, e
 		}
-		if v, e := SelectBestVersion(versions, spec, opts.IncludePrerelease); e == nil {
-			version = CleanVersion(v)
+		version, e = resolveDiscoveredVersion(versions, nil, spec, opts.IncludePrerelease)
+		if e != nil {
+			return nil, e
 		}
 	} else if name == "r" {
 		data, e := fetchReleaseData(ctx, base+"/")
@@ -482,12 +486,15 @@ func (p *PantsTool) Name() string {
 }
 
 func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if res, ok, err := checkExistingCandidate(doguHome, "pants", versionSpec, opts, nil); ok || err != nil {
+	if res, ok, err := checkExistingCandidate(ctx, doguHome, "pants", versionSpec, opts, nil); ok || err != nil {
 		return res, err
 	}
 
 	baseURL := resolveBaseURL("https://github.com/pantsbuild/pants/releases/download", mirrorBaseURL)
-	normVer := resolvePantsVersion(ctx, versionSpec, opts.IncludePrerelease)
+	normVer, err := resolvePantsVersion(ctx, versionSpec, opts.IncludePrerelease)
+	if err != nil {
+		return nil, err
+	}
 
 	osName, archName := mapPantsTarget()
 	targetBin := "pants"
@@ -511,18 +518,14 @@ func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome st
 	})
 }
 
-func resolvePantsVersion(ctx context.Context, versionSpec string, includePrerelease bool) string {
+func resolvePantsVersion(ctx context.Context, versionSpec string, includePrerelease bool) (string, error) {
 	if versions, err := FetchGitHubReleases(ctx, "pantsbuild", "pants"); err == nil && len(versions) > 0 {
 		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
-			return CleanVersion(best)
+			return CleanVersion(best), nil
 		}
 	}
-	if versions, err := FetchPyPIVersions(ctx, "pantsbuild.pants"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
-			return CleanVersion(best)
-		}
-	}
-	return CleanVersion(versionSpec)
+	versions, err := FetchPyPIVersions(ctx, "pantsbuild.pants")
+	return resolveDiscoveredVersion(versions, err, versionSpec, includePrerelease)
 }
 
 func resolvePantsDownloadURL(ctx context.Context, baseURL string, normVer string, osName string, archName string) string {
