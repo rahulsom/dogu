@@ -224,7 +224,7 @@ func TestResolveNPMToolVersion(t *testing.T) {
 
 func TestResolveMavenVersion(t *testing.T) {
 	localVersionSources(t, map[string][]byte{
-		"archive.apache.org/dist/maven/maven-3/": []byte(`<a href="3.9.6/">3.9.6</a>`),
+		"archive.apache.org/dist/maven/": []byte(`<a href="3.9.6/">3.9.6</a>`),
 	})
 
 	normVer, err := resolveMavenVersion(t.Context(), "3", "https://archive.apache.org/dist/maven/maven-3", false)

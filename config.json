@@ -20,7 +20,7 @@
     "jsyntrax": "https://github.com/atp-mipt/jsyntrax/releases/download",
     "leiningen": "https://github.com/technomancy/leiningen/releases/download",
     "lilypond": "https://gitlab.com/lilypond/lilypond/-/releases",
-    "maven": "https://archive.apache.org/dist/maven/maven-3",
+    "maven": "https://archive.apache.org/dist/maven",
     "mermaid-cli": "https://registry.npmjs.org",
     "mill": "https://github.com/com-lihaoyi/mill/releases/download",
     "node": "https://nodejs.org/dist",

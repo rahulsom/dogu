@@ -21,6 +21,12 @@ func TestAllToolsReuseMajorAndLatest(t *testing.T) {
 	t.Cleanup(func() { http.DefaultTransport = old })
 	for _, name := range List() {
 		t.Run(name, func(t *testing.T) {
+			if _, diagram := diagramDefinition(name); diagram && runtime.GOOS == "windows" {
+				t.Skip("Unix-only diagram provider")
+			}
+			if name == "elm" && runtime.GOARCH != "amd64" && !(runtime.GOOS == "darwin" && runtime.GOARCH == "arm64") {
+				t.Skip("unsupported Elm architecture")
+			}
 			if runtime.GOOS == "windows" && (name == "clojure" || name == "rust" || name == "ghc" || name == "r" || name == "ruby" || name == "lua") {
 				t.Skip("Unix-only provider")
 			}
@@ -142,15 +148,30 @@ func TestSpecializedMajorAndLatestInstalls(t *testing.T) {
 				path = "/" + version + "/" + asset
 			}
 			payload := []byte("fixture")
-			if binary == "" {
-				payload = definitionArchive(t, asset, "distribution/bin/tool", payload)
+			archiveBinary := "tool"
+			if name == "bun" || name == "uv" {
+				archiveBinary = name
+				if runtime.GOOS == "windows" {
+					archiveBinary += ".exe"
+				}
 			}
-			downloads := 0
+			if binary == "" {
+				archivePath := "distribution/bin/" + archiveBinary
+				if name == "bun" || name == "uv" {
+					archivePath = "distribution/" + archiveBinary
+				}
+				if runtime.GOOS == "windows" && (name == "node" || name == "python") {
+					archivePath = archiveBinary
+				}
+				payload = definitionArchive(t, asset, archivePath, payload)
+			}
+			downloads, discoveries := 0, 0
 			diagramHTTP(t, func(r *http.Request) (string, int) {
 				if r.URL.Path == path && (r.URL.Host == "downloads.example.test" || name == "java") {
 					downloads++
 					return string(payload), 200
 				}
+				discoveries++
 				switch {
 				case name == "java" && r.URL.Host == "api.foojay.io":
 					if got := r.URL.Query().Get("version"); got != "" && got != major {
@@ -207,9 +228,24 @@ func TestSpecializedMajorAndLatestInstalls(t *testing.T) {
 				if res.EnvVars[env.FormatEnvKey(name, major)] != res.HomeDir {
 					t.Fatalf("wrong version environment: %+v", res)
 				}
-				// Force must resolve empty specs online even with a local candidate.
-				if _, err := tool.Install(t.Context(), "", home, mirror, InstallOptions{Force: true}); err != nil {
+				file := filepath.Join(res.BinDirs[0], archiveBinary)
+				if binary != "" {
+					file = filepath.Join(res.BinDirs[0], binary)
+				}
+				if err := os.WriteFile(file, []byte("broken"), 0755); err != nil {
 					t.Fatal(err)
+				}
+				before := discoveries
+				restored, err := tool.Install(t.Context(), "", home, mirror, InstallOptions{Force: true})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if discoveries == before || restored.InstallDir != res.InstallDir {
+					t.Fatal("force did not discover and replace the resolved candidate")
+				}
+				got, err := os.ReadFile(file)
+				if err != nil || string(got) != "fixture" {
+					t.Fatalf("force did not restore payload: %q, %v", got, err)
 				}
 			}
 			if downloads != 2 {

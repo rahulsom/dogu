@@ -72,10 +72,17 @@ func IsRC(v string) bool {
 	}
 	clean := CleanVersion(v)
 	lower := strings.ToLower(clean)
+	// Java distribution names are not prerelease identifiers.
+	for _, vendor := range []string{"tem", "temurin", "zulu", "microsoft", "corretto", "oracle", "liberica", "openlogic", "sap_machine", "graalvm", "jetbrains", "semeru", "dragonwell", "bisheng"} {
+		lower = strings.TrimSuffix(lower, "-"+vendor)
+	}
+	if regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+(?:[.-]|$)`).MatchString(lower) {
+		return true
+	}
 
 	rcKeywords := []string{
 		"rc", "alpha", "beta", "dev", "milestone", "preview",
-		"snapshot", "nightly", "next", "canary", "cr",
+		"snapshot", "nightly", "next", "canary", "cr", "pre",
 	}
 
 	for _, kw := range rcKeywords {
@@ -561,33 +568,26 @@ func ResolveGitHubVersion(ctx context.Context, owner, repo, versionSpec string, 
 // FetchApacheMavenVersions retrieves version strings from Apache Maven archive index.
 func FetchApacheMavenVersions(ctx context.Context, baseURL string) ([]string, error) {
 	if baseURL == "" {
-		baseURL = "https://archive.apache.org/dist/maven/maven-3"
+		baseURL = "https://archive.apache.org/dist/maven"
 	}
-	baseURL = strings.TrimSuffix(baseURL, "/")
-
-	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/", nil)
+	baseURL = mavenArchiveRoot(baseURL)
+	data, err := fetchReleaseData(ctx, baseURL+"/")
 	if err != nil {
 		return nil, err
 	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("apache maven archive returned status %s", resp.Status)
-	}
-
-	dirRegex := regexp.MustCompile(`href="([0-9]+\.[0-9]+\.[0-9]+)/?"`)
-	scanner := bufio.NewScanner(resp.Body)
+	majors := regexp.MustCompile(`href="(maven-[0-9]+)/?"`).FindAllSubmatch(data, -1)
+	dirRegex := regexp.MustCompile(`href="([0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?)/?"`)
 	versionMap := make(map[string]bool)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		matches := dirRegex.FindAllStringSubmatch(line, -1)
+	indexes := [][]byte{data}
+	for _, major := range majors {
+		index, err := fetchReleaseData(ctx, baseURL+"/"+string(major[1])+"/")
+		if err != nil {
+			return nil, err
+		}
+		indexes = append(indexes, index)
+	}
+	for _, index := range indexes {
+		matches := dirRegex.FindAllStringSubmatch(string(index), -1)
 		for _, m := range matches {
 			if len(m) > 1 {
 				versionMap[m[1]] = true
@@ -605,4 +605,8 @@ func FetchApacheMavenVersions(ctx context.Context, baseURL string) ([]string, er
 	}
 
 	return versions, nil
+}
+
+func mavenArchiveRoot(base string) string {
+	return regexp.MustCompile(`/maven-[0-9]+$`).ReplaceAllString(strings.TrimRight(base, "/"), "")
 }

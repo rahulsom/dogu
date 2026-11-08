@@ -43,7 +43,11 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		DoguHome:      doguHome,
 		Opts:          opts,
 		FindDirs: func(installDir string) (string, []string) {
-			return findDirWithBinary(installDir, "bun")
+			binary := "bun"
+			if runtime.GOOS == "windows" {
+				binary += ".exe"
+			}
+			return findDirWithBinary(installDir, binary)
 		},
 	})
 }

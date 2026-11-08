@@ -26,7 +26,7 @@ func TestCatalogAssets(t *testing.T) {
 		os, arch, asset, path, binary, cache string
 	}{
 		{antDefinition, "linux", "amd64", "apache-ant-1.2.3-bin.tar.gz", "apache-ant-1.2.3-bin.tar.gz", "", "apache-ant-1.2.3-bin.tar.gz"},
-		{mavenDefinition, "darwin", "arm64", "apache-maven-1.2.3-bin.tar.gz", "1.2.3/binaries/apache-maven-1.2.3-bin.tar.gz", "", "apache-maven-1.2.3-bin.tar.gz"},
+		{mavenDefinition, "darwin", "arm64", "apache-maven-1.2.3-bin.tar.gz", "maven-1/1.2.3/binaries/apache-maven-1.2.3-bin.tar.gz", "", "apache-maven-1.2.3-bin.tar.gz"},
 		{gradleDefinition, "windows", "amd64", "gradle-1.2.3-bin.zip", "gradle-1.2.3-bin.zip", "", "gradle-1.2.3-bin.zip"},
 		{sbtDefinition, "linux", "amd64", "sbt-1.2.3.tgz", "v1.2.3/sbt-1.2.3.tgz", "", "sbt-1.2.3.tgz"},
 		{sbtDefinition, "windows", "arm64", "sbt-1.2.3.zip", "v1.2.3/sbt-1.2.3.zip", "", "sbt-1.2.3.zip"},

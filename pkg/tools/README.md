@@ -16,7 +16,7 @@ A definition contains:
 - A binary name for single-binary installs; an empty name selects archives.
 - Optional cache naming, home environment keys, and extra environment values.
 
-Templates support `{version}`, `{os}`, `{arch}`, `{ext}`, `{suffix}`, and
+Templates support `{version}`, `{major}`, `{os}`, `{arch}`, `{ext}`, `{suffix}`, and
 `{binary}`. Download paths additionally support `{asset}`. Extra environment
 values use the same substitution rules. Versions are cleaned after selection,
 with the requested version as fallback when discovery fails or finds no match.
@@ -26,6 +26,12 @@ by default. Discovery must succeed for empty specs; there is no explicit version
 to fall back to. Never treat the tool's candidates root as an exact empty match.
 Shared installers scope cached downloads by candidate version so releases with
 identical asset filenames cannot reuse another version's payload.
+They extract or copy into a temporary directory before replacing the candidate.
+Setup runs with an incomplete marker; only successful setup clears it and writes
+a completion marker. Candidate searches reject marked incomplete installations,
+while unmarked legacy installations remain reusable. Failed extraction removes
+its cached archive so the next attempt can download it again. Forced installs
+replace candidate contents even when the resolved version is unchanged.
 
 Fresh and reused installs apply the same home environment metadata. Reused
 installs derive the normalized version and major-version environment keys from

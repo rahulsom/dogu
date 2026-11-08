@@ -40,7 +40,11 @@ Sets `SCALA_HOME` and `SCALA_<MAJOR>_HOME`.
 === Apache Maven
 
 Downloads Apache Maven releases.
-The default base URL is `https://archive.apache.org/dist/maven/maven-3`.
+The default base URL is `https://archive.apache.org/dist/maven`.
+Discovery includes all major archives and prerelease suffixes. Use
+`--maven= --prerelease` or `--maven 4 --prerelease` to include Maven 4
+prereleases. Mirrors should expose the parent archive and its `maven-N`
+directories; legacy URLs ending in `maven-3` are normalized to their parent.
 
 You can specify versions with `--maven`.
 This supports major versions, major.minor, or exact semver versions.

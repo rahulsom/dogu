@@ -315,7 +315,7 @@ func parseJavaSpec(spec string) (version string, distribution string) {
 
 func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist string, osName string, archName string, mirrorBaseURL string, includePrerelease bool) (downloadURL string, filename string, normVersion string, resolvedDist string, err error) {
 	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") {
-		if ver == "" {
+		if ver == "" || partialVersionRegex.MatchString(ver) {
 			_, _, ver, dist, err = j.resolveDownloadURL(ctx, ver, dist, osName, archName, "", includePrerelease)
 			if err != nil {
 				return "", "", "", "", err

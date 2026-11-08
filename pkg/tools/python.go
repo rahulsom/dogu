@@ -106,9 +106,7 @@ func resolvePythonAsset(ctx context.Context, spec string, prerelease bool) (vers
 		if spec == "" {
 			return "", "", "", fmt.Errorf("resolve latest Python version: %w", err)
 		}
-		// Preserve the legacy release fallback for explicit requests.
-		version, err = resolveDiscoveredVersion([]string{"3.8.18", "3.9.18", "3.10.13", "3.11.7", "3.12.1"}, nil, spec, prerelease)
-		return version, "20240107", fmt.Sprintf("cpython-%s+20240107-%s-install_only.tar.gz", version, mapPythonTarget()), err
+		return legacyPythonAsset(spec, prerelease)
 	}
 	var versions []string
 	for _, release := range releases {
@@ -122,6 +120,9 @@ func resolvePythonAsset(ctx context.Context, spec string, prerelease bool) (vers
 	}
 	version, err = SelectBestVersion(versions, spec, prerelease)
 	if err != nil {
+		if spec != "" {
+			return legacyPythonAsset(spec, prerelease)
+		}
 		return "", "", "", err
 	}
 	for _, release := range releases {
@@ -133,6 +134,11 @@ func resolvePythonAsset(ctx context.Context, spec string, prerelease bool) (vers
 		}
 	}
 	return version, tag, filename, nil
+}
+
+func legacyPythonAsset(spec string, prerelease bool) (version, tag, filename string, err error) {
+	version, err = resolveDiscoveredVersion([]string{"3.8.18", "3.9.18", "3.10.13", "3.11.7", "3.12.1"}, nil, spec, prerelease)
+	return version, "20240107", fmt.Sprintf("cpython-%s+20240107-%s-install_only.tar.gz", version, mapPythonTarget()), err
 }
 
 func ensurePythonSymlink(binDir string) {
@@ -212,7 +218,11 @@ func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome strin
 		DoguHome:      doguHome,
 		Opts:          opts,
 		FindDirs: func(installDir string) (string, []string) {
-			return findDirWithBinary(installDir, "uv")
+			binary := "uv"
+			if runtime.GOOS == "windows" {
+				binary += ".exe"
+			}
+			return findDirWithBinary(installDir, binary)
 		},
 	})
 }

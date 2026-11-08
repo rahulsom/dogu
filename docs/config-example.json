@@ -16,8 +16,8 @@
     "java": "http://localhost:8080/api.foojay.io/disco/v3.0/packages",
     // Mirrors https://github.com/technomancy/leiningen/releases/download
     "leiningen": "http://localhost:8080/github.com/technomancy/leiningen/releases/download",
-    // Mirrors https://archive.apache.org/dist/maven/maven-3
-    "maven": "http://localhost:8080/archive.apache.org/dist/maven/maven-3",
+    // Mirrors https://archive.apache.org/dist/maven
+    "maven": "http://localhost:8080/archive.apache.org/dist/maven",
     // Mirrors https://github.com/com-lihaoyi/mill/releases/download
     "mill": "http://localhost:8080/github.com/com-lihaoyi/mill/releases/download",
     // Mirrors https://nodejs.org/dist

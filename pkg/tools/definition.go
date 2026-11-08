@@ -91,7 +91,7 @@ func (d toolDefinition) expand(version, goos, goarch string) (asset, path, binar
 	if binary != "" {
 		binary += suffix
 	}
-	replace := strings.NewReplacer("{version}", version, "{os}", osName, "{arch}", arch, "{ext}", ext, "{suffix}", suffix, "{binary}", binary)
+	replace := strings.NewReplacer("{version}", version, "{major}", strings.Split(version, ".")[0], "{os}", osName, "{arch}", arch, "{ext}", ext, "{suffix}", suffix, "{binary}", binary)
 	asset = replace.Replace(d.asset)
 	path = strings.ReplaceAll(replace.Replace(d.downloadPath), "{asset}", asset)
 	cache = asset
@@ -127,7 +127,11 @@ func (d toolDefinition) Install(ctx context.Context, spec, doguHome, mirrorURL s
 		return nil, err
 	}
 	asset, path, binary, cache, extraEnv := d.expand(version, runtime.GOOS, runtime.GOARCH)
-	url := resolveBaseURL(d.baseURL, mirrorURL) + "/" + path
+	base := resolveBaseURL(d.baseURL, mirrorURL)
+	if d.name == "maven" {
+		base = mavenArchiveRoot(base)
+	}
+	url := base + "/" + path
 	if d.binary != "" {
 		return installBinaryTool(ctx, BinaryInstallConfig{
 			ToolName: d.name, VersionSpec: spec, NormalizedVer: version,

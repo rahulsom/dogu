@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -78,9 +79,23 @@ func installArchiveTool(ctx context.Context, cfg ArchiveInstallConfig) (*Install
 	}
 	installDir := filepath.Join(cfg.DoguHome, "candidates", cfg.ToolName, dirName)
 	cacheFile := filepath.Join(cfg.DoguHome, "cache", cfg.ToolName, dirName, cfg.FileName)
+	if err := os.MkdirAll(cfg.DoguHome, 0755); err != nil {
+		return nil, err
+	}
+	stage, err := os.MkdirTemp(cfg.DoguHome, ".dogu-install-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(stage)
 
-	if err := downloader.DownloadAndExtract(ctx, cfg.DownloadURL, cacheFile, installDir, downloader.WithRewriteRule(cfg.Opts.RewriteRules)); err != nil {
+	if err := downloader.DownloadAndExtract(ctx, cfg.DownloadURL, cacheFile, stage, downloader.WithRewriteRule(cfg.Opts.RewriteRules)); err != nil {
+		if cleanupErr := os.Remove(cacheFile); cleanupErr != nil && !os.IsNotExist(cleanupErr) {
+			err = errors.Join(err, fmt.Errorf("remove failed archive cache: %w", cleanupErr))
+		}
 		return nil, fmt.Errorf("failed to download %s: %w", cfg.ToolName, err)
+	}
+	if err := publishCandidate(stage, installDir); err != nil {
+		return nil, err
 	}
 
 	var homeDir string
@@ -104,10 +119,13 @@ func installArchiveTool(ctx context.Context, cfg ArchiveInstallConfig) (*Install
 
 	if cfg.PostInstall != nil {
 		if err := cfg.PostInstall(res); err != nil {
-			return nil, err
+			return nil, errors.Join(err, os.RemoveAll(installDir))
 		}
 	}
 
+	if err := completeCandidate(installDir); err != nil {
+		return nil, errors.Join(err, os.RemoveAll(installDir))
+	}
 	return res, nil
 }
 
@@ -134,9 +152,20 @@ func installBinaryTool(ctx context.Context, cfg BinaryInstallConfig) (*InstallRe
 	}
 	installDir := filepath.Join(cfg.DoguHome, "candidates", cfg.ToolName, dirName)
 	cacheFile := filepath.Join(cfg.DoguHome, "cache", cfg.ToolName, dirName, cfg.CacheFileName)
+	if err := os.MkdirAll(cfg.DoguHome, 0755); err != nil {
+		return nil, err
+	}
+	stage, err := os.MkdirTemp(cfg.DoguHome, ".dogu-install-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(stage)
 
-	if err := downloader.SaveSingleBinary(ctx, cfg.DownloadURL, cacheFile, installDir, cfg.TargetBin, downloader.WithRewriteRule(cfg.Opts.RewriteRules)); err != nil {
+	if err := downloader.SaveSingleBinary(ctx, cfg.DownloadURL, cacheFile, stage, cfg.TargetBin, downloader.WithRewriteRule(cfg.Opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download %s: %w", cfg.ToolName, err)
+	}
+	if err := publishCandidate(stage, installDir); err != nil {
+		return nil, err
 	}
 
 	res := &InstallResult{
@@ -151,14 +180,49 @@ func installBinaryTool(ctx context.Context, cfg BinaryInstallConfig) (*InstallRe
 
 	if cfg.PostInstall != nil {
 		if err := cfg.PostInstall(res); err != nil {
-			return nil, err
+			return nil, errors.Join(err, os.RemoveAll(installDir))
 		}
+	}
+
+	if err := completeCandidate(installDir); err != nil {
+		return nil, errors.Join(err, os.RemoveAll(installDir))
 	}
 
 	return res, nil
 }
 
+func publishCandidate(stage, dest string) error {
+	if err := os.WriteFile(filepath.Join(stage, ".dogu-incomplete"), nil, 0644); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return err
+	}
+	if err := os.RemoveAll(dest); err != nil {
+		return err
+	}
+	return os.Rename(stage, dest)
+}
+
+func completeCandidate(dir string) error {
+	if err := os.WriteFile(filepath.Join(dir, ".dogu-complete"), nil, 0644); err != nil {
+		return err
+	}
+	return os.Remove(filepath.Join(dir, ".dogu-incomplete"))
+}
+
+func candidateComplete(dir string) bool {
+	if _, err := os.Stat(filepath.Join(dir, ".dogu-incomplete")); err == nil {
+		return false
+	}
+	entries, err := os.ReadDir(dir)
+	return err == nil && len(entries) > 0
+}
+
 func findDirWithBinary(installDir, binName string) (string, []string) {
+	if fi, err := os.Stat(filepath.Join(installDir, binName)); err == nil && !fi.IsDir() {
+		return installDir, []string{installDir}
+	}
 	home := downloader.FindSubDirWithDir(installDir, binName)
 	if fi, err := filepath.Glob(filepath.Join(installDir, "*", binName)); err == nil && len(fi) > 0 {
 		home = filepath.Dir(fi[0])
@@ -196,7 +260,7 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string,
 	if versionSpec != "" && (!partialVersionRegex.MatchString(version) || IsRC(versionSpec)) {
 		exactDir := filepath.Join(candidatesDir, versionSpec)
 		if fi, err := os.Stat(exactDir); err == nil && fi.IsDir() {
-			if subEntries, _ := os.ReadDir(exactDir); len(subEntries) > 0 {
+			if candidateComplete(exactDir) {
 				return exactDir, true
 			}
 		}
@@ -210,12 +274,19 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string,
 			continue
 		}
 		name := entry.Name()
+		if toolName == "java" {
+			_, requestedDist := parseJavaSpec(versionSpec)
+			_, candidateDist := parseJavaSpec(name)
+			if requestedDist != "" && requestedDist != candidateDist {
+				continue
+			}
+		}
 		if MatchVersion(name, versionSpec) {
 			if !includePrerelease && !specIsRC && IsRC(name) {
 				continue
 			}
 			dirPath := filepath.Join(candidatesDir, name)
-			if subEntries, _ := os.ReadDir(dirPath); len(subEntries) > 0 {
+			if candidateComplete(dirPath) {
 				matchingDirs = append(matchingDirs, name)
 			}
 		}
@@ -249,6 +320,14 @@ func buildResultFromDir(toolName string, versionSpec string, installDir string) 
 	}
 
 	normalizedVer := filepath.Base(installDir)
+	if toolName == "bun" || toolName == "uv" {
+		binary := toolName
+		if runtime.GOOS == "windows" {
+			binary += ".exe"
+		}
+		homeDir, _ = findDirWithBinary(installDir, binary)
+		binDir = homeDir
+	}
 	majorVer := env.ExtractMajorVersion(normalizedVer)
 	envVars := map[string]string{
 		env.FormatEnvKey(toolName, majorVer): homeDir,
