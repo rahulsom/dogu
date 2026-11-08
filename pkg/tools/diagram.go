@@ -33,7 +33,6 @@ var diagramTools = []diagramTool{
 	{"mermaid-cli", "npm", "@mermaid-js/mermaid-cli", "https://registry.npmjs.org"},
 	{"penrose", "npm", "@penrose/roger", "https://registry.npmjs.org"},
 	{"plantuml", "github", "plantuml/plantuml", "https://github.com/plantuml/plantuml/releases/download"},
-	{"js-sequence-diagrams", "browser", "bramp/js-sequence-diagrams", "https://github.com/bramp/js-sequence-diagrams/archive/refs/tags"},
 	{"jsyntrax", "github", "atp-mipt/jsyntrax", "https://github.com/atp-mipt/jsyntrax/releases/download"},
 	{"vega-lite", "npm", "vega-lite", "https://registry.npmjs.org"},
 	{"vega", "npm", "vega-cli", "https://registry.npmjs.org"},
@@ -64,21 +63,6 @@ func (d diagramTool) versions(ctx context.Context, mirror string) ([]string, err
 	base := resolveBaseURL(d.base, mirror)
 	if d.kind == "npm" {
 		return FetchNPMVersions(ctx, d.pkg, base)
-	}
-	if d.kind == "browser" {
-		data, err := fetchReleaseData(ctx, "https://api.github.com/repos/"+d.pkg+"/tags?per_page=100")
-		if err != nil {
-			return nil, err
-		}
-		var tags []struct{ Name string }
-		if err := json.Unmarshal(data, &tags); err != nil {
-			return nil, err
-		}
-		var versions []string
-		for _, tag := range tags {
-			versions = append(versions, tag.Name)
-		}
-		return versions, nil
 	}
 	if d.kind == "github" {
 		return fetchGitHubReleases(ctx, strings.Split(d.pkg, "/")[0], strings.Split(d.pkg, "/")[1], true)
@@ -232,9 +216,6 @@ func (d diagramTool) Install(ctx context.Context, spec, home, mirror string, opt
 		err = run(dest, nil, "cabal", "install", "erd-"+version, "--installdir="+filepath.Join(dest, "bin"), "--install-method=copy", "--overwrite-policy=always")
 	case "source":
 		err = d.installSource(ctx, version, dest, home, base, opts, run)
-	case "browser":
-		filename := tag + ".tar.gz"
-		err = downloader.DownloadAndExtract(ctx, base+"/"+filename, filepath.Join(home, "cache", d.name, filename), dest, downloader.WithRewriteRule(opts.RewriteRules))
 	default:
 		var asset, download string
 		asset, download, err = d.asset(ctx, tag, version, base, runtime.GOOS, runtime.GOARCH)

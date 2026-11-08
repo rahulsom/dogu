@@ -145,24 +145,6 @@ runtime; some diagrams also require Graphviz.
 dogu --java 21 -- dogu --plantuml 1.2025 -- plantuml diagram.puml
 ----
 
-=== https://bramp.github.io/js-sequence-diagrams/[JS Sequence Diagrams]
-
-Downloads the tagged browser-library source archive into
-`JS_SEQUENCE_DIAGRAMS_HOME`. This project has no CLI: use its JavaScript and
-browser dependencies in a web page. Serve `dist/sequence-diagram-min.js`
-from the downloaded archive alongside Snap.svg and underscore.js, then call
-`Diagram.parse` in the page:
-
-[source,html]
-----
-<script src="/assets/snap.svg-min.js"></script>
-<script src="/assets/underscore-min.js"></script>
-<script src="/assets/sequence-diagram-min.js"></script>
-<div id="diagram"></div>
-<script>
-  Diagram.parse("Alice->Bob: Hello").drawSVG("diagram", {theme: "simple"});
-</script>
-----
 
 === https://atp-mipt.github.io/jsyntrax/[JSyntrax]
 
