@@ -248,7 +248,7 @@ func publishCandidate(stage, dest string) error {
 	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 		return err
 	}
-	backup, err := os.MkdirTemp(filepath.Dir(dest), ".dogu-backup-")
+	backup, err := os.MkdirTemp(filepath.Dir(filepath.Dir(dest)), ".dogu-backup-")
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string,
 	version := CleanVersion(versionSpec)
 	hasBuildMetadata := strings.Contains(versionSpec, "+")
 	if toolName == "java" {
-		version, _ = parseJavaSpec(version)
+		version, _ = parseJavaSpec(versionSpec)
 	}
 	if versionSpec != "" && (hasBuildMetadata || !partialVersionRegex.MatchString(version) || IsRC(versionSpec)) {
 		exactDir := filepath.Join(candidatesDir, versionSpec)
@@ -352,26 +352,37 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string,
 			}
 		}
 	}
-	if hasBuildMetadata {
+	if hasBuildMetadata && toolName != "java" {
 		return "", false
 	}
 
 	specIsRC := IsRC(versionSpec)
 	var matchingDirs []string
+	requestedJavaVersion, requestedJavaDist := "", ""
+	if toolName == "java" {
+		requestedJavaVersion, requestedJavaDist = parseJavaSpec(versionSpec)
+	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		name := entry.Name()
+		matches := false
 		if toolName == "java" {
-			_, requestedDist := parseJavaSpec(versionSpec)
-			_, candidateDist := parseJavaSpec(name)
-			if requestedDist != "" && normalizeJavaDistribution(requestedDist) != normalizeJavaDistribution(candidateDist) {
+			candidateVersion, candidateDist := parseJavaSpec(name)
+			if requestedJavaDist != "" && normalizeJavaDistribution(requestedJavaDist) != normalizeJavaDistribution(candidateDist) {
 				continue
 			}
+			if hasBuildMetadata {
+				matches = candidateVersion == requestedJavaVersion
+			} else {
+				matches = MatchVersion(candidateVersion, requestedJavaVersion)
+			}
+		} else {
+			matches = MatchVersion(name, versionSpec)
 		}
-		if MatchVersion(name, versionSpec) {
+		if matches {
 			if !includePrerelease && !specIsRC && IsRC(name) {
 				continue
 			}
@@ -413,6 +424,12 @@ func lockExistingCandidate(ctx context.Context, doguHome, toolName, versionSpec 
 		}
 		unlock, err := lockCandidate(ctx, doguHome, toolName, filepath.Base(dir))
 		if err != nil {
+			if ctx.Err() == nil {
+				current, found := findExistingCandidate(doguHome, toolName, versionSpec, includePrerelease)
+				if found && current == dir {
+					return dir, func() {}, true, nil
+				}
+			}
 			return "", nil, false, err
 		}
 		current, found := findExistingCandidate(doguHome, toolName, versionSpec, includePrerelease)

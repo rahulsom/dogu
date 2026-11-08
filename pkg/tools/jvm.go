@@ -179,6 +179,20 @@ func (*LeiningenTool) Install(ctx context.Context, spec, home, mirror string, op
 				unlock()
 				return res, nil
 			}
+			archives, _ := filepath.Glob(filepath.Join(dir, "*.jar"))
+			if len(archives) > 0 {
+				res := buildResultFromDir("leiningen", spec, dir)
+				res.NormalizedVer = filepath.Base(dir)
+				res.HomeDir = dir
+				res.BinDirs = []string{dir}
+				res.EnvVars = buildEnvVars("leiningen", res.NormalizedVer, dir, leiningenDefinition.homeEnv, nil)
+				if err := leiningenPostInstall(filepath.Base(archives[0]))(res); err != nil {
+					unlock()
+					return nil, err
+				}
+				unlock()
+				return res, nil
+			}
 			unlock()
 		}
 	}
@@ -199,18 +213,22 @@ func (*LeiningenTool) Install(ctx context.Context, spec, home, mirror string, op
 		DoguHome:      home,
 		Opts:          opts,
 		ExtraHomeEnv:  leiningenDefinition.homeEnv,
-		PostInstall: func(res *InstallResult) error {
-			script := fmt.Sprintf("#!/bin/sh\nDIR=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\nexec \"${LEIN_JAVA_CMD:-java}\" ${LEIN_JVM_OPTS:-} -Dfile.encoding=UTF-8 -Dmaven.wagon.http.ssl.easy=false -Dleiningen.original.working.directory=\"$PWD\" -Dleiningen.script=\"$0\" -classpath \"$DIR/%s\" clojure.main -m leiningen.core.main \"$@\"\n", jarName)
-			if err := os.WriteFile(filepath.Join(res.InstallDir, "lein"), []byte(script), 0755); err != nil {
-				return err
-			}
-			batch := fmt.Sprintf("@echo off\r\njava %%LEIN_JVM_OPTS%% -Dfile.encoding=UTF-8 -Dmaven.wagon.http.ssl.easy=false -Dleiningen.original.working.directory=\"%%CD%%\" -Dleiningen.script=\"%%~f0\" -classpath \"%%~dp0%s\" clojure.main -m leiningen.core.main %%*\r\n", jarName)
-			if err := os.WriteFile(filepath.Join(res.InstallDir, "lein.bat"), []byte(batch), 0644); err != nil {
-				return err
-			}
-			return nil
-		},
+		PostInstall:   leiningenPostInstall(jarName),
 	})
+}
+
+func leiningenPostInstall(jarName string) func(*InstallResult) error {
+	return func(res *InstallResult) error {
+		script := fmt.Sprintf("#!/bin/sh\nDIR=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\nexec \"${LEIN_JAVA_CMD:-java}\" ${LEIN_JVM_OPTS:-} -Dfile.encoding=UTF-8 -Dmaven.wagon.http.ssl.easy=false -Dleiningen.original.working.directory=\"$PWD\" -Dleiningen.script=\"$0\" -classpath \"$DIR/%s\" clojure.main -m leiningen.core.main \"$@\"\n", jarName)
+		if err := os.WriteFile(filepath.Join(res.InstallDir, "lein"), []byte(script), 0755); err != nil {
+			return err
+		}
+		batch := fmt.Sprintf("@echo off\r\njava %%LEIN_JVM_OPTS%% -Dfile.encoding=UTF-8 -Dmaven.wagon.http.ssl.easy=false -Dleiningen.original.working.directory=\"%%CD%%\" -Dleiningen.script=\"%%~f0\" -classpath \"%%~dp0%s\" clojure.main -m leiningen.core.main %%*\r\n", jarName)
+		if err := os.WriteFile(filepath.Join(res.InstallDir, "lein.bat"), []byte(batch), 0644); err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 // GradleTool installs gradle using the shared tool definition.
@@ -316,8 +334,26 @@ func parseJavaSpec(spec string) (version string, distribution string) {
 			return version, distribution
 		}
 	}
+	if idx := strings.LastIndex(spec, "-"); idx > 0 {
+		suffix := strings.ToLower(spec[idx+1:])
+		if !isJavaPrereleaseSuffix(suffix) {
+			return spec[:idx], suffix
+		}
+	}
 	version = spec
 	return version, distribution
+}
+
+func isJavaPrereleaseSuffix(suffix string) bool {
+	if strings.Trim(suffix, "0123456789") == "" {
+		return true
+	}
+	for _, marker := range []string{"ea", "rc", "alpha", "beta", "dev", "milestone", "preview", "snapshot", "nightly", "next", "canary", "cr", "pre"} {
+		if suffix == marker || strings.HasPrefix(suffix, marker+"-") || strings.HasPrefix(suffix, marker+".") {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeJavaDistribution(distribution string) string {

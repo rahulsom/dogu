@@ -15,6 +15,12 @@ import (
 
 var versionNumRegex = regexp.MustCompile(`[0-9]+`)
 var partialVersionRegex = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)?$`)
+var prereleaseSpecRegex = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-.+`)
+var goPseudoVersionRegex = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+-[0-9]{14}-[0-9a-f]{12}$`)
+var numericPrereleaseRegex = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+(?:[.-]|$)`)
+var prereleaseKeywordRegex = regexp.MustCompile(`(?i)(^|[.-])(rc|alpha|beta|dev|milestone|preview|snapshot|nightly|next|canary|cr|pre)(?:[0-9]|[.-]|$)|[0-9](?:rc|alpha|beta|dev|milestone|preview|snapshot|nightly|next|canary|cr|pre)[0-9]`)
+var milestoneRegex = regexp.MustCompile(`(?i)[-.]m[0-9]+`)
+var pythonPrereleaseRegex = regexp.MustCompile(`(?i)[0-9]+[ab][0-9]+`)
 
 // CleanVersion removes common prefixes and distribution suffixes from a version string.
 func CleanVersion(v string) string {
@@ -56,7 +62,7 @@ func MatchVersion(candidateVersion string, versionSpec string) bool {
 	if candClean == specClean || candClean == specVersionOnly {
 		return true
 	}
-	if regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-.+`).MatchString(specClean) {
+	if prereleaseSpecRegex.MatchString(specClean) {
 		return false
 	}
 
@@ -75,37 +81,30 @@ func IsRC(v string) bool {
 	}
 	clean := CleanVersion(v)
 	lower := strings.ToLower(clean)
-	if regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+-[0-9]{14}-[0-9a-f]{12}$`).MatchString(lower) {
+	if goPseudoVersionRegex.MatchString(lower) {
 		return false
 	}
 	// Java distribution names are not prerelease identifiers.
 	for _, vendor := range []string{"tem", "temurin", "zulu", "microsoft", "corretto", "oracle", "liberica", "openlogic", "sap_machine", "graalvm", "jetbrains", "semeru", "dragonwell", "bisheng"} {
 		lower = strings.TrimSuffix(lower, "-"+vendor)
 	}
-	if regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+(?:[.-]|$)`).MatchString(lower) {
+	if numericPrereleaseRegex.MatchString(lower) {
 		return true
 	}
 
-	rcKeywords := []string{
-		"rc", "alpha", "beta", "dev", "milestone", "preview",
-		"snapshot", "nightly", "next", "canary", "cr", "pre",
-	}
-
-	for _, kw := range rcKeywords {
-		if strings.Contains(lower, kw) {
-			return true
-		}
+	if prereleaseKeywordRegex.MatchString(lower) {
+		return true
 	}
 
 	if strings.Contains(lower, "-ea") || strings.HasSuffix(lower, "ea") {
 		return true
 	}
 
-	if regexp.MustCompile(`(?i)[-.]m[0-9]+`).MatchString(lower) {
+	if milestoneRegex.MatchString(lower) {
 		return true
 	}
 
-	if regexp.MustCompile(`(?i)[0-9]+[ab][0-9]+`).MatchString(lower) {
+	if pythonPrereleaseRegex.MatchString(lower) {
 		return true
 	}
 
@@ -122,10 +121,10 @@ func getMainNumericParts(v string) []int {
 				cut = idx
 			}
 		}
-		if idx := regexp.MustCompile(`(?i)[-.]m[0-9]+`).FindStringIndex(lower); idx != nil && idx[0] < cut {
+		if idx := milestoneRegex.FindStringIndex(lower); idx != nil && idx[0] < cut {
 			cut = idx[0]
 		}
-		if idx := regexp.MustCompile(`(?i)[0-9]+[ab][0-9]+`).FindStringIndex(lower); idx != nil {
+		if idx := pythonPrereleaseRegex.FindStringIndex(lower); idx != nil {
 			match := lower[idx[0]:idx[1]]
 			for i, ch := range match {
 				if ch == 'a' || ch == 'b' || ch == 'A' || ch == 'B' {

@@ -43,15 +43,119 @@ func TestJavaCandidateDistribution(t *testing.T) {
 
 func TestJavaBuildMetadataCandidateIsExact(t *testing.T) {
 	home := t.TempDir()
-	for _, version := range []string{"21+35-temurin", "21.0.1+12-temurin"} {
+	for _, version := range []string{"17.0.2-temurin", "17.0.2-zulu", "21+35-temurin", "21.0.1+12-temurin"} {
 		dir := filepath.Join(home, "candidates", "java", version)
 		if err := os.MkdirAll(filepath.Join(dir, "bin"), 0755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	dir, ok := findExistingCandidate(home, "java", "21+35-temurin", false)
-	if !ok || filepath.Base(dir) != "21+35-temurin" {
-		t.Fatalf("exact build metadata candidate = %s, %v", dir, ok)
+	for _, tc := range []struct{ spec, want string }{
+		{"21+35-temurin", "21+35-temurin"},
+		{"21+35", "21+35-temurin"},
+		{"17.0.2-tem", "17.0.2-temurin"},
+	} {
+		dir, ok := findExistingCandidate(home, "java", tc.spec, false)
+		if !ok || filepath.Base(dir) != tc.want {
+			t.Fatalf("spec=%q: candidate=%s, %v; want %s", tc.spec, dir, ok, tc.want)
+		}
+	}
+}
+
+func TestJavaUnlistedDistributions(t *testing.T) {
+	home := t.TempDir()
+	for _, version := range []string{"21.0.1-kona", "21.0.2-mandrel", "21.0.3-zulu_prime", "26-ea-kona"} {
+		if err := os.MkdirAll(filepath.Join(home, "candidates", "java", version, "bin"), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tc := range []struct{ spec, want string }{
+		{"21-kona", "21.0.1-kona"},
+		{"21-mandrel", "21.0.2-mandrel"},
+		{"21-zulu_prime", "21.0.3-zulu_prime"},
+		{"26-ea-kona", "26-ea-kona"},
+	} {
+		dir, ok := findExistingCandidate(home, "java", tc.spec, true)
+		if !ok || filepath.Base(dir) != tc.want {
+			t.Fatalf("spec=%q: candidate=%s, %v; want %s", tc.spec, dir, ok, tc.want)
+		}
+	}
+}
+
+func TestExistingCandidateCanBeReusedWithoutWritableLockDirectory(t *testing.T) {
+	home := t.TempDir()
+	candidatesDir := filepath.Join(home, "candidates", "dummy")
+	candidateDir := filepath.Join(candidatesDir, "1.2.3")
+	if err := os.MkdirAll(filepath.Join(candidateDir, "bin"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = os.Chmod(candidatesDir, 0755)
+		_ = os.Chmod(filepath.Dir(candidatesDir), 0755)
+	}()
+	if err := os.Chmod(candidatesDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Dir(candidatesDir), 0555); err != nil {
+		t.Fatal(err)
+	}
+	dir, unlock, ok, err := lockExistingCandidate(t.Context(), home, "dummy", "1.2.3", false)
+	if err != nil {
+		t.Fatalf("reuse from a read-only candidate directory: %v", err)
+	}
+	if !ok || dir != candidateDir {
+		t.Fatalf("candidate=%s, ok=%v; want %s", dir, ok, candidateDir)
+	}
+	unlock()
+}
+
+func TestLeiningenReuseRepairsMissingLauncher(t *testing.T) {
+	home := t.TempDir()
+	dir := filepath.Join(home, "candidates", "leiningen", "2.10.0")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "leiningen-2.10.0-standalone.jar"), []byte("fixture"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := (&LeiningenTool{}).Install(t.Context(), "2.10.0", home, "", InstallOptions{})
+	if err != nil {
+		t.Fatalf("reuse incomplete Leiningen candidate: %v", err)
+	}
+	for _, launcher := range []string{"lein", "lein.bat"} {
+		if _, err := os.Stat(filepath.Join(dir, launcher)); err != nil {
+			t.Errorf("missing repaired launcher %s: %v", launcher, err)
+		}
+	}
+	if res.InstallDir != dir {
+		t.Fatalf("reused install dir=%s; want %s", res.InstallDir, dir)
+	}
+}
+
+func TestReplacementBackupIsOutsideCandidateSearchRoot(t *testing.T) {
+	home := t.TempDir()
+	dest := filepath.Join(home, "candidates", "dummy", "1.0.0")
+	stage := filepath.Join(home, ".stage")
+	if err := os.MkdirAll(dest, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dest, "old"), []byte("old"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(stage, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(stage, "new"), []byte("new"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := publishCandidate(stage, dest); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(filepath.Join(home, "candidates", "dummy"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "1.0.0" {
+		t.Fatalf("candidate search root contains unexpected entries: %v", entries)
 	}
 }
 
@@ -292,6 +396,7 @@ func TestStableSelectionFormats(t *testing.T) {
 		rc      bool
 	}{
 		{"3.0.0-1", true}, {"2.0.0-pre.1", true}, {"21.0.1-microsoft", false},
+		{"21.0.3-zulu_prime", false},
 		{"25.0.1-temurin", false}, {"25-ea", true}, {"25-ea-microsoft", true},
 		{"v0.0.0-20240101000000-cdef12345678", false},
 	} {
