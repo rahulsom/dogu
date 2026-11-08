@@ -748,7 +748,16 @@ func extractTar(r io.Reader, dest string) error {
 				out.Close()
 				return err
 			}
-			out.Close()
+			if err := out.Close(); err != nil {
+				return err
+			}
+			// Source distributions rely on modification times to avoid
+			// rebuilding generated files with bootstrap tools.
+			if !header.ModTime.IsZero() {
+				if err := os.Chtimes(target, header.ModTime, header.ModTime); err != nil {
+					return err
+				}
+			}
 		case tar.TypeSymlink:
 			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 				return err
