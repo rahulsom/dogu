@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dogu-dev/dogu/pkg/downloader"
 	"net/url"
 	"os"
 	"os/exec"
@@ -11,8 +12,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-
-	"github.com/dogu-dev/dogu/pkg/downloader"
 )
 
 // Package-based tools are installed into private prefixes, never globally.

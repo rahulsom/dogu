@@ -31,23 +31,27 @@ Java, Node, Python, Pants, Bun, UV, npm, pnpm, Clojure CLI, and Leiningen.
 Extend the catalog when a provider fits its existing rules; keep specialized
 behavior in Go rather than adding a configuration language for it.
 
+Provider implementations are grouped in `jvm.go`, `js.go`, `python.go`,
+`lang.go`, and `diagram.go`. Generic build tools live in `lang.go`; shared
+catalog, installation, version, and registry logic stays in this package.
+
 When adding or migrating a definition, cover its release naming on the relevant
 platforms and use local fixtures to verify version resolution, extracted or
 binary payloads, cached installation metadata, and forced reinstallation.
 
 Go and Julia select host archives from their official JSON release indexes in
-`languages.go`. Rust standalone installers and GHC bindists run their setup
+`lang.go`. Rust standalone installers and GHC bindists run their setup
 commands after extraction. R is built from CRAN sources. These three providers
 support Linux and macOS and require the prerequisites documented in
 `docs/tools.adoc`; failed setup removes the candidate so it cannot be reused.
 Elm's gzip-compressed executable uses the single-binary installer.
 
-Ruby and Lua also use the configured-language workflow in `languages.go`.
+Ruby and Lua also use the configured-language workflow in `lang.go`.
 Their official source indexes drive both installation and version listing.
 Ruby runs configure and make; Lua uses the Linux or macOS make target and
 installs with `INSTALL_TOP` pointing to its candidate directory.
 
-`diagrams.go` registers the diagramming category. Providers use private npm,
+`diagram.go` registers the diagramming category. Providers use private npm,
 RubyGems, Go, or Cabal prefixes, official binary/jar distributions, browser
 source archives, or configured source builds. A completion marker distinguishes
 successful setup from partial candidates; failures remove the candidate.

@@ -1,0 +1,223 @@
+== Diagramming Tools
+
+Diagramming providers currently support Linux and macOS. Use major,
+major.minor, or exact versions with each flag; `dogu list-versions <tool>`
+shows the available releases. Installations stay under `$DOGU_HOME` and
+failed setup is removed before it can be reused. `--force` runs setup again.
+Every provider sets `<TOOL>_HOME` and `<TOOL>_<MAJOR>_HOME`, with hyphens
+converted to underscores.
+
+=== https://github.com/asciitosvg/asciitosvg[AsciiToSVG]
+
+Builds the Go package and provides the `a2s` command. Go must be on PATH during
+installation. Untagged releases use the Go proxy's pseudo-version.
+
+[source,bash]
+----
+dogu --asciitosvg 0.2 -- a2s --help
+----
+
+=== https://rubygems.org/gems/barby[Barby]
+
+Installs the Ruby gem and its dependencies in a private prefix, exposed through
+`GEM_PATH`. Load it from Ruby with `require 'barby'`.
+
+[source,bash]
+----
+dogu --ruby 3.4 -- dogu --barby 0.6 -- ruby -rbarby -e 'puts Barby::VERSION'
+----
+
+=== https://rubygems.org/gems/rqrcode[RQRCode]
+
+Installs the Ruby gem and its dependencies in a private prefix, exposed through
+`GEM_PATH`. Load it from Ruby with `require 'rqrcode'`.
+
+[source,bash]
+----
+dogu --ruby 3.4 -- dogu --rqrcode 3 -- ruby -rrqrcode -e 'puts RQRCode::QRCode.new("hello").as_svg'
+----
+
+=== https://github.com/Deep-Symmetry/bytefield-svg[Bytefield SVG]
+
+Installs the `bytefield-svg` npm package and provides the `bytefield-svg`
+command.
+
+[source,bash]
+----
+dogu --node 22 -- dogu --bytefield-svg 1 -- bytefield-svg --help
+----
+
+=== https://d2lang.com/[D2]
+
+Downloads the host release archive and provides the `d2` command.
+
+[source,bash]
+----
+dogu --d2 0.7 -- d2 diagram.d2 diagram.svg
+----
+
+=== https://github.com/softwaretechnik-berlin/dbml-renderer[DBML Renderer]
+
+Installs the `@softwaretechnik/dbml-renderer` npm package and provides the
+`dbml-renderer` command.
+
+[source,bash]
+----
+dogu --node 22 -- dogu --dbml-renderer 1 -- dbml-renderer --help
+----
+
+=== https://ditaa.sourceforge.net/[ditaa]
+
+Downloads the standalone jar and supplies a `ditaa` launcher. Java is required
+at runtime.
+
+[source,bash]
+----
+dogu --java 21 -- dogu --ditaa 0.11 -- ditaa input.ditaa output.png
+----
+
+=== https://github.com/BurntSushi/erd[erd]
+
+Builds the Hackage package with Cabal into a private prefix. Cabal and GHC are
+required during installation; Graphviz is required at runtime.
+
+[source,bash]
+----
+dogu --ghc 9.6 -- dogu --erd 1 -- erd --help
+----
+
+=== https://sourceforge.net/projects/gnuplot/files/gnuplot/[gnuplot]
+
+Builds the official sources with `configure`, `make`, and `make install`, and
+provides the `gnuplot` command.
+
+[source,bash]
+----
+dogu --gnuplot 6 -- gnuplot plot.gp
+----
+
+=== https://graphviz.gitlab.io/[Graphviz]
+
+Builds the official release sources with `configure`, `make`, and
+`make install`. Provides `dot` and the Graphviz utilities.
+
+[source,bash]
+----
+dogu --graphviz 12 -- dot -Tsvg graph.dot -o graph.svg
+----
+
+=== https://lilypond.org/[LilyPond]
+
+Downloads official GitLab binaries and provides `lilypond`. Supports x86-64
+Linux and macOS, plus ARM64 macOS.
+
+[source,bash]
+----
+dogu --lilypond 2.24 -- lilypond score.ly
+----
+
+=== https://github.com/mermaid-js/mermaid-cli[Mermaid CLI]
+
+Installs the `@mermaid-js/mermaid-cli` npm package and provides the `mmdc`
+command.
+
+[source,bash]
+----
+dogu --node 22 -- dogu --mermaid-cli 11 -- mmdc -i diagram.mmd -o diagram.svg
+----
+
+=== https://penrose.cs.cmu.edu/[Penrose]
+
+Installs the `@penrose/roger` npm package and provides the `roger` command.
+
+[source,bash]
+----
+dogu --node 22 -- dogu --penrose 4 -- roger --help
+----
+
+=== https://plantuml.com/[PlantUML]
+
+Downloads the jar and supplies a `plantuml` launcher. Java is required at
+runtime; some diagrams also require Graphviz.
+
+[source,bash]
+----
+dogu --java 21 -- dogu --plantuml 1.2025 -- plantuml diagram.puml
+----
+
+=== https://bramp.github.io/js-sequence-diagrams/[JS Sequence Diagrams]
+
+Downloads the tagged browser-library source archive into
+`JS_SEQUENCE_DIAGRAMS_HOME`. This project has no CLI: use its JavaScript and
+browser dependencies in a web page. Serve `dist/sequence-diagram-min.js`
+from the downloaded archive alongside Snap.svg and underscore.js, then call
+`Diagram.parse` in the page:
+
+[source,html]
+----
+<script src="/assets/snap.svg-min.js"></script>
+<script src="/assets/underscore-min.js"></script>
+<script src="/assets/sequence-diagram-min.js"></script>
+<div id="diagram"></div>
+<script>
+  Diagram.parse("Alice->Bob: Hello").drawSVG("diagram", {theme: "simple"});
+</script>
+----
+
+=== https://atp-mipt.github.io/jsyntrax/[JSyntrax]
+
+Downloads the distribution zip and provides the `syntrax` command. Java 11 or
+newer is required at runtime.
+
+[source,bash]
+----
+dogu --java 21 -- dogu --jsyntrax 1 -- syntrax --help
+----
+
+=== https://vega.github.io/vega-lite/[Vega-Lite]
+
+Installs the `vega-lite` npm package and provides `vl2svg`, `vl2png`, `vl2pdf`,
+and `vl2vg`.
+
+[source,bash]
+----
+dogu --node 22 -- dogu --vega-lite 5 -- vl2svg chart.json chart.svg
+----
+
+=== https://vega.github.io/vega/[Vega]
+
+Installs the `vega-cli` npm package and provides `vg2svg`, `vg2png`, and
+`vg2pdf`. Versions refer to the CLI package.
+
+[source,bash]
+----
+dogu --node 22 -- dogu --vega 5 -- vg2svg chart.json chart.svg
+----
+
+Package managers used for setup (`npm`, `gem`, `go`, or `cabal`) and their
+runtimes must already be on PATH before diagram installation begins. Tools
+requested together are provisioned concurrently, so a sibling `--node`,
+`--ruby`, `--go`, or `--ghc` flag does not supply installation prerequisites.
+To provision a prerequisite with dogu, run a nested command as shown below.
+Java flags can be used alongside jar tools because Java is needed at runtime.
+
+npm packages install locally with their dependencies, and their commands are
+added to PATH. `NODE_PATH` exposes their modules to CommonJS consumers.
+Ruby libraries use `GEM_PATH`; multiple selected gem prefixes are combined.
+Both search paths preserve existing values. ESM consumers should use explicit
+module paths or normal project dependencies.
+Mermaid's Puppeteer browser download requires network access and the browser's
+system libraries. Penrose and Vega's canvas dependencies may require a native
+compiler, Python, Cairo, Pango, and image development libraries when prebuilt
+binaries are unavailable. Graphviz and gnuplot require make, C/C++ compilers,
+and their upstream build dependencies. Available rendering formats depend on
+the optional libraries detected by configure (for example Cairo/Pango for SVG
+and PNG, and readline for interactive gnuplot).
+
+`baseUrls` overrides the package registry, source index, or release-download
+base shown in `config.json`. Graphviz mirrors serve their source index at `/`
+and `graphviz-<version>.tar.gz` at the same base. GitHub/GitLab release discovery
+uses the public API. Download rewrite rules apply to dogu-managed archives and
+jars, and to the registry/proxy endpoint passed to npm, RubyGems, or Go;
+those package managers control their own dependency downloads. Cabal uses its
+existing repository configuration; the erd base URL controls version discovery.
