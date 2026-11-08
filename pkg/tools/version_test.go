@@ -95,6 +95,10 @@ func TestMatchVersion(t *testing.T) {
 		{"10.2.5", "2", false},
 		{"17.0.2", "17-tem", true},
 		{"17.0.2-temurin", "17", true},
+		{"1.2.3", "", true},
+		{"v25.0.1", "", true},
+		{"", "", false},
+		{"", "1", false},
 	}
 
 	for _, tc := range tests {
@@ -169,7 +173,10 @@ func TestResolveUVVersion(t *testing.T) {
 		"pypi.org/pypi/uv/json": []byte(`{"releases":{"0.1.15":{},"0.1.16":{}}}`),
 	})
 
-	normVer := resolveUVVersion(t.Context(), "0.1", false)
+	normVer, err := resolveUVVersion(t.Context(), "0.1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if normVer != "0.1.16" {
 		t.Errorf("expected uv 0.1 to resolve to 0.1.16, got %q", normVer)
 	}
@@ -177,15 +184,21 @@ func TestResolveUVVersion(t *testing.T) {
 
 func TestResolvePythonVersion(t *testing.T) {
 	localVersionSources(t, map[string][]byte{
-		"api.github.com/repos/indygreg/python-build-standalone/releases": []byte(`[{"tag_name":"cpython-3.12.1+20240101","assets":[{}]}]`),
+		"api.github.com/repos/indygreg/python-build-standalone/releases": []byte(fmt.Sprintf(`[{"tag_name":"20240107","assets":[{"name":"cpython-3.12.1+20240107-%s-install_only.tar.gz"}]}]`, mapPythonTarget())),
 	})
 
-	normVer := resolvePythonVersion(t.Context(), "3.12", false)
+	normVer, _, _, err := resolvePythonAsset(t.Context(), "3.12", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if normVer != "3.12.1" {
 		t.Errorf("expected python 3.12 to resolve to 3.12.1, got %q", normVer)
 	}
 
-	normVer3 := resolvePythonVersion(t.Context(), "3", false)
+	normVer3, _, _, err := resolvePythonAsset(t.Context(), "3", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if normVer3 != "3.12.1" {
 		t.Errorf("expected python 3 to resolve to 3.12.1, got %q", normVer3)
 	}
@@ -199,7 +212,10 @@ func TestResolveNPMToolVersion(t *testing.T) {
 	})
 
 	for _, tool := range []string{"npm", "pnpm", "yarn"} {
-		normVer := resolveNPMToolVersion(t.Context(), tool, "1", "", false)
+		normVer, err := resolveNPMToolVersion(t.Context(), tool, "1", "", false)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if normVer != "1.2.3" {
 			t.Errorf("expected %s normVer to resolve to 1.2.3, got %q", tool, normVer)
 		}
@@ -211,7 +227,10 @@ func TestResolveMavenVersion(t *testing.T) {
 		"archive.apache.org/dist/maven/maven-3/": []byte(`<a href="3.9.6/">3.9.6</a>`),
 	})
 
-	normVer := resolveMavenVersion(t.Context(), "3", "https://archive.apache.org/dist/maven/maven-3", false)
+	normVer, err := resolveMavenVersion(t.Context(), "3", "https://archive.apache.org/dist/maven/maven-3", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if normVer != "3.9.6" {
 		t.Errorf("expected maven version 3.9.6, got %q", normVer)
 	}
@@ -250,7 +269,10 @@ func TestResolveBunVersion(t *testing.T) {
 		"api.github.com/repos/oven-sh/bun/releases": []byte(`[{"tag_name":"bun-v1.1.0","assets":[{}]}]`),
 	})
 
-	tag, normVer := resolveBunVersion(t.Context(), "1", false)
+	tag, normVer, err := resolveBunVersion(t.Context(), "1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if tag != "bun-v1.1.0" {
 		t.Errorf("expected tag bun-v1.1.0, got %q", tag)
 	}

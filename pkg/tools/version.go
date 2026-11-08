@@ -14,6 +14,7 @@ import (
 )
 
 var versionNumRegex = regexp.MustCompile(`[0-9]+`)
+var partialVersionRegex = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)?$`)
 
 // CleanVersion removes common prefixes and distribution suffixes from a version string.
 func CleanVersion(v string) string {
@@ -36,8 +37,11 @@ func CleanVersion(v string) string {
 
 // MatchVersion checks whether candidateVersion satisfies versionSpec.
 func MatchVersion(candidateVersion string, versionSpec string) bool {
-	if candidateVersion == "" || versionSpec == "" {
+	if candidateVersion == "" {
 		return false
+	}
+	if versionSpec == "" {
+		return true
 	}
 
 	candClean := CleanVersion(candidateVersion)
@@ -242,6 +246,22 @@ func SelectBestVersion(versions []string, spec string, includePrerelease bool) (
 	})
 
 	return matches[len(matches)-1], nil
+}
+
+// resolveDiscoveredVersion preserves explicit-version fallback, but an empty
+// spec must resolve successfully before an installer can construct a URL.
+func resolveDiscoveredVersion(versions []string, fetchErr error, spec string, prerelease bool) (string, error) {
+	if fetchErr == nil {
+		best, err := SelectBestVersion(versions, spec, prerelease)
+		if err == nil {
+			return CleanVersion(best), nil
+		}
+		fetchErr = err
+	}
+	if spec == "" {
+		return "", fmt.Errorf("resolve latest version: %w", fetchErr)
+	}
+	return CleanVersion(spec), nil
 }
 
 // FetchNPMVersions retrieves all published version strings for an npm package.

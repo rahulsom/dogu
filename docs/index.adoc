@@ -87,6 +87,26 @@ NOTE: Self-update and version checking are enabled exclusively for official bina
 
 === Examples
 
+Every tool accepts a major-only, major.minor, or exact version. Both
+`--java 25` and `--java=25` select the newest matching installed candidate,
+or install the newest matching release if none is installed.
+
+An empty value (`--<tool>=`) selects the newest locally installed candidate
+across all major versions, or installs the latest available release if none
+is installed. Only dogu-managed candidates are considered, not tools on the
+system `PATH`. Prereleases are excluded unless `--prerelease` is supplied;
+`--force` skips local reuse and resolves a release online.
+
+[source,bash]
+----
+dogu --java= -- java --version
+dogu --node= -- node --version
+----
+
+Use the explicit `=` for an empty version; a bare `--java` still requires
+a version argument. Release discovery may still contact upstream registries
+when a static download mirror is configured.
+
 Run Maven tests with Java, Maven, and Node.js provisioned:
 
 [source,bash]

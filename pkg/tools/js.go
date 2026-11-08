@@ -1,15 +1,12 @@
 package tools
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"github.com/dogu-dev/dogu/pkg/downloader"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 )
 
 type BunTool struct{}
@@ -28,7 +25,10 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	}
 
 	baseURL := resolveBaseURL("https://github.com/oven-sh/bun/releases/download", mirrorBaseURL)
-	tag, normVer := resolveBunVersion(ctx, versionSpec, opts.IncludePrerelease)
+	tag, normVer, err := resolveBunVersion(ctx, versionSpec, opts.IncludePrerelease)
+	if err != nil {
+		return nil, err
+	}
 
 	targetOS, targetArch := mapBunTarget()
 	filename := fmt.Sprintf("bun-%s-%s.zip", targetOS, targetArch)
@@ -48,16 +48,13 @@ func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	})
 }
 
-func resolveBunVersion(ctx context.Context, versionSpec string, includePrerelease bool) (tag string, normVer string) {
-	if versions, err := FetchGitHubReleases(ctx, "oven-sh", "bun"); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
-			clean := CleanVersion(best)
-			return "bun-v" + clean, "v" + clean
-		}
+func resolveBunVersion(ctx context.Context, versionSpec string, includePrerelease bool) (tag string, normVer string, err error) {
+	versions, err := FetchGitHubReleases(ctx, "oven-sh", "bun")
+	clean, err := resolveDiscoveredVersion(versions, err, versionSpec, includePrerelease)
+	if err != nil {
+		return "", "", err
 	}
-
-	clean := CleanVersion(versionSpec)
-	return "bun-v" + clean, "v" + clean
+	return "bun-v" + clean, "v" + clean, nil
 }
 
 func mapBunTarget() (string, string) {
@@ -130,50 +127,12 @@ func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome str
 }
 
 func resolveNodeFullVersion(ctx context.Context, baseURL string, spec string, includePrerelease bool) (string, error) {
-	clean := spec
-	if !strings.HasPrefix(clean, "v") {
-		clean = "v" + clean
-	}
-
-	indexURL := fmt.Sprintf("%s/index.tab", baseURL)
-	req, err := http.NewRequestWithContext(ctx, "GET", indexURL, nil)
+	versions, err := listVersions(ctx, "node", baseURL)
+	version, err := resolveDiscoveredVersion(versions, err, spec, includePrerelease)
 	if err != nil {
-		return clean, nil
+		return "", err
 	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return clean, nil
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return clean, nil
-	}
-
-	var versions []string
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		line := scanner.Text()
-		fields := strings.Split(line, "\t")
-		if len(fields) > 0 {
-			ver := fields[0]
-			if ver != "" && ver != "version" {
-				versions = append(versions, ver)
-			}
-		}
-	}
-
-	if len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, spec, includePrerelease); err == nil {
-			if !strings.HasPrefix(best, "v") {
-				best = "v" + CleanVersion(best)
-			}
-			return best, nil
-		}
-	}
-
-	return clean, nil
+	return "v" + version, nil
 }
 
 func mapNodePlatform(goos, goarch string) (string, string) {
@@ -217,7 +176,10 @@ func (n *NPMTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	}
 
 	baseURL := resolveBaseURL("https://registry.npmjs.org/npm/-", mirrorBaseURL)
-	normVer := resolveNPMToolVersion(ctx, "npm", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
+	normVer, err := resolveNPMToolVersion(ctx, "npm", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
+	if err != nil {
+		return nil, err
+	}
 
 	filename := fmt.Sprintf("npm-%s.tgz", normVer)
 	downloadURL := fmt.Sprintf("%s/%s", baseURL, filename)
@@ -234,13 +196,9 @@ func (n *NPMTool) Install(ctx context.Context, versionSpec string, doguHome stri
 	})
 }
 
-func resolveNPMToolVersion(ctx context.Context, pkgName string, versionSpec string, mirrorBaseURL string, includePrerelease bool) string {
-	if versions, err := FetchNPMVersions(ctx, pkgName, mirrorBaseURL); err == nil && len(versions) > 0 {
-		if best, err := SelectBestVersion(versions, versionSpec, includePrerelease); err == nil {
-			return CleanVersion(best)
-		}
-	}
-	return CleanVersion(versionSpec)
+func resolveNPMToolVersion(ctx context.Context, pkgName string, versionSpec string, mirrorBaseURL string, includePrerelease bool) (string, error) {
+	versions, err := FetchNPMVersions(ctx, pkgName, mirrorBaseURL)
+	return resolveDiscoveredVersion(versions, err, versionSpec, includePrerelease)
 }
 
 func ensureNPMWrappers(binDir string) {
@@ -280,7 +238,10 @@ func (p *PNPMTool) Install(ctx context.Context, versionSpec string, doguHome str
 		return res, err
 	}
 
-	normVer := resolveNPMToolVersion(ctx, "pnpm", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
+	normVer, err := resolveNPMToolVersion(ctx, "pnpm", versionSpec, mirrorBaseURL, opts.IncludePrerelease)
+	if err != nil {
+		return nil, err
+	}
 	baseURL := resolveBaseURL("https://github.com/pnpm/pnpm/releases/download", mirrorBaseURL)
 
 	osName := mapPNPMOS()

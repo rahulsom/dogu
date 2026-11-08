@@ -102,7 +102,7 @@ func TestDiagramPackageInstallation(t *testing.T) {
 				}
 			})
 			home := t.TempDir()
-			r, err := d.Install(context.Background(), "1.2", home, "", InstallOptions{})
+			r, err := d.Install(context.Background(), "", home, "", InstallOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

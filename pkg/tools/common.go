@@ -44,7 +44,7 @@ func buildEnvVars(toolName string, versionForMajor string, homeDir string, extra
 	majorVer := env.ExtractMajorVersion(versionForMajor)
 	envVars := map[string]string{
 		env.FormatEnvKey(toolName, majorVer): homeDir,
-		env.FormatEnvKey(toolName, ""):        homeDir,
+		env.FormatEnvKey(toolName, ""):       homeDir,
 	}
 	for _, homeKey := range extraHomeEnv {
 		envVars[homeKey] = homeDir
@@ -77,7 +77,7 @@ func installArchiveTool(ctx context.Context, cfg ArchiveInstallConfig) (*Install
 		dirName = cfg.NormalizedVer
 	}
 	installDir := filepath.Join(cfg.DoguHome, "candidates", cfg.ToolName, dirName)
-	cacheFile := filepath.Join(cfg.DoguHome, "cache", cfg.ToolName, cfg.FileName)
+	cacheFile := filepath.Join(cfg.DoguHome, "cache", cfg.ToolName, dirName, cfg.FileName)
 
 	if err := downloader.DownloadAndExtract(ctx, cfg.DownloadURL, cacheFile, installDir, downloader.WithRewriteRule(cfg.Opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download %s: %w", cfg.ToolName, err)
@@ -133,7 +133,7 @@ func installBinaryTool(ctx context.Context, cfg BinaryInstallConfig) (*InstallRe
 		dirName = cfg.NormalizedVer
 	}
 	installDir := filepath.Join(cfg.DoguHome, "candidates", cfg.ToolName, dirName)
-	cacheFile := filepath.Join(cfg.DoguHome, "cache", cfg.ToolName, cfg.CacheFileName)
+	cacheFile := filepath.Join(cfg.DoguHome, "cache", cfg.ToolName, dirName, cfg.CacheFileName)
 
 	if err := downloader.SaveSingleBinary(ctx, cfg.DownloadURL, cacheFile, installDir, cfg.TargetBin, downloader.WithRewriteRule(cfg.Opts.RewriteRules)); err != nil {
 		return nil, fmt.Errorf("failed to download %s: %w", cfg.ToolName, err)
@@ -189,11 +189,16 @@ func findExistingCandidate(doguHome string, toolName string, versionSpec string,
 		return "", false
 	}
 
-	exactDir := filepath.Join(candidatesDir, versionSpec)
-	if fi, err := os.Stat(exactDir); err == nil && fi.IsDir() {
-		if subEntries, _ := os.ReadDir(exactDir); len(subEntries) > 0 {
-			log.Debug("Found candidate directory", "tool", toolName, "dir", exactDir)
-			return exactDir, true
+	version := CleanVersion(versionSpec)
+	if toolName == "java" {
+		version, _ = parseJavaSpec(version)
+	}
+	if versionSpec != "" && (!partialVersionRegex.MatchString(version) || IsRC(versionSpec)) {
+		exactDir := filepath.Join(candidatesDir, versionSpec)
+		if fi, err := os.Stat(exactDir); err == nil && fi.IsDir() {
+			if subEntries, _ := os.ReadDir(exactDir); len(subEntries) > 0 {
+				return exactDir, true
+			}
 		}
 	}
 
@@ -243,16 +248,17 @@ func buildResultFromDir(toolName string, versionSpec string, installDir string) 
 		}
 	}
 
-	majorVer := env.ExtractMajorVersion(versionSpec)
+	normalizedVer := filepath.Base(installDir)
+	majorVer := env.ExtractMajorVersion(normalizedVer)
 	envVars := map[string]string{
 		env.FormatEnvKey(toolName, majorVer): homeDir,
-		env.FormatEnvKey(toolName, ""):        homeDir,
+		env.FormatEnvKey(toolName, ""):       homeDir,
 	}
 
 	return &InstallResult{
 		ToolName:      toolName,
 		RequestedVer:  versionSpec,
-		NormalizedVer: versionSpec,
+		NormalizedVer: normalizedVer,
 		InstallDir:    installDir,
 		HomeDir:       homeDir,
 		BinDirs:       []string{binDir},

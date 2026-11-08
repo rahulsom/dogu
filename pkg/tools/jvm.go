@@ -179,7 +179,10 @@ func (*LeiningenTool) Install(ctx context.Context, spec, home, mirror string, op
 		}
 	}
 
-	version := leiningenDefinition.resolveVersion(ctx, spec, mirror, opts.IncludePrerelease)
+	version, err := leiningenDefinition.resolveVersion(ctx, spec, mirror, opts.IncludePrerelease)
+	if err != nil {
+		return nil, err
+	}
 	asset, path, _, cacheName, _ := leiningenDefinition.expand(version, runtime.GOOS, runtime.GOARCH)
 	jarName := filepath.Base(asset)
 	return installBinaryTool(ctx, BinaryInstallConfig{
@@ -280,7 +283,7 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 	return installArchiveTool(ctx, ArchiveInstallConfig{
 		ToolName:         "java",
 		VersionSpec:      versionSpec,
-		NormalizedVer:    ver,
+		NormalizedVer:    normVersion,
 		CandidateDirName: candidateDirName,
 		DownloadURL:      downloadURL,
 		FileName:         filename,
@@ -312,6 +315,12 @@ func parseJavaSpec(spec string) (version string, distribution string) {
 
 func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist string, osName string, archName string, mirrorBaseURL string, includePrerelease bool) (downloadURL string, filename string, normVersion string, resolvedDist string, err error) {
 	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") {
+		if ver == "" {
+			_, _, ver, dist, err = j.resolveDownloadURL(ctx, ver, dist, osName, archName, "", includePrerelease)
+			if err != nil {
+				return "", "", "", "", err
+			}
+		}
 		mirrorBaseURL = strings.TrimSuffix(mirrorBaseURL, "/")
 		distSuffix := ""
 		if dist != "" {
@@ -332,7 +341,9 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 		endpoint = strings.TrimSuffix(mirrorBaseURL, "/")
 	}
 	v := url.Values{}
-	v.Set("version", ver)
+	if ver != "" {
+		v.Set("version", ver)
+	}
 	v.Set("operating_system", osName)
 	v.Set("architecture", archName)
 	v.Set("archive_type", archiveType)
@@ -379,14 +390,15 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 	}
 
 	if len(validPkgs) == 0 {
-		if len(discoResp.Result) > 0 && !includePrerelease && !specIsRC {
-			validPkgs = discoResp.Result
-		} else {
-			return "", "", "", "", fmt.Errorf("no java package found for version=%s, dist=%s, os=%s, arch=%s", ver, dist, osName, archName)
-		}
+		return "", "", "", "", fmt.Errorf("no java package found for version=%s, dist=%s, os=%s, arch=%s", ver, dist, osName, archName)
 	}
 
 	pkg := validPkgs[0]
+	for _, candidate := range validPkgs[1:] {
+		if CompareVersions(candidate.JavaVersion, pkg.JavaVersion) > 0 {
+			pkg = candidate
+		}
+	}
 	pkgDist := strings.ToLower(pkg.Distribution)
 	if pkgDist == "" {
 		pkgDist = dist
@@ -409,7 +421,8 @@ func buildJavaResultFromDir(versionSpec string, installDir string) *InstallResul
 		binDir = jdkHome
 	}
 
-	ver, _ := parseJavaSpec(versionSpec)
+	normalizedVer := filepath.Base(installDir)
+	ver, _ := parseJavaSpec(normalizedVer)
 	majorVersion := env.ExtractMajorVersion(ver)
 	majorKey := env.FormatEnvKey("java", majorVersion)
 	javaHomeKey := env.FormatEnvKey("java", "")
@@ -422,7 +435,7 @@ func buildJavaResultFromDir(versionSpec string, installDir string) *InstallResul
 	return &InstallResult{
 		ToolName:      "java",
 		RequestedVer:  versionSpec,
-		NormalizedVer: versionSpec,
+		NormalizedVer: normalizedVer,
 		InstallDir:    installDir,
 		HomeDir:       jdkHome,
 		BinDirs:       []string{binDir},
@@ -501,7 +514,7 @@ func (*MavenTool) Install(ctx context.Context, versionSpec, doguHome, mirrorBase
 	return mavenDefinition.Install(ctx, versionSpec, doguHome, mirrorBaseURL, opts)
 }
 
-func resolveMavenVersion(ctx context.Context, versionSpec, baseURL string, includePrerelease bool) string {
+func resolveMavenVersion(ctx context.Context, versionSpec, baseURL string, includePrerelease bool) (string, error) {
 	return mavenDefinition.resolveVersion(ctx, versionSpec, baseURL, includePrerelease)
 }
 
@@ -521,11 +534,30 @@ type ScalaTool struct{}
 func init()                     { Register(&ScalaTool{}) }
 func (*ScalaTool) Name() string { return "scala" }
 func (*ScalaTool) Install(ctx context.Context, spec, home, mirror string, opts InstallOptions) (*InstallResult, error) {
+	requestedSpec := spec
+	if spec == "" {
+		if res, ok, err := checkExistingCandidate(home, "scala", spec, opts, nil); ok || err != nil {
+			return res, err
+		}
+		versions, err := listScalaVersions(ctx)
+		if err != nil {
+			return nil, err
+		}
+		spec, err = SelectBestVersion(versions, spec, opts.IncludePrerelease)
+		if err != nil {
+			return nil, err
+		}
+		spec = CleanVersion(spec)
+	}
 	d := scalaDefinition
 	if strings.HasPrefix(CleanVersion(spec), "3") {
 		d.baseURL = "https://github.com/scala/scala3/releases/download"
 		d.source.owner, d.source.repository = "scala", "scala3"
 		d.asset, d.downloadPath = "scala3-{version}.zip", "{version}/{asset}"
 	}
-	return d.Install(ctx, spec, home, mirror, opts)
+	res, err := d.Install(ctx, spec, home, mirror, opts)
+	if res != nil {
+		res.RequestedVer = requestedSpec
+	}
+	return res, err
 }

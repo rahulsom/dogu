@@ -116,7 +116,7 @@ cat >> Makefile <<'MAKE'
 			if err != nil {
 				t.Fatal(err)
 			}
-			res, err := tool.Install(t.Context(), "3.4", home, server.URL, InstallOptions{})
+			res, err := tool.Install(t.Context(), "", home, server.URL, InstallOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

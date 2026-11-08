@@ -21,6 +21,11 @@ Templates support `{version}`, `{os}`, `{arch}`, `{ext}`, `{suffix}`, and
 values use the same substitution rules. Versions are cleaned after selection,
 with the requested version as fallback when discovery fails or finds no match.
 Existing mirror and download-rewrite behavior is retained.
+An empty version spec matches all releases and candidates, excluding prereleases
+by default. Discovery must succeed for empty specs; there is no explicit version
+to fall back to. Never treat the tool's candidates root as an exact empty match.
+Shared installers scope cached downloads by candidate version so releases with
+identical asset filenames cannot reuse another version's payload.
 
 Fresh and reused installs apply the same home environment metadata. Reused
 installs derive the normalized version and major-version environment keys from
@@ -30,6 +35,9 @@ Providers with custom discovery or setup remain ordinary Go implementations:
 Java, Node, Python, Pants, Bun, UV, npm, pnpm, Clojure CLI, and Leiningen.
 Extend the catalog when a provider fits its existing rules; keep specialized
 behavior in Go rather than adding a configuration language for it.
+Python resolves interpreter versions and host assets from standalone build
+release metadata, not the date-based release tags. Scala's empty spec considers
+both Scala 2 and Scala 3 releases.
 
 Provider implementations are grouped in `jvm.go`, `js.go`, `python.go`,
 `lang.go`, and `diagram.go`. Generic build tools live in `lang.go`; shared

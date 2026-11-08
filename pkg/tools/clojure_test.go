@@ -63,7 +63,7 @@ chmod +x "$1/bin/clojure" "$1/bin/clj"
 	if err != nil {
 		t.Fatal(err)
 	}
-	fresh, err := tool.Install(t.Context(), "1.12", home, server.URL, InstallOptions{})
+	fresh, err := tool.Install(t.Context(), "", home, server.URL, InstallOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

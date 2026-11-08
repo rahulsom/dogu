@@ -64,14 +64,9 @@ type toolDefinition struct {
 	extraEnv                         map[string]string
 }
 
-func (d toolDefinition) resolveVersion(ctx context.Context, spec, mirrorURL string, prerelease bool) string {
+func (d toolDefinition) resolveVersion(ctx context.Context, spec, mirrorURL string, prerelease bool) (string, error) {
 	versions, err := d.source.fetch(ctx, resolveBaseURL(d.baseURL, mirrorURL), mirrorURL)
-	if err == nil {
-		if best, err := SelectBestVersion(versions, spec, prerelease); err == nil {
-			return CleanVersion(best)
-		}
-	}
-	return CleanVersion(spec)
+	return resolveDiscoveredVersion(versions, err, spec, prerelease)
 }
 
 // expand returns the naming rules for a specific platform without consulting the
@@ -127,7 +122,10 @@ func (d toolDefinition) Install(ctx context.Context, spec, doguHome, mirrorURL s
 			return res, nil
 		}
 	}
-	version := d.resolveVersion(ctx, spec, mirrorURL, opts.IncludePrerelease)
+	version, err := d.resolveVersion(ctx, spec, mirrorURL, opts.IncludePrerelease)
+	if err != nil {
+		return nil, err
+	}
 	asset, path, binary, cache, extraEnv := d.expand(version, runtime.GOOS, runtime.GOARCH)
 	url := resolveBaseURL(d.baseURL, mirrorURL) + "/" + path
 	if d.binary != "" {

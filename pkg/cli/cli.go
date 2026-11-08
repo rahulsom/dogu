@@ -64,6 +64,7 @@ func PrintUsage(out *os.File) {
 	sb.WriteString(headerStyle.Render("Examples:") + "\n")
 	for _, example := range []string{
 		"dogu --node 22 -- node --version",
+		"dogu --java= -- java --version",
 		"dogu --java 21 --maven 3.9 -- mvn clean test",
 		"dogu --java 21 --clojure 1.12 -- lein test",
 		"dogu --python 3.11 --uv 0.5 -- uv run pytest",
@@ -100,6 +101,8 @@ func PrintUsage(out *os.File) {
 	sb.WriteString("  Use a major, major.minor, or exact version (e.g. 22, 22.11, 22.11.0).\n")
 	sb.WriteString("  Partial versions select the newest matching installed version, or\n")
 	sb.WriteString("  the newest matching release if none is installed.\n")
+	sb.WriteString("  Use --<tool>= for the newest installed version, or the latest release\n")
+	sb.WriteString("  if none is installed. --force skips reuse; prereleases are excluded by default.\n")
 	sb.WriteString("  Java also accepts vendor suffixes: --java 17-zulu, --java 21-tem.\n")
 	sb.WriteString("  Buck2 accepts release dates or tags: --buck2 2026-10-15.\n")
 
