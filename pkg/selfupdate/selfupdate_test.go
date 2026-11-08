@@ -78,7 +78,7 @@ func TestCheckForUpdate(t *testing.T) {
 				TagName: "v1.5.0",
 				Name:    "v1.5.0",
 				Assets: []ReleaseAsset{
-					{Name: "dogu_1.5.0_linux_amd64.tar.gz", DownloadURL: "http://example.com/dl"},
+					{Name: "dogu-" + runtime.GOOS + "-" + runtime.GOARCH + armAssetSuffix(), DownloadURL: "http://example.com/dl"},
 				},
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -205,4 +205,15 @@ func TestReplaceExecutable(t *testing.T) {
 	if string(content) != "v2" {
 		t.Errorf("expected content 'v2', got %q", string(content))
 	}
+}
+
+func armAssetSuffix() string {
+	suffix := ""
+	if arm := os.Getenv("GOARM"); arm != "" {
+		suffix = "v" + arm
+	}
+	if runtime.GOOS == "windows" {
+		suffix += ".exe"
+	}
+	return suffix
 }

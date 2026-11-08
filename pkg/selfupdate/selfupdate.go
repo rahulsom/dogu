@@ -43,7 +43,7 @@ type Release struct {
 	Assets  []ReleaseAsset `json:"assets"`
 }
 
-// CheckForUpdate checks GitHub for the latest release and compares it with currentVersion.
+// CheckForUpdate checks GitHub for a newer release with a compatible binary.
 // Returns the latest release, a boolean indicating if an update is available, and an error if any.
 func CheckForUpdate(ctx context.Context, currentVersion, owner, repo string) (*Release, bool, error) {
 	if owner == "" {
@@ -85,6 +85,9 @@ func CheckForUpdate(ctx context.Context, currentVersion, owner, repo string) (*R
 
 	// Compare currentVersion and latestVer
 	if isUpdateAvailable(currentVersion, latestVer) {
+		if !hasCompatibleAsset(&rel) {
+			return &rel, false, nil
+		}
 		return &rel, true, nil
 	}
 
@@ -185,7 +188,7 @@ func SelfUpdate(ctx context.Context, currentVersion, owner, repo string) error {
 	}
 
 	if !updateAvailable {
-		fmt.Printf("dogu is already up to date (%s).\n", currentVersion)
+		fmt.Printf("No newer release with a compatible binary is available (%s).\n", currentVersion)
 		return nil
 	}
 
@@ -342,4 +345,9 @@ func replaceExecutable(tempPath, exePath string) error {
 	}
 
 	return os.Rename(tempPath, exePath)
+}
+
+func hasCompatibleAsset(rel *Release) bool {
+	asset, err := FindMatchingAsset(rel.Assets, runtime.GOOS, runtime.GOARCH, os.Getenv("GOARM"))
+	return err == nil && asset.DownloadURL != ""
 }
