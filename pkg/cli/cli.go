@@ -92,7 +92,7 @@ func PrintUsage(out *os.File) {
 		{"JavaScript", "node, npm, pnpm, yarn, bun"},
 		{"Python", "python, uv"},
 		{"Other languages", "go, rust, ghc, r, julia, elm, ruby, lua"},
-		{"Diagramming tools", "asciitosvg, barby, rqrcode, bytefield-svg, d2, dbml-renderer\n                    ditaa, erd, gnuplot, graphviz, lilypond, mermaid-cli\n                    penrose, plantuml, js-sequence-diagrams, jsyntrax, vega-lite, vega"},
+		{"Diagramming tools", "asciitosvg, barby, rqrcode, bytefield-svg, d2, dbml-renderer\n                    ditaa, erd, gnuplot, graphviz, lilypond, mermaid-cli\n                    penrose, plantuml, jsyntrax, vega-lite, vega"},
 	} {
 		sb.WriteString(fmt.Sprintf("  %-18s%s\n", ecosystem.name, ecosystem.tools))
 	}

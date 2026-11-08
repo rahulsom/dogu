@@ -239,7 +239,7 @@ func TestDiagramArchiveInstallation(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX installers")
 	}
-	for _, name := range []string{"d2", "jsyntrax", "lilypond", "js-sequence-diagrams"} {
+	for _, name := range []string{"d2", "jsyntrax", "lilypond"} {
 		t.Run(name, func(t *testing.T) {
 			d, _ := diagramDefinition(name)
 			asset, entry := "jsyntrax-1.2.3-syntrax.zip", "jsyntrax-1.2.3/bin/syntrax"
@@ -258,17 +258,12 @@ func TestDiagramArchiveInstallation(t *testing.T) {
 					t.Skip(err)
 				}
 				entry = "lilypond-1.2.3/bin/lilypond"
-			case "js-sequence-diagrams":
-				asset = "v1.2.3.tar.gz"
-				entry = "js-sequence-diagrams-1.2.3/dist/sequence-diagram-min.js"
 			}
 			payload := definitionArchive(t, asset, entry, []byte("fixture"))
 			diagramHTTP(t, func(r *http.Request) (string, int) {
 				switch {
 				case strings.Contains(r.URL.Path, "/releases/tags/"):
 					return fmt.Sprintf(`{"assets":[{"name":%q}]}`, asset), 200
-				case strings.HasSuffix(r.URL.Path, "/tags"):
-					return `[{"name":"v1.2.3"}]`, 200
 				case strings.Contains(r.URL.Path, "/releases") && (r.URL.Host == "api.github.com" || strings.Contains(r.URL.Path, "/api/v4/")):
 					return `[{"tag_name":"v1.2.3","assets":[{}]}]`, 200
 				default:
@@ -295,7 +290,7 @@ func TestDiagramArchiveInstallation(t *testing.T) {
 }
 
 func TestDiagramDiscoveryErrors(t *testing.T) {
-	for _, name := range []string{"barby", "asciitosvg", "erd", "graphviz", "lilypond", "js-sequence-diagrams"} {
+	for _, name := range []string{"barby", "asciitosvg", "erd", "graphviz", "lilypond"} {
 		t.Run(name, func(t *testing.T) {
 			d, _ := diagramDefinition(name)
 			diagramHTTP(t, func(*http.Request) (string, int) { return "unavailable", 503 })

@@ -16,7 +16,6 @@
     "gradle": "https://services.gradle.org/distributions",
     "graphviz": "https://graphviz.org/download/source",
     "java": "https://api.foojay.io/disco/v3.0/packages",
-    "js-sequence-diagrams": "https://github.com/bramp/js-sequence-diagrams/archive/refs/tags",
     "jsyntrax": "https://github.com/atp-mipt/jsyntrax/releases/download",
     "leiningen": "https://github.com/technomancy/leiningen/releases/download",
     "lilypond": "https://gitlab.com/lilypond/lilypond/-/releases",
