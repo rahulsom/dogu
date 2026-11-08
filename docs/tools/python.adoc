@@ -1,0 +1,23 @@
+== Python Ecosystem
+
+=== Python
+
+Downloads standalone Python builds.
+The default base URL is `https://github.com/indygreg/python-build-standalone/releases/download`.
+
+You can specify versions with `--python`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--python 3`, `--python 3.11`, `--python 3.11.7`
+
+It will set the following environment variables: `PYTHON_<MAJOR>_HOME`, `PYTHON_HOME`, `PYTHONHOME`.
+
+=== UV
+
+Downloads Astral UV releases.
+The default base URL is `https://github.com/astral-sh/uv/releases/download`.
+
+You can specify versions with `--uv`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--uv 0`, `--uv 0.5`, `--uv 0.5.1`
+
+It will set the following environment variables: `UV_<MAJOR>_HOME`, `UV_HOME`.

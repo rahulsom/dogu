@@ -1,0 +1,46 @@
+== Additional Languages
+
+All providers accept major, major.minor, or exact versions and set
+`<TOOL>_HOME` and `<TOOL>_<MAJOR>_HOME`. Download base URLs can be overridden
+with the existing `baseUrls` configuration; URL rewrite rules also apply.
+
+[cols="1,1,3"]
+|===
+|Tool |Example |Distribution
+|Go |`--go 1.24` |Official host archive selected from the go.dev JSON index; also sets `GOROOT`.
+|Rust |`--rust 1.85` |Official standalone toolchain, including `rustc` and Cargo. Runs `install.sh` into the candidate directory.
+|GHC (Haskell) |`--ghc 9.6` |Official GHC bindist. Runs `configure` and `make install` into the candidate directory.
+|R |`--r 4.4` |Builds CRAN sources with `configure`, `make`, and `make install`. Sets `R_HOME` to the installed `lib/R` directory.
+|Julia |`--julia 1.11` |Official host archive selected from Julia's JSON release index.
+|Elm |`--elm 0.19.1` |Official compressed compiler executable. Supports x86-64 Linux, macOS, Windows, and native macOS ARM64.
+|Ruby |`--ruby 3.4` |Builds official Ruby sources, including RubyGems, with `configure`, `make`, and `make install`.
+|Lua |`--lua 5.4` |Builds official Lua sources, including `lua` and `luac`, with the host's make target and `make install`.
+|===
+
+Rust, GHC, R, Ruby, and Lua currently support Linux and macOS on x86-64 and ARM64.
+Rust requires a shell and a system linker/C toolchain to compile programs.
+GHC requires a shell, make, a C compiler, and the runtime libraries required by
+its bindist (including GMP; Linux selects the oldest available Debian baseline
+from Debian 10 through Debian 13).
+R requires make, C and Fortran compilers, and CRAN's build dependencies
+(including readline, zlib, bzip2, xz, PCRE2, and libcurl development files).
+R builds without X11; building from source can take several minutes.
+Ruby requires a shell, make, a C compiler, and development libraries for
+OpenSSL, libyaml, and zlib for its standard extensions and RubyGems.
+Ruby builds without documentation; building from source can take several minutes.
+Lua requires make and a C compiler, plus readline development files on Linux.
+Ruby uses `https://cache.ruby-lang.org/pub/ruby` (`index.txt` for discovery);
+Lua uses `https://www.lua.org/ftp` for discovery and source downloads.
+These providers install within `$DOGU_HOME` without requesting administrator access.
+
+[source,bash]
+----
+dogu --java 21 --clojure 1.12 -- lein test
+dogu --go 1.24 -- go version
+dogu --rust 1.85 -- cargo --version
+dogu --ghc 9.6 -- ghc --version
+dogu --r 4.4 -- R --version
+dogu --elm 0.19.1 -- elm --version
+dogu --ruby 3.4 -- ruby --version
+dogu --lua 5.4 -- lua -v
+----

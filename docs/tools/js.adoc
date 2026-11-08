@@ -1,0 +1,56 @@
+== Node.js / JavaScript Ecosystem
+
+=== Node.js
+
+Downloads official nodejs.org dist archives.
+The default base URL is `https://nodejs.org/dist`.
+
+You can specify versions with `--node`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--node 20`, `--node 22.11`, `--node 22.11.0`
+
+It will set the following environment variables: `NODE_<MAJOR>_HOME`, `NODE_HOME`.
+
+=== npm
+
+Downloads npm release tarballs.
+The default base URL is `https://registry.npmjs.org/npm/-`.
+
+You can specify versions with `--npm`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--npm 10`, `--npm 10.2`, `--npm 10.2.4`
+
+It will set the following environment variables: `NPM_<MAJOR>_HOME`, `NPM_HOME`.
+
+=== pnpm
+
+Downloads standalone pnpm binaries.
+The default base URL is `https://github.com/pnpm/pnpm/releases/download`.
+
+You can specify versions with `--pnpm`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--pnpm 8`, `--pnpm 8.15`, `--pnpm 8.15.1`
+
+It will set the following environment variables: `PNPM_<MAJOR>_HOME`, `PNPM_HOME`.
+
+=== Yarn
+
+Downloads Yarn v1 releases.
+The default base URL is `https://github.com/yarnpkg/yarn/releases/download`.
+
+You can specify versions with `--yarn`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--yarn 1`, `--yarn 1.22`, `--yarn 1.22.19`
+
+It will set the following environment variables: `YARN_<MAJOR>_HOME`, `YARN_HOME`.
+
+=== Bun
+
+Downloads Oven Bun release archives.
+The default base URL is `https://github.com/oven-sh/bun/releases/download`.
+
+You can specify versions with `--bun`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--bun 1`, `--bun 1.1`, `--bun 1.1.0`
+
+It will set the following environment variables: `BUN_<MAJOR>_HOME`, `BUN_HOME`.

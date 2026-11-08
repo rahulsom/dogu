@@ -1,0 +1,56 @@
+== Generic Build Tools
+
+=== Apache Ant
+
+Downloads Apache Ant binary archives.
+The default base URL is `https://archive.apache.org/dist/ant/binaries`.
+
+You can specify versions with `--ant`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--ant 1`, `--ant 1.10`, `--ant 1.10.14`
+
+It will set the following environment variables: `ANT_<MAJOR>_HOME`, `ANT_HOME`.
+
+=== Mill
+
+Downloads Mill build tool releases.
+The default base URL is `https://github.com/com-lihaoyi/mill/releases/download`.
+
+You can specify versions with `--mill`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--mill 0`, `--mill 0.12`, `--mill 0.12.5`
+
+It will set the following environment variables: `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION`.
+
+=== Bazel
+
+Downloads standalone Bazel binaries.
+The default base URL is `https://github.com/bazelbuild/bazel/releases/download`.
+
+You can specify versions with `--bazel`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--bazel 7`, `--bazel 7.4`, `--bazel 7.4.0`
+
+It will set the following environment variables: `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME`.
+
+=== Pants
+
+Downloads Pants build system executables.
+The default base URL is `https://github.com/pantsbuild/pants/releases/download`.
+
+You can specify versions with `--pants`.
+This supports major versions, major.minor, or exact semver versions.
+E.g. `--pants 2`, `--pants 2.33`, `--pants 2.33.1`
+
+It will set the following environment variables: `PANTS_<MAJOR>_HOME`, `PANTS_HOME`.
+
+=== Buck2
+
+Downloads Buck2 build system releases.
+The default base URL is `https://github.com/facebook/buck2/releases/download`.
+
+You can specify versions with `--buck2`.
+This supports release dates or version tags.
+E.g. `--buck2 2026`, `--buck2 2026-10`, `--buck2 2026-10-15`
+
+It will set the following environment variables: `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME`.
