@@ -20,7 +20,7 @@ func (b *BunTool) Name() string {
 }
 
 func (b *BunTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if res, ok, err := checkExistingCandidate(doguHome, "bun", versionSpec, opts, nil); ok || err != nil {
+	if res, ok, err := checkExistingCandidate(ctx, doguHome, "bun", versionSpec, opts, nil); ok || err != nil {
 		return res, err
 	}
 
@@ -89,7 +89,7 @@ func (n *NodeTool) Name() string {
 }
 
 func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if res, ok, err := checkExistingCandidate(doguHome, "node", versionSpec, opts, nil); ok || err != nil {
+	if res, ok, err := checkExistingCandidate(ctx, doguHome, "node", versionSpec, opts, nil); ok || err != nil {
 		return res, err
 	}
 
@@ -118,13 +118,11 @@ func (n *NodeTool) Install(ctx context.Context, versionSpec string, doguHome str
 		DoguHome:      doguHome,
 		Opts:          opts,
 		FindDirs: func(installDir string) (string, []string) {
+			if runtime.GOOS == "windows" {
+				return findDirWithBinary(installDir, "node.exe")
+			}
 			nodeHome := downloader.FindSubDirWithDir(installDir, "bin")
 			binDir := filepath.Join(nodeHome, "bin")
-			if runtime.GOOS == "windows" {
-				if _, err := filepath.Glob(filepath.Join(nodeHome, "node.exe")); err == nil {
-					binDir = nodeHome
-				}
-			}
 			return nodeHome, []string{binDir}
 		},
 	})
@@ -175,7 +173,7 @@ func (n *NPMTool) Install(ctx context.Context, versionSpec string, doguHome stri
 		return nil
 	}
 
-	if res, ok, err := checkExistingCandidate(doguHome, "npm", versionSpec, opts, postNPM); ok || err != nil {
+	if res, ok, err := checkExistingCandidate(ctx, doguHome, "npm", versionSpec, opts, postNPM); ok || err != nil {
 		return res, err
 	}
 
@@ -238,7 +236,7 @@ func (p *PNPMTool) Name() string {
 }
 
 func (p *PNPMTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if res, ok, err := checkExistingCandidate(doguHome, "pnpm", versionSpec, opts, nil); ok || err != nil {
+	if res, ok, err := checkExistingCandidate(ctx, doguHome, "pnpm", versionSpec, opts, nil); ok || err != nil {
 		return res, err
 	}
 

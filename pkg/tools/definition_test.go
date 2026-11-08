@@ -97,7 +97,13 @@ func TestDefinitionInstall(t *testing.T) {
 				}
 				switch r.URL.Path {
 				case "/mirror/":
-					_, _ = io.WriteString(w, `apache-ant-1.2.3-bin.tar.gz <a href="1.2.3/">1.2.3</a>`)
+					if d.name == "maven" {
+						_, _ = io.WriteString(w, `<a href="maven-1/">1</a>`)
+					} else {
+						_, _ = io.WriteString(w, `apache-ant-1.2.3-bin.tar.gz <a href="1.2.3/">1.2.3</a>`)
+					}
+				case "/mirror/maven-1/":
+					_, _ = io.WriteString(w, `<a href="1.2.3/">1.2.3</a>`)
 				case "/mirror/versions/all":
 					_, _ = io.WriteString(w, `[{"version":"1.2.3"}]`)
 				case "/mirror/yarn":

@@ -45,7 +45,7 @@ func (*ClojureTool) Install(ctx context.Context, spec, home, mirror string, opts
 	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		return nil, fmt.Errorf("Clojure CLI installation currently supports Linux and macOS")
 	}
-	if res, ok, err := checkExistingCandidate(home, "clojure", spec, opts, func(res *InstallResult) error {
+	if res, ok, err := checkExistingCandidate(ctx, home, "clojure", spec, opts, func(res *InstallResult) error {
 		if err := validateClojureLaunchers(res.InstallDir); err != nil {
 			return err
 		}
@@ -163,7 +163,9 @@ func (*LeiningenTool) Name() string { return "leiningen" }
 
 func (*LeiningenTool) Install(ctx context.Context, spec, home, mirror string, opts InstallOptions) (*InstallResult, error) {
 	if !opts.Force {
-		if dir, ok := findExistingCandidate(home, "leiningen", spec, opts.IncludePrerelease); ok {
+		if dir, unlock, ok, err := lockExistingCandidate(ctx, home, "leiningen", spec, opts.IncludePrerelease); err != nil {
+			return nil, err
+		} else if ok {
 			launcher := filepath.Join(dir, "lein")
 			if runtime.GOOS == "windows" {
 				launcher += ".bat"
@@ -174,8 +176,10 @@ func (*LeiningenTool) Install(ctx context.Context, spec, home, mirror string, op
 				res.HomeDir = dir
 				res.BinDirs = []string{dir}
 				res.EnvVars = buildEnvVars("leiningen", res.NormalizedVer, dir, leiningenDefinition.homeEnv, nil)
+				unlock()
 				return res, nil
 			}
+			unlock()
 		}
 	}
 
@@ -260,7 +264,10 @@ type discoResponse struct {
 
 func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
 	if !opts.Force {
-		if existingDir, ok := findExistingCandidate(doguHome, "java", versionSpec, opts.IncludePrerelease); ok {
+		if existingDir, unlock, ok, err := lockExistingCandidate(ctx, doguHome, "java", versionSpec, opts.IncludePrerelease); err != nil {
+			return nil, err
+		} else if ok {
+			defer unlock()
 			return buildJavaResultFromDir(versionSpec, existingDir), nil
 		}
 	}
@@ -297,28 +304,41 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 }
 
 func parseJavaSpec(spec string) (version string, distribution string) {
-	parts := strings.SplitN(spec, "-", 2)
-	version = parts[0]
-	if len(parts) > 1 {
-		distribution = parts[1]
+	lower := strings.ToLower(spec)
+	for _, vendor := range []string{
+		"temurin", "microsoft", "corretto", "openlogic", "sap_machine", "dragonwell",
+		"liberica", "graalvm", "jetbrains", "semeru", "bisheng", "oracle", "zulu", "tem",
+	} {
+		suffix := "-" + vendor
+		if strings.HasSuffix(lower, suffix) {
+			version = spec[:len(spec)-len(suffix)]
+			distribution = normalizeJavaDistribution(vendor)
+			return version, distribution
+		}
 	}
-
-	if strings.HasSuffix(version, "-tem") || distribution == "tem" || distribution == "temurin" {
-		version = strings.TrimSuffix(version, "-tem")
-		distribution = "temurin"
-	} else if strings.HasSuffix(version, "-zulu") || distribution == "zulu" {
-		version = strings.TrimSuffix(version, "-zulu")
-		distribution = "zulu"
-	}
+	version = spec
 	return version, distribution
+}
+
+func normalizeJavaDistribution(distribution string) string {
+	distribution = strings.ToLower(distribution)
+	if distribution == "tem" {
+		return "temurin"
+	}
+	return distribution
 }
 
 func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist string, osName string, archName string, mirrorBaseURL string, includePrerelease bool) (downloadURL string, filename string, normVersion string, resolvedDist string, err error) {
 	if mirrorBaseURL != "" && !strings.Contains(mirrorBaseURL, "foojay") {
 		if ver == "" || partialVersionRegex.MatchString(ver) {
-			_, _, ver, dist, err = j.resolveDownloadURL(ctx, ver, dist, osName, archName, "", includePrerelease)
-			if err != nil {
-				return "", "", "", "", err
+			requestedVersion, requestedDist := ver, dist
+			_, _, resolvedVersion, resolvedDistribution, resolveErr := j.resolveDownloadURL(ctx, ver, dist, osName, archName, "", includePrerelease)
+			if resolveErr == nil {
+				ver, dist = resolvedVersion, resolvedDistribution
+			} else if ver == "" {
+				return "", "", "", "", resolveErr
+			} else {
+				ver, dist = requestedVersion, requestedDist
 			}
 		}
 		mirrorBaseURL = strings.TrimSuffix(mirrorBaseURL, "/")
@@ -348,6 +368,7 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 	v.Set("architecture", archName)
 	v.Set("archive_type", archiveType)
 	v.Set("package_type", "jdk")
+	v.Set("directly_downloadable", "true")
 
 	specIsRC := IsRC(ver)
 	if !includePrerelease && !specIsRC {
@@ -381,6 +402,9 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 
 	var validPkgs []discoPackage
 	for _, p := range discoResp.Result {
+		if p.Filename == "" || p.Links.PkgDownloadRedirect == "" {
+			continue
+		}
 		if !includePrerelease && !specIsRC {
 			if p.EarlyAccess || IsRC(p.JavaVersion) {
 				continue
@@ -536,7 +560,7 @@ func (*ScalaTool) Name() string { return "scala" }
 func (*ScalaTool) Install(ctx context.Context, spec, home, mirror string, opts InstallOptions) (*InstallResult, error) {
 	requestedSpec := spec
 	if spec == "" {
-		if res, ok, err := checkExistingCandidate(home, "scala", spec, opts, nil); ok || err != nil {
+		if res, ok, err := checkExistingCandidate(ctx, home, "scala", spec, opts, nil); ok || err != nil {
 			return res, err
 		}
 		versions, err := listScalaVersions(ctx)

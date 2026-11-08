@@ -155,13 +155,22 @@ func TestSpecializedMajorAndLatestInstalls(t *testing.T) {
 					archiveBinary += ".exe"
 				}
 			}
+			if runtime.GOOS == "windows" && name == "node" {
+				archiveBinary = "node.exe"
+			}
+			if runtime.GOOS == "windows" && name == "python" {
+				archiveBinary = "python.exe"
+			}
 			if binary == "" {
 				archivePath := "distribution/bin/" + archiveBinary
 				if name == "bun" || name == "uv" {
 					archivePath = "distribution/" + archiveBinary
 				}
-				if runtime.GOOS == "windows" && (name == "node" || name == "python") {
-					archivePath = archiveBinary
+				if runtime.GOOS == "windows" && name == "node" {
+					_, nodeArch := mapNodePlatform("windows", runtime.GOARCH)
+					archivePath = fmt.Sprintf("node-v%s-win-%s/node.exe", version, nodeArch)
+				} else if runtime.GOOS == "windows" && name == "python" {
+					archivePath = "python/python.exe"
 				}
 				payload = definitionArchive(t, asset, archivePath, payload)
 			}
@@ -228,9 +237,15 @@ func TestSpecializedMajorAndLatestInstalls(t *testing.T) {
 				if res.EnvVars[env.FormatEnvKey(name, major)] != res.HomeDir {
 					t.Fatalf("wrong version environment: %+v", res)
 				}
+				if name == "python" && res.EnvVars["PYTHONHOME"] != res.HomeDir {
+					t.Fatalf("wrong Python home: %+v", res)
+				}
 				file := filepath.Join(res.BinDirs[0], archiveBinary)
 				if binary != "" {
 					file = filepath.Join(res.BinDirs[0], binary)
+				}
+				if _, err := os.Stat(file); err != nil {
+					t.Fatalf("tool executable not found on PATH: %s: %v", file, err)
 				}
 				if err := os.WriteFile(file, []byte("broken"), 0755); err != nil {
 					t.Fatal(err)

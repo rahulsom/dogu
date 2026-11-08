@@ -72,7 +72,7 @@ func TestCheckExistingCandidate(t *testing.T) {
 	}
 
 	// Hit existing candidate
-	res, ok, err := checkExistingCandidate(doguHome, "dummy", "1.0", InstallOptions{}, nil)
+	res, ok, err := checkExistingCandidate(t.Context(), doguHome, "dummy", "1.0", InstallOptions{}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestCheckExistingCandidate(t *testing.T) {
 	}
 
 	// Force mode ignores existing
-	res, ok, err = checkExistingCandidate(doguHome, "dummy", "1.0", InstallOptions{Force: true}, nil)
+	res, ok, err = checkExistingCandidate(t.Context(), doguHome, "dummy", "1.0", InstallOptions{Force: true}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

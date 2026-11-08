@@ -56,6 +56,9 @@ func MatchVersion(candidateVersion string, versionSpec string) bool {
 	if candClean == specClean || candClean == specVersionOnly {
 		return true
 	}
+	if regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-.+`).MatchString(specClean) {
+		return false
+	}
 
 	// Check dotted or dashed prefix matching: e.g. "1.1" matches "1.1.0", "3" matches "3.9.6"
 	if strings.HasPrefix(candClean, specVersionOnly+".") || strings.HasPrefix(candClean, specVersionOnly+"-") {
@@ -72,6 +75,9 @@ func IsRC(v string) bool {
 	}
 	clean := CleanVersion(v)
 	lower := strings.ToLower(clean)
+	if regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+-[0-9]{14}-[0-9a-f]{12}$`).MatchString(lower) {
+		return false
+	}
 	// Java distribution names are not prerelease identifiers.
 	for _, vendor := range []string{"tem", "temurin", "zulu", "microsoft", "corretto", "oracle", "liberica", "openlogic", "sap_machine", "graalvm", "jetbrains", "semeru", "dragonwell", "bisheng"} {
 		lower = strings.TrimSuffix(lower, "-"+vendor)
@@ -567,46 +573,98 @@ func ResolveGitHubVersion(ctx context.Context, owner, repo, versionSpec string, 
 
 // FetchApacheMavenVersions retrieves version strings from Apache Maven archive index.
 func FetchApacheMavenVersions(ctx context.Context, baseURL string) ([]string, error) {
+	versions, _, _, err := fetchApacheMavenRelease(ctx, baseURL, "")
+	return versions, err
+}
+
+func fetchApacheMavenRelease(ctx context.Context, baseURL, spec string) ([]string, string, bool, error) {
 	if baseURL == "" {
 		baseURL = "https://archive.apache.org/dist/maven"
 	}
+	originalBase := strings.TrimRight(baseURL, "/")
 	baseURL = mavenArchiveRoot(baseURL)
 	data, err := fetchReleaseData(ctx, baseURL+"/")
 	if err != nil {
-		return nil, err
-	}
-	majors := regexp.MustCompile(`href="(maven-[0-9]+)/?"`).FindAllSubmatch(data, -1)
-	dirRegex := regexp.MustCompile(`href="([0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?)/?"`)
-	versionMap := make(map[string]bool)
-	indexes := [][]byte{data}
-	for _, major := range majors {
-		index, err := fetchReleaseData(ctx, baseURL+"/"+string(major[1])+"/")
-		if err != nil {
-			return nil, err
-		}
-		indexes = append(indexes, index)
-	}
-	for _, index := range indexes {
-		matches := dirRegex.FindAllStringSubmatch(string(index), -1)
-		for _, m := range matches {
-			if len(m) > 1 {
-				versionMap[m[1]] = true
+		if originalBase != baseURL {
+			directData, directErr := fetchReleaseData(ctx, originalBase+"/")
+			if directErr == nil {
+				if versions := mavenVersionsInIndex(directData); len(versions) > 0 {
+					return versions, originalBase, true, nil
+				}
 			}
 		}
+		if major := mavenSpecMajor(spec); major != "" {
+			archive := baseURL + "/maven-" + major
+			index, indexErr := fetchReleaseData(ctx, archive+"/")
+			if indexErr == nil {
+				return mavenVersionsInIndex(index), baseURL, false, nil
+			}
+			return nil, baseURL, false, indexErr
+		}
+		return nil, baseURL, false, err
 	}
-
+	majors := regexp.MustCompile(`href="(maven-[0-9]+)/?"`).FindAllSubmatch(data, -1)
+	if len(majors) == 0 {
+		return mavenVersionsInIndex(data), baseURL, true, nil
+	}
+	wantedMajor := mavenSpecMajor(spec)
 	var versions []string
-	for v := range versionMap {
-		versions = append(versions, v)
+	var selectedArchive string
+	foundMajor := false
+	for _, entry := range majors {
+		archiveName := string(entry[1])
+		major := strings.TrimPrefix(archiveName, "maven-")
+		if wantedMajor != "" && major != wantedMajor {
+			continue
+		}
+		foundMajor = true
+		archive := baseURL + "/" + archiveName
+		index, err := fetchReleaseData(ctx, archive+"/")
+		if err != nil {
+			return nil, baseURL, false, err
+		}
+		versions = append(versions, mavenVersionsInIndex(index)...)
+		selectedArchive = baseURL
 	}
-
-	if len(versions) == 0 {
-		return nil, fmt.Errorf("no versions found at apache maven archive %s", baseURL)
+	if wantedMajor != "" && !foundMajor {
+		index, err := fetchReleaseData(ctx, baseURL+"/maven-"+wantedMajor+"/")
+		if err != nil {
+			return nil, baseURL, false, err
+		}
+		versions = append(versions, mavenVersionsInIndex(index)...)
+		selectedArchive = baseURL
 	}
+	if wantedMajor == "" && len(majors) > 0 && len(versions) == 0 {
+		return nil, baseURL, false, fmt.Errorf("no versions found at apache maven archive %s", baseURL)
+	}
+	if selectedArchive == "" {
+		selectedArchive = baseURL
+	}
+	return versions, selectedArchive, false, nil
+}
 
-	return versions, nil
+func mavenVersionsInIndex(data []byte) []string {
+	dirRegex := regexp.MustCompile(`href="([0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?)/?"`)
+	var versions []string
+	seen := map[string]bool{}
+	for _, match := range dirRegex.FindAllSubmatch(data, -1) {
+		if len(match) > 1 && !seen[string(match[1])] {
+			seen[string(match[1])] = true
+			versions = append(versions, string(match[1]))
+		}
+	}
+	return versions
+}
+
+func mavenSpecMajor(spec string) string {
+	match := regexp.MustCompile(`^[0-9]+`).FindString(CleanVersion(spec))
+	return match
 }
 
 func mavenArchiveRoot(base string) string {
 	return regexp.MustCompile(`/maven-[0-9]+$`).ReplaceAllString(strings.TrimRight(base, "/"), "")
+}
+
+func mavenArchivePath(archive, version, asset string) string {
+	return strings.TrimRight(archive, "/") + "/" + version + "/binaries/" + asset
 }

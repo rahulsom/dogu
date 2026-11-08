@@ -107,7 +107,10 @@ func (d toolDefinition) expand(version, goos, goarch string) (asset, path, binar
 
 func (d toolDefinition) Install(ctx context.Context, spec, doguHome, mirrorURL string, opts InstallOptions) (*InstallResult, error) {
 	if !opts.Force {
-		if dir, ok := findExistingCandidate(doguHome, d.name, spec, opts.IncludePrerelease); ok {
+		if dir, unlock, ok, err := lockExistingCandidate(ctx, doguHome, d.name, spec, opts.IncludePrerelease); err != nil {
+			return nil, err
+		} else if ok {
+			defer unlock()
 			version := filepath.Base(dir)
 			_, _, _, _, extraEnv := d.expand(version, runtime.GOOS, runtime.GOARCH)
 			res := buildResultFromDir(d.name, spec, dir)
@@ -122,16 +125,33 @@ func (d toolDefinition) Install(ctx context.Context, spec, doguHome, mirrorURL s
 			return res, nil
 		}
 	}
-	version, err := d.resolveVersion(ctx, spec, mirrorURL, opts.IncludePrerelease)
+	var version string
+	var mavenArchive string
+	var mavenDirect bool
+	var err error
+	if d.name == "maven" {
+		baseURL := resolveBaseURL(d.baseURL, mirrorURL)
+		versions, archive, direct, fetchErr := fetchApacheMavenRelease(ctx, baseURL, spec)
+		mavenArchive, mavenDirect = archive, direct
+		version, err = resolveDiscoveredVersion(versions, fetchErr, spec, opts.IncludePrerelease)
+	} else {
+		version, err = d.resolveVersion(ctx, spec, mirrorURL, opts.IncludePrerelease)
+	}
 	if err != nil {
 		return nil, err
 	}
 	asset, path, binary, cache, extraEnv := d.expand(version, runtime.GOOS, runtime.GOARCH)
 	base := resolveBaseURL(d.baseURL, mirrorURL)
 	if d.name == "maven" {
-		base = mavenArchiveRoot(base)
+		if !mavenDirect {
+			mavenArchive = strings.TrimRight(mavenArchive, "/") + "/maven-" + mavenSpecMajor(version)
+		}
+		path = mavenArchivePath(mavenArchive, version, asset)
 	}
 	url := base + "/" + path
+	if d.name == "maven" {
+		url = path
+	}
 	if d.binary != "" {
 		return installBinaryTool(ctx, BinaryInstallConfig{
 			ToolName: d.name, VersionSpec: spec, NormalizedVer: version,

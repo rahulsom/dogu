@@ -31,7 +31,7 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 		return nil
 	}
 
-	if res, ok, err := checkExistingCandidate(doguHome, "python", versionSpec, opts, postPython); ok || err != nil {
+	if res, ok, err := checkExistingCandidate(ctx, doguHome, "python", versionSpec, opts, postPython); ok || err != nil {
 		return res, err
 	}
 
@@ -52,11 +52,11 @@ func (p *PythonTool) Install(ctx context.Context, versionSpec string, doguHome s
 		Opts:          opts,
 		ExtraHomeEnv:  []string{"PYTHONHOME"},
 		FindDirs: func(installDir string) (string, []string) {
+			if runtime.GOOS == "windows" {
+				return findDirWithBinary(installDir, "python.exe")
+			}
 			pythonHome := downloader.FindSubDirWithDir(installDir, "bin")
 			binDir := filepath.Join(pythonHome, "bin")
-			if runtime.GOOS == "windows" {
-				binDir = pythonHome
-			}
 			return pythonHome, []string{binDir}
 		},
 		PostInstall: postPython,
@@ -71,13 +71,20 @@ type pythonRelease struct {
 }
 
 func fetchPythonReleases(ctx context.Context) ([]pythonRelease, error) {
-	data, err := fetchReleaseData(ctx, "https://api.github.com/repos/indygreg/python-build-standalone/releases?per_page=100")
-	if err != nil {
-		return nil, err
-	}
 	var releases []pythonRelease
-	if err := json.Unmarshal(data, &releases); err != nil {
-		return nil, err
+	for page := 1; ; page++ {
+		data, err := fetchReleaseData(ctx, fmt.Sprintf("https://api.github.com/repos/indygreg/python-build-standalone/releases?per_page=100&page=%d", page))
+		if err != nil {
+			return nil, err
+		}
+		var current []pythonRelease
+		if err := json.Unmarshal(data, &current); err != nil {
+			return nil, err
+		}
+		releases = append(releases, current...)
+		if len(current) < 100 {
+			break
+		}
 	}
 	return releases, nil
 }
@@ -191,7 +198,7 @@ func (u *UVTool) Name() string {
 }
 
 func (u *UVTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if res, ok, err := checkExistingCandidate(doguHome, "uv", versionSpec, opts, nil); ok || err != nil {
+	if res, ok, err := checkExistingCandidate(ctx, doguHome, "uv", versionSpec, opts, nil); ok || err != nil {
 		return res, err
 	}
 

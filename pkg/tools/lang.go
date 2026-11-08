@@ -147,7 +147,7 @@ func installIndexedLanguage(ctx context.Context, name, spec, home, mirror string
 	if name == "go" {
 		envKeys = []string{"GOROOT"}
 	}
-	if res, ok, err := checkExistingCandidate(home, name, spec, opts, func(r *InstallResult) error {
+	if res, ok, err := checkExistingCandidate(ctx, home, name, spec, opts, func(r *InstallResult) error {
 		r.NormalizedVer = filepath.Base(r.InstallDir)
 		r.EnvVars = buildEnvVars(name, r.NormalizedVer, r.HomeDir, envKeys, nil)
 		return nil
@@ -245,7 +245,7 @@ func installConfiguredLanguage(ctx context.Context, name, spec, home, mirror str
 	if runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64" {
 		return nil, fmt.Errorf("unsupported %s architecture %s", name, runtime.GOARCH)
 	}
-	if r, ok, e := checkExistingCandidate(home, name, spec, opts, func(r *InstallResult) error {
+	if r, ok, e := checkExistingCandidate(ctx, home, name, spec, opts, func(r *InstallResult) error {
 		r.NormalizedVer = filepath.Base(r.InstallDir)
 		r.EnvVars = configuredLanguageEnv(name, r.NormalizedVer, r.HomeDir)
 		return nil
@@ -486,7 +486,7 @@ func (p *PantsTool) Name() string {
 }
 
 func (p *PantsTool) Install(ctx context.Context, versionSpec string, doguHome string, mirrorBaseURL string, opts InstallOptions) (*InstallResult, error) {
-	if res, ok, err := checkExistingCandidate(doguHome, "pants", versionSpec, opts, nil); ok || err != nil {
+	if res, ok, err := checkExistingCandidate(ctx, doguHome, "pants", versionSpec, opts, nil); ok || err != nil {
 		return res, err
 	}
 

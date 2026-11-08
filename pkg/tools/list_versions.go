@@ -108,6 +108,9 @@ func listVersions(ctx context.Context, name, mirror string) ([]string, error) {
 		}
 		var versions []string
 		for _, p := range response.Result {
+			if p.Filename == "" || p.Links.PkgDownloadRedirect == "" {
+				continue
+			}
 			dist := p.Distribution
 			if dist == "temurin" {
 				dist = "tem"
