@@ -72,7 +72,7 @@ To update `dogu` itself to the latest released version:
 dogu self-update
 ----
 
-NOTE: Self-update and version checking are enabled exclusively for official binary distributions (not when compiling/running directly from Go source code). When running as a binary distribution, `dogu` will also check GitHub for newer releases and suggest running `dogu self-update`.
+NOTE: Self-update and version checking are enabled exclusively for official binary distributions (not when compiling/running directly from Go source code). When running as a binary distribution, `dogu` checks GitHub at most once every seven days and suggests running `dogu self-update` only when a newer release includes a compatible binary. The last check and available release are cached in `$DOGU_HOME/update-check.json` (defaulting to `~/.dogu/update-check.json`), including failed check attempts. Cached notices stop once the installed version reaches the available version. Running `dogu self-update` explicitly always checks GitHub immediately, bypassing the weekly cache.
 
 === Flags
 

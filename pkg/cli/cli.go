@@ -295,7 +295,7 @@ func checkAndSuggestUpdate() {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	rel, available, err := selfupdate.CheckForUpdate(ctx, curVer, selfupdate.DefaultGitHubOwner, selfupdate.DefaultGitHubRepo)
+	rel, available, err := selfupdate.CheckForUpdateCached(ctx, curVer, selfupdate.DefaultGitHubOwner, selfupdate.DefaultGitHubRepo)
 	if err == nil && available && rel != nil {
 		latestVer := rel.TagName
 		if latestVer == "" {
