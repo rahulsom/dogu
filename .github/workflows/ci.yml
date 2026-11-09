@@ -35,11 +35,23 @@ jobs:
             cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-
             cachew-v1-${{ runner.os }}-${{ runner.arch }}-
 
+      - name: Install prerequisites for documented examples
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gfortran cabal-install pkg-config \
+            libgmp-dev libnuma-dev libffi-dev libncurses-dev libreadline-dev libssl-dev \
+            libyaml-dev zlib1g-dev libbz2-dev liblzma-dev libpcre2-dev \
+            libcurl4-openssl-dev libcairo2-dev libpango1.0-dev libjpeg-dev \
+            libgif-dev librsvg2-dev libpng-dev graphviz
+          cabal update
+
       - name: Run tests through Cachew
+        env:
+          CACHEW_GITHUB_TOKEN: ${{ github.token }}
         run: >-
           ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox
           --packages="./..." --rerun-fails=2 --rerun-fails-abort-on-data-race
-          -- -race -cover
+          -- -timeout 90m -race -cover
 
       - name: Save Cachew downloads
         if: always() && steps.cachew-cache.outcome == 'success'
@@ -66,6 +78,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Generate tool examples
+        run: go test ./pkg/cli -run '^TestToolExampleDocs$' -count=1
 
       - name: Install Asciidoctor
         run: |

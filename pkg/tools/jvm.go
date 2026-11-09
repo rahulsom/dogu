@@ -26,6 +26,12 @@ func init() {
 func (*ClojureTool) Name() string { return "clojure" }
 
 func fetchClojureVersions(ctx context.Context, baseURL string) ([]string, error) {
+	// The public download bucket does not expose a directory listing. Releases
+	// are published by the official CLI repository; custom mirrors retain their
+	// archive index contract.
+	if strings.TrimRight(baseURL, "/") == clojureDefinition.baseURL {
+		return FetchGitHubReleases(ctx, "clojure", "brew-install")
+	}
 	data, err := fetchReleaseData(ctx, strings.TrimRight(baseURL, "/")+"/")
 	if err != nil {
 		return nil, err
@@ -46,7 +52,7 @@ func (*ClojureTool) Install(ctx context.Context, spec, home, mirror string, opts
 		return nil, fmt.Errorf("Clojure CLI installation currently supports Linux and macOS")
 	}
 	if res, ok, err := checkExistingCandidate(ctx, home, "clojure", spec, opts, func(res *InstallResult) error {
-		if err := validateClojureLaunchers(res.InstallDir); err != nil {
+		if err := prepareClojureLaunchers(res.InstallDir); err != nil {
 			return err
 		}
 		res.NormalizedVer = filepath.Base(res.InstallDir)
@@ -111,7 +117,7 @@ func (*ClojureTool) Install(ctx context.Context, spec, home, mirror string, opts
 	if err != nil {
 		return nil, fmt.Errorf("Clojure CLI setup failed: %w\n%s", err, output)
 	}
-	if err := validateClojureLaunchers(installDir); err != nil {
+	if err := prepareClojureLaunchers(installDir); err != nil {
 		return nil, err
 	}
 	installed = true
@@ -128,10 +134,33 @@ func (*ClojureTool) Install(ctx context.Context, spec, home, mirror string, opts
 	return res, nil
 }
 
-func validateClojureLaunchers(installDir string) error {
+// prepareClojureLaunchers also repairs candidates installed by older versions
+// whose Homebrew path substitution silently failed.
+func prepareClojureLaunchers(installDir string) error {
+	// The archive's Homebrew installer relies on HOMEBREW_RUBY_PATH. Replace
+	// paths here so Java is the only runtime prerequisite.
+	quote := func(path string) string { return "'" + strings.ReplaceAll(path, "'", "'\"'\"'") + "'" }
+	assignments := []struct {
+		pattern     *regexp.Regexp
+		replacement string
+	}{
+		{regexp.MustCompile(`(?m)^install_dir=PREFIX$`), "install_dir=" + quote(installDir)},
+		{regexp.MustCompile(`(?m)^bin_dir=BINDIR$`), "bin_dir=" + quote(filepath.Join(installDir, "bin"))},
+	}
 	for _, launcher := range []string{"clojure", "clj"} {
-		if _, err := os.Stat(filepath.Join(installDir, "bin", launcher)); err != nil {
+		path := filepath.Join(installDir, "bin", launcher)
+		data, err := os.ReadFile(path)
+		if err != nil {
 			return fmt.Errorf("Clojure CLI installation is missing its %s launcher: %w", launcher, err)
+		}
+		rendered := string(data)
+		for _, assignment := range assignments {
+			rendered = assignment.pattern.ReplaceAllStringFunc(rendered, func(string) string { return assignment.replacement })
+		}
+		if rendered != string(data) {
+			if err := os.WriteFile(path, []byte(rendered), 0755); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -264,6 +293,7 @@ func (j *JavaTool) Name() string {
 type discoPackage struct {
 	ID                  string `json:"id"`
 	ArchiveType         string `json:"archive_type"`
+	LibCType            string `json:"lib_c_type"`
 	Distribution        string `json:"distribution"`
 	MajorVersion        int    `json:"major_version"`
 	JavaVersion         string `json:"java_version"`
@@ -401,6 +431,14 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 		v.Set("version", ver)
 	}
 	v.Set("operating_system", osName)
+	libCType := ""
+	if osName == "linux" {
+		libCType = "glibc"
+		if loaders, _ := filepath.Glob("/lib/ld-musl-*.so.1"); len(loaders) > 0 {
+			libCType = "musl"
+		}
+		v.Set("libc_type", libCType)
+	}
 	v.Set("architecture", archName)
 	v.Set("archive_type", archiveType)
 	v.Set("package_type", "jdk")
@@ -438,6 +476,9 @@ func (j *JavaTool) resolveDownloadURL(ctx context.Context, ver string, dist stri
 
 	var validPkgs []discoPackage
 	for _, p := range discoResp.Result {
+		if libCType != "" && p.LibCType != "" && p.LibCType != libCType {
+			continue
+		}
 		if p.Filename == "" || p.Links.PkgDownloadRedirect == "" {
 			continue
 		}

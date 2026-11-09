@@ -37,6 +37,10 @@ Fresh and reused installs apply the same home environment metadata. Reused
 installs derive the normalized version and major-version environment keys from
 the selected candidate directory rather than the requested version range.
 
+Clojure discovers public releases through `clojure/brew-install` on GitHub;
+custom mirrors can expose an archive index. Launcher paths are substituted in
+Go so installing the CLI does not require Homebrew Ruby.
+
 Providers with custom discovery or setup remain ordinary Go implementations:
 Java, Node, Python, Pants, Bun, UV, npm, pnpm, Clojure CLI, and Leiningen.
 Extend the catalog when a provider fits its existing rules; keep specialized
@@ -75,3 +79,10 @@ tools expose NODE_PATH and local executables. See `docs/tools.adoc` for commands
 and platform requirements. `diagrams_test.go` uses in-memory release responses
 and fake package managers to check discovery, resolved versions, reuse, jars,
 source builds, and failure cleanup without installing third-party tools.
+
+Graphviz source builds disable optional SWIG bindings so installation does not
+depend on development libraries for every language installed on the host. The
+erd 0.2.1.0 release is unpacked into a temporary directory and receives the
+upstream `Data.Text.Lazy hiding (elem)` import fix before Cabal installs it.
+This patch is scoped to that release; unexpected source layouts fail setup and
+all temporary source files are removed.

@@ -10,171 +10,126 @@ converted to underscores.
 === https://github.com/asciitosvg/asciitosvg[AsciiToSVG]
 
 Builds the Go package and provides the `a2s` command. Go must be on PATH during
-installation. Untagged releases use the Go proxy's pseudo-version.
+installation. Untagged releases use the Go proxy's pseudo-version; the example
+uses `--prerelease` to allow that version.
 
-[source,bash]
-----
-dogu --asciitosvg 0.2 -- a2s --help
-----
+include::../../build/docs-examples/asciitosvg.adoc[]
 
 === https://rubygems.org/gems/barby[Barby]
 
 Installs the Ruby gem and its dependencies in a private prefix, exposed through
 `GEM_PATH`. Load it from Ruby with `require 'barby'`.
 
-[source,bash]
-----
-dogu --ruby 3.4 -- dogu --barby 0.6 -- ruby -rbarby -e 'puts Barby::VERSION'
-----
+include::../../build/docs-examples/barby.adoc[]
 
 === https://rubygems.org/gems/rqrcode[RQRCode]
 
 Installs the Ruby gem and its dependencies in a private prefix, exposed through
 `GEM_PATH`. Load it from Ruby with `require 'rqrcode'`.
 
-[source,bash]
-----
-dogu --ruby 3.4 -- dogu --rqrcode 3 -- ruby -rrqrcode -e 'puts RQRCode::QRCode.new("hello").as_svg'
-----
+include::../../build/docs-examples/rqrcode.adoc[]
 
 === https://github.com/Deep-Symmetry/bytefield-svg[Bytefield SVG]
 
 Installs the `bytefield-svg` npm package and provides the `bytefield-svg`
 command.
 
-[source,bash]
-----
-dogu --node 22 -- dogu --bytefield-svg 1 -- bytefield-svg --help
-----
+include::../../build/docs-examples/bytefield-svg.adoc[]
 
 === https://d2lang.com/[D2]
 
 Downloads the host release archive and provides the `d2` command.
 
-[source,bash]
-----
-dogu --d2 0.7 -- d2 diagram.d2 diagram.svg
-----
+include::../../build/docs-examples/d2.adoc[]
 
 === https://github.com/softwaretechnik-berlin/dbml-renderer[DBML Renderer]
 
 Installs the `@softwaretechnik/dbml-renderer` npm package and provides the
 `dbml-renderer` command.
 
-[source,bash]
-----
-dogu --node 22 -- dogu --dbml-renderer 1 -- dbml-renderer --help
-----
+include::../../build/docs-examples/dbml-renderer.adoc[]
 
 === https://ditaa.sourceforge.net/[ditaa]
 
 Downloads the standalone jar and supplies a `ditaa` launcher. Java is required
 at runtime.
 
-[source,bash]
-----
-dogu --java 21 -- dogu --ditaa 0.11 -- ditaa input.ditaa output.png
-----
+include::../../build/docs-examples/ditaa.adoc[]
 
 === https://github.com/BurntSushi/erd[erd]
 
 Builds the Hackage package with Cabal into a private prefix. Cabal and GHC are
-required during installation; Graphviz is required at runtime.
+required during installation; Graphviz is required at runtime. The example uses
+GHC 9.0 because erd's bytestring dependency does not support newer GHC releases.
+For erd 0.2.1.0, dogu applies the upstream fix for its parser's conflicting
+`elem` imports before building.
 
-[source,bash]
-----
-dogu --ghc 9.6 -- dogu --erd 1 -- erd --help
-----
+include::../../build/docs-examples/erd.adoc[]
+
+NOTE: erd prints help with exit status 1.
 
 === https://sourceforge.net/projects/gnuplot/files/gnuplot/[gnuplot]
 
 Builds the official sources with `configure`, `make`, and `make install`, and
 provides the `gnuplot` command.
 
-[source,bash]
-----
-dogu --gnuplot 6 -- gnuplot plot.gp
-----
+include::../../build/docs-examples/gnuplot.adoc[]
 
 === https://graphviz.gitlab.io/[Graphviz]
 
 Builds the official release sources with `configure`, `make`, and
-`make install`. Provides `dot` and the Graphviz utilities.
+`make install`. Provides `dot` and the Graphviz utilities; optional SWIG
+language bindings are disabled.
 
-[source,bash]
-----
-dogu --graphviz 12 -- dot -Tsvg graph.dot -o graph.svg
-----
+include::../../build/docs-examples/graphviz.adoc[]
 
 === https://lilypond.org/[LilyPond]
 
 Downloads official GitLab binaries and provides `lilypond`. Supports x86-64
 Linux and macOS, plus ARM64 macOS.
 
-[source,bash]
-----
-dogu --lilypond 2.24 -- lilypond score.ly
-----
+include::../../build/docs-examples/lilypond.adoc[]
 
 === https://github.com/mermaid-js/mermaid-cli[Mermaid CLI]
 
 Installs the `@mermaid-js/mermaid-cli` npm package and provides the `mmdc`
 command.
 
-[source,bash]
-----
-dogu --node 22 -- dogu --mermaid-cli 11 -- mmdc -i diagram.mmd -o diagram.svg
-----
+include::../../build/docs-examples/mermaid-cli.adoc[]
 
 === https://penrose.cs.cmu.edu/[Penrose]
 
 Installs the `@penrose/roger` npm package and provides the `roger` command.
 
-[source,bash]
-----
-dogu --node 22 -- dogu --penrose 4 -- roger --help
-----
+include::../../build/docs-examples/penrose.adoc[]
 
 === https://plantuml.com/[PlantUML]
 
 Downloads the jar and supplies a `plantuml` launcher. Java is required at
 runtime; some diagrams also require Graphviz.
 
-[source,bash]
-----
-dogu --java 21 -- dogu --plantuml 1.2025 -- plantuml diagram.puml
-----
-
+include::../../build/docs-examples/plantuml.adoc[]
 
 === https://atp-mipt.github.io/jsyntrax/[JSyntrax]
 
 Downloads the distribution zip and provides the `syntrax` command. Java 11 or
 newer is required at runtime.
 
-[source,bash]
-----
-dogu --java 21 -- dogu --jsyntrax 1 -- syntrax --help
-----
+include::../../build/docs-examples/jsyntrax.adoc[]
 
 === https://vega.github.io/vega-lite/[Vega-Lite]
 
 Installs the `vega-lite` npm package and provides `vl2svg`, `vl2png`, `vl2pdf`,
 and `vl2vg`.
 
-[source,bash]
-----
-dogu --node 22 -- dogu --vega-lite 5 -- vl2svg chart.json chart.svg
-----
+include::../../build/docs-examples/vega-lite.adoc[]
 
 === https://vega.github.io/vega/[Vega]
 
 Installs the `vega-cli` npm package and provides `vg2svg`, `vg2png`, and
 `vg2pdf`. Versions refer to the CLI package.
 
-[source,bash]
-----
-dogu --node 22 -- dogu --vega 5 -- vg2svg chart.json chart.svg
-----
+include::../../build/docs-examples/vega.adoc[]
 
 Package managers used for setup (`npm`, `gem`, `go`, or `cabal`) and their
 runtimes must already be on PATH before diagram installation begins. Tools
