@@ -2,9 +2,11 @@ package tools
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -32,14 +34,41 @@ func TestClojureVersions(t *testing.T) {
 	}
 }
 
+func TestClojureOfficialVersions(t *testing.T) {
+	original := http.DefaultTransport
+	http.DefaultTransport = definitionTransport(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host != "api.github.com" || r.URL.Path != "/repos/clojure/brew-install/releases" {
+			t.Fatalf("unexpected discovery URL: %s", r.URL)
+		}
+		body := `[]`
+		if r.URL.Query().Get("page") == "1" {
+			body = `[{"tag_name":"1.12.0.1530","assets":[{}]}]`
+		}
+		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+	})
+	t.Cleanup(func() { http.DefaultTransport = original })
+	versions, err := ListVersions(t.Context(), "clojure", "")
+	if err != nil || !reflect.DeepEqual(versions, []string{"1.12.0.1530"}) {
+		t.Fatalf("versions %v: %v", versions, err)
+	}
+}
+
 func TestClojureInstall(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Clojure CLI setup script requires a Unix shell")
 	}
 	installScript := `#!/bin/sh
 mkdir -p "$1/bin"
-printf '#!/bin/sh\nprintf clojure\n' > "$1/bin/clojure"
-printf '#!/bin/sh\nprintf clj\n' > "$1/bin/clj"
+cat > "$1/bin/clojure" <<'LAUNCHER'
+#!/bin/sh
+install_dir=PREFIX
+printf '%s' "$install_dir"
+LAUNCHER
+cat > "$1/bin/clj" <<'LAUNCHER'
+#!/bin/sh
+bin_dir=BINDIR
+printf '%s' "$bin_dir"
+LAUNCHER
 chmod +x "$1/bin/clojure" "$1/bin/clj"
 `
 	payload := definitionArchive(t, "clojure-tools-1.12.0.1530.tar.gz", "clojure-tools/install.sh", []byte(installScript))
@@ -58,7 +87,7 @@ chmod +x "$1/bin/clojure" "$1/bin/clj"
 	}))
 	defer server.Close()
 
-	home := t.TempDir()
+	home := filepath.Join(t.TempDir(), "dogu home ' PREFIX BINDIR $dollar")
 	tool, err := FindTool("clojure")
 	if err != nil {
 		t.Fatal(err)
@@ -78,6 +107,20 @@ chmod +x "$1/bin/clojure" "$1/bin/clj"
 		t.Fatal(err)
 	}
 
+	assertLaunchers := func() {
+		t.Helper()
+		for launcher, want := range map[string]string{"clojure": fresh.InstallDir, "clj": fresh.BinDirs[0]} {
+			out, err := exec.Command(filepath.Join(fresh.BinDirs[0], launcher)).CombinedOutput()
+			if err != nil || string(out) != want {
+				t.Fatalf("%s output %q, want %q: %v", launcher, out, want, err)
+			}
+		}
+	}
+	assertLaunchers()
+	prepared, err := os.ReadFile(filepath.Join(fresh.BinDirs[0], "clj"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	requestsAfterInstall := requests
 	cached, err := tool.Install(t.Context(), "1", home, "http://127.0.0.1:1", InstallOptions{})
 	if err != nil {
@@ -88,15 +131,27 @@ chmod +x "$1/bin/clojure" "$1/bin/clj"
 		t.Fatalf("cache mismatch: %+v vs %+v; requests %d -> %d", cached, fresh, requestsAfterInstall, requests)
 	}
 
+	assertLaunchers()
+	clj, err := os.ReadFile(filepath.Join(fresh.BinDirs[0], "clj"))
+	if err != nil || string(clj) != string(prepared) {
+		t.Fatalf("cached launcher changed on reuse: %s (%v)", clj, err)
+	}
+	// Repair a launcher left unprepared by an older installation.
+	if err := os.WriteFile(filepath.Join(fresh.BinDirs[0], "clj"), []byte("#!/bin/sh\nbin_dir=BINDIR\nprintf '%s' \"$bin_dir\"\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tool.Install(t.Context(), "1", home, server.URL, InstallOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	assertLaunchers()
+
 	if err := os.WriteFile(filepath.Join(fresh.BinDirs[0], "clojure"), []byte("modified"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tool.Install(t.Context(), "1.12.0.1530", home, server.URL, InstallOptions{Force: true}); err != nil {
 		t.Fatal(err)
 	}
-	if content, err := os.ReadFile(filepath.Join(fresh.BinDirs[0], "clojure")); err != nil || !strings.Contains(string(content), "printf clojure") {
-		t.Fatalf("force did not reinstall launcher: %q, %v", content, err)
-	}
+	assertLaunchers()
 }
 
 func TestLeiningenInstall(t *testing.T) {

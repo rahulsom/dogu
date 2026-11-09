@@ -29,7 +29,8 @@ var diagramTools = []diagramTool{
 	{"erd", "cabal", "erd", "https://hackage.haskell.org"},
 	{"gnuplot", "source", "", "https://sourceforge.net/projects/gnuplot/files/gnuplot"},
 	{"graphviz", "source", "", "https://graphviz.org/download/source"},
-	{"lilypond", "gitlab", "lilypond/lilypond", "https://gitlab.com/lilypond/lilypond/-/releases"},
+	// GitLab project ID avoids encoded namespace paths through mirrors.
+	{"lilypond", "gitlab", "18695663", "https://gitlab.com/lilypond/lilypond/-/releases"},
 	{"mermaid-cli", "npm", "@mermaid-js/mermaid-cli", "https://registry.npmjs.org"},
 	{"penrose", "npm", "@penrose/roger", "https://registry.npmjs.org"},
 	{"plantuml", "github", "plantuml/plantuml", "https://github.com/plantuml/plantuml/releases/download"},
@@ -156,6 +157,9 @@ func (d diagramTool) Install(ctx context.Context, spec, home, mirror string, opt
 	if !opts.Force {
 		if dest, ok := findExistingCandidate(home, d.name, spec, opts.IncludePrerelease); ok {
 			if _, e := os.Stat(filepath.Join(dest, ".dogu-complete")); e == nil {
+				if err := d.prepareLaunchers(dest); err != nil {
+					return nil, err
+				}
 				return d.result(spec, filepath.Base(dest), dest), nil
 			}
 		}
@@ -213,7 +217,25 @@ func (d diagramTool) Install(ctx context.Context, spec, home, mirror string, opt
 		err = run(dest, []string{"GOBIN=" + filepath.Join(dest, "bin"), "GOPROXY=" + rewrite(strings.TrimSuffix(base, "/github.com/asciitosvg/asciitosvg"))}, "go", "install", d.pkg+"@"+tag)
 	case "cabal":
 		// Cabal's repository is configured by the caller; the prefix remains private.
-		err = run(dest, nil, "cabal", "install", "erd-"+version, "--installdir="+filepath.Join(dest, "bin"), "--install-method=copy", "--overwrite-policy=always")
+		target := "erd-" + version
+		workDir := dest
+		if version == "0.2.1.0" {
+			// Apply the upstream parser fix missing from this Hackage release.
+			work, e := os.MkdirTemp("", "dogu-erd-*")
+			if e != nil {
+				return nil, e
+			}
+			defer os.RemoveAll(work)
+			if e = run(work, nil, "cabal", "unpack", target, "--destdir="+work); e != nil {
+				return nil, e
+			}
+			workDir = filepath.Join(work, target)
+			if e = patchERDParser(workDir); e != nil {
+				return nil, e
+			}
+			target = "."
+		}
+		err = run(workDir, nil, "cabal", "install", target, "--installdir="+filepath.Join(dest, "bin"), "--install-method=copy", "--overwrite-policy=always")
 	case "source":
 		err = d.installSource(ctx, version, dest, home, base, opts, run)
 	default:
@@ -235,10 +257,37 @@ func (d diagramTool) Install(ctx context.Context, spec, home, mirror string, opt
 	if err != nil {
 		return nil, err
 	}
+	if err = d.prepareLaunchers(dest); err != nil {
+		return nil, err
+	}
 	if err = os.WriteFile(filepath.Join(dest, ".dogu-complete"), []byte(version), 0644); err != nil {
 		return nil, err
 	}
 	return d.result(spec, version, dest), nil
+}
+
+// patchERDParser backports the upstream import fix to erd 0.2.1.0.
+func patchERDParser(source string) error {
+	path := filepath.Join(source, "src", "Text", "Parsec", "Erd", "Parser.hs")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	importLine := regexp.MustCompile(`(?m)^(import[ \t]+Data\.Text\.Lazy)[ \t]*$`)
+	if len(importLine.FindAllIndex(data, -1)) != 1 {
+		return fmt.Errorf("erd 0.2.1.0 parser has an unexpected Text import")
+	}
+	patched := importLine.ReplaceAll(data, []byte("${1} hiding (elem)"))
+	return os.WriteFile(path, patched, 0644)
+}
+
+// JSyntrax distributes its POSIX launcher as a non-executable ZIP entry.
+func (d diagramTool) prepareLaunchers(dest string) error {
+	if d.name != "jsyntrax" {
+		return nil
+	}
+	result := buildResultFromDir(d.name, "", dest)
+	return os.Chmod(filepath.Join(result.BinDirs[0], "syntrax"), 0755)
 }
 
 func writeDiagramJarLauncher(dest, name, jar string) error {
@@ -324,7 +373,12 @@ func (d diagramTool) installSource(ctx context.Context, version, dest, home, bas
 	if source == "" {
 		return fmt.Errorf("%s archive has no configure script", d.name)
 	}
-	if err = run(source, nil, "sh", "./configure", "--prefix="+dest); err != nil {
+	configureArgs := []string{"./configure", "--prefix=" + dest}
+	if d.name == "graphviz" {
+		// Install the CLI and rendering libraries without host-language bindings.
+		configureArgs = append(configureArgs, "--disable-swig")
+	}
+	if err = run(source, nil, "sh", configureArgs...); err != nil {
 		return err
 	}
 	if err = run(source, nil, "make"); err != nil {

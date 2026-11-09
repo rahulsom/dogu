@@ -11,6 +11,8 @@ E.g. `--node 20`, `--node 22.11`, `--node 22.11.0`
 
 It will set the following environment variables: `NODE_<MAJOR>_HOME`, `NODE_HOME`.
 
+include::../../build/docs-examples/node.adoc[]
+
 === npm
 
 Downloads npm release tarballs.
@@ -21,6 +23,8 @@ This supports major versions, major.minor, or exact semver versions.
 E.g. `--npm 10`, `--npm 10.2`, `--npm 10.2.4`
 
 It will set the following environment variables: `NPM_<MAJOR>_HOME`, `NPM_HOME`.
+
+include::../../build/docs-examples/npm.adoc[]
 
 === pnpm
 
@@ -33,6 +37,8 @@ E.g. `--pnpm 8`, `--pnpm 8.15`, `--pnpm 8.15.1`
 
 It will set the following environment variables: `PNPM_<MAJOR>_HOME`, `PNPM_HOME`.
 
+include::../../build/docs-examples/pnpm.adoc[]
+
 === Yarn
 
 Downloads Yarn v1 releases.
@@ -44,6 +50,8 @@ E.g. `--yarn 1`, `--yarn 1.22`, `--yarn 1.22.19`
 
 It will set the following environment variables: `YARN_<MAJOR>_HOME`, `YARN_HOME`.
 
+include::../../build/docs-examples/yarn.adoc[]
+
 === Bun
 
 Downloads Oven Bun release archives.
@@ -54,3 +62,5 @@ This supports major versions, major.minor, or exact semver versions.
 E.g. `--bun 1`, `--bun 1.1`, `--bun 1.1.0`
 
 It will set the following environment variables: `BUN_<MAJOR>_HOME`, `BUN_HOME`.
+
+include::../../build/docs-examples/bun.adoc[]

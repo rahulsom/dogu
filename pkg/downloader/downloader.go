@@ -758,6 +758,27 @@ func extractTar(r io.Reader, dest string) error {
 					return err
 				}
 			}
+		case tar.TypeLink:
+			// Hard-link names are relative to the archive root, not the link's
+			// directory. Root confines both paths, including symlinked parents.
+			root, err := os.OpenRoot(dest)
+			if err != nil {
+				return err
+			}
+			info, err := root.Lstat(header.Linkname)
+			if err == nil && !info.Mode().IsRegular() {
+				err = fmt.Errorf("hard link source is not a regular file: %s", header.Linkname)
+			}
+			if err == nil {
+				err = root.MkdirAll(filepath.Dir(header.Name), 0755)
+			}
+			if err == nil {
+				err = root.Link(header.Linkname, header.Name)
+			}
+			root.Close()
+			if err != nil {
+				return fmt.Errorf("extract hard link %s: %w", header.Name, err)
+			}
 		case tar.TypeSymlink:
 			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 				return err

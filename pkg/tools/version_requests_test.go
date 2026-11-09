@@ -36,7 +36,7 @@ func TestAllToolsReuseMajorAndLatest(t *testing.T) {
 				if err := os.MkdirAll(filepath.Join(dir, "bin"), 0755); err != nil {
 					t.Fatal(err)
 				}
-				for _, file := range []string{"bin/tool", "bin/clojure", "bin/clj", "lein", "lein.bat", ".dogu-complete"} {
+				for _, file := range []string{"bin/tool", "bin/clojure", "bin/clj", "bin/syntrax", "lein", "lein.bat", ".dogu-complete"} {
 					if err := os.WriteFile(filepath.Join(dir, file), []byte("fixture"), 0755); err != nil {
 						t.Fatal(err)
 					}

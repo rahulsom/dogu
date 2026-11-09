@@ -11,6 +11,8 @@ E.g. `--ant 1`, `--ant 1.10`, `--ant 1.10.14`
 
 It will set the following environment variables: `ANT_<MAJOR>_HOME`, `ANT_HOME`.
 
+include::../../build/docs-examples/ant.adoc[]
+
 === Mill
 
 Downloads Mill build tool releases.
@@ -21,6 +23,8 @@ This supports major versions, major.minor, or exact semver versions.
 E.g. `--mill 0`, `--mill 0.12`, `--mill 0.12.5`
 
 It will set the following environment variables: `MILL_<MAJOR>_HOME`, `MILL_HOME`, `MILL_VERSION`.
+
+include::../../build/docs-examples/mill.adoc[]
 
 === Bazel
 
@@ -33,6 +37,8 @@ E.g. `--bazel 7`, `--bazel 7.4`, `--bazel 7.4.0`
 
 It will set the following environment variables: `BAZEL_<MAJOR>_HOME`, `BAZEL_HOME`.
 
+include::../../build/docs-examples/bazel.adoc[]
+
 === Pants
 
 Downloads Pants build system executables.
@@ -44,6 +50,8 @@ E.g. `--pants 2`, `--pants 2.33`, `--pants 2.33.1`
 
 It will set the following environment variables: `PANTS_<MAJOR>_HOME`, `PANTS_HOME`.
 
+include::../../build/docs-examples/pants.adoc[]
+
 === Buck2
 
 Downloads Buck2 build system releases.
@@ -54,3 +62,5 @@ This supports release dates or version tags.
 E.g. `--buck2 2026`, `--buck2 2026-10`, `--buck2 2026-10-15`
 
 It will set the following environment variables: `BUCK2_<MAJOR>_HOME`, `BUCK2_HOME`.
+
+include::../../build/docs-examples/buck2.adoc[]

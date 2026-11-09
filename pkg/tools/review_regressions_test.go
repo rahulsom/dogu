@@ -573,3 +573,22 @@ func containsString(values []string, value string) bool {
 	}
 	return false
 }
+
+func TestJavaResolutionMatchesLibC(t *testing.T) {
+	diagramHTTP(t, func(r *http.Request) (string, int) {
+		if r.URL.Query().Get("libc_type") != "glibc" {
+			t.Errorf("missing host libc filter: %s", r.URL)
+		}
+		return `{"result":[
+   {"java_version":"21.0.1","lib_c_type":"musl","filename":"musl.tar.gz","links":{"pkg_download_redirect":"https://example.test/musl"}},
+   {"java_version":"21.0.1","lib_c_type":"glibc","filename":"glibc.tar.gz","links":{"pkg_download_redirect":"https://example.test/glibc"}}
+  ]}`, 200
+	})
+	if loaders, _ := filepath.Glob("/lib/ld-musl-*.so.1"); len(loaders) > 0 {
+		t.Skip("glibc host fixture")
+	}
+	url, file, _, _, err := (&JavaTool{}).resolveDownloadURL(t.Context(), "21", "", "linux", "x64", "", false)
+	if err != nil || file != "glibc.tar.gz" || url != "https://example.test/glibc" {
+		t.Fatalf("incompatible Java package: %s, %s, %v", url, file, err)
+	}
+}

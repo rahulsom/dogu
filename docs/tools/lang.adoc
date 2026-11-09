@@ -21,7 +21,8 @@ Rust, GHC, R, Ruby, and Lua currently support Linux and macOS on x86-64 and ARM6
 Rust requires a shell and a system linker/C toolchain to compile programs.
 GHC requires a shell, make, a C compiler, and the runtime libraries required by
 its bindist (including GMP; Linux selects the oldest available Debian baseline
-from Debian 10 through Debian 13).
+from Debian 10 through Debian 13). NUMA-enabled Linux bindists also need
+libnuma development libraries when linking programs.
 R requires make, C and Fortran compilers, and CRAN's build dependencies
 (including readline, zlib, bzip2, xz, PCRE2, and libcurl development files).
 R builds without X11; building from source can take several minutes.
@@ -33,14 +34,34 @@ Ruby uses `https://cache.ruby-lang.org/pub/ruby` (`index.txt` for discovery);
 Lua uses `https://www.lua.org/ftp` for discovery and source downloads.
 These providers install within `$DOGU_HOME` without requesting administrator access.
 
-[source,bash]
-----
-dogu --java 21 --clojure 1.12 -- lein test
-dogu --go 1.24 -- go version
-dogu --rust 1.85 -- cargo --version
-dogu --ghc 9.6 -- ghc --version
-dogu --r 4.4 -- R --version
-dogu --elm 0.19.1 -- elm --version
-dogu --ruby 3.4 -- ruby --version
-dogu --lua 5.4 -- lua -v
-----
+=== Go
+
+include::../../build/docs-examples/go.adoc[]
+
+=== Rust
+
+include::../../build/docs-examples/rust.adoc[]
+
+=== GHC (Haskell)
+
+include::../../build/docs-examples/ghc.adoc[]
+
+=== R
+
+include::../../build/docs-examples/r.adoc[]
+
+=== Julia
+
+include::../../build/docs-examples/julia.adoc[]
+
+=== Elm
+
+include::../../build/docs-examples/elm.adoc[]
+
+=== Ruby
+
+include::../../build/docs-examples/ruby.adoc[]
+
+=== Lua
+
+include::../../build/docs-examples/lua.adoc[]
