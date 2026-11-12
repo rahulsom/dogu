@@ -1,6 +1,7 @@
 package env_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -62,7 +63,7 @@ func TestBuildEnvMap(t *testing.T) {
 		t.Errorf("expected JAVA_HOME set, got %s", resMap["JAVA_HOME"])
 	}
 
-	expectedPathPrefix := "/home/user/.dogu/candidates/java/17/bin:/home/user/.dogu/candidates/node/24/bin"
+	expectedPathPrefix := strings.Join(binPaths, string(os.PathListSeparator))
 	if !strings.HasPrefix(resMap["PATH"], expectedPathPrefix) {
 		t.Errorf("expected PATH to start with prepended bin paths, got %s", resMap["PATH"])
 	}

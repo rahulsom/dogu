@@ -13,8 +13,12 @@ permissions:
 
 jobs:
   unit:
-    name: Unit Tests
-    runs-on: ubuntu-latest
+    name: Unit Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -25,8 +29,13 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      - name: Run unit tests
+      - name: Run unit tests with race detection
+        if: runner.os == 'Linux'
         run: go test -race -cover ./...
+
+      - name: Run unit tests
+        if: runner.os == 'Windows'
+        run: go test -cover ./...
 
   integration:
     needs: unit

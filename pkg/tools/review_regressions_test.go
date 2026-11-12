@@ -560,7 +560,7 @@ func TestSharedInstallerSerializesCandidatePublication(t *testing.T) {
 		t.Fatalf("installs were not serialized: dirs=%s,%s downloads=%d", results[0].InstallDir, results[1].InstallDir, downloads)
 	}
 	root, err := os.Stat(results[0].InstallDir)
-	if err != nil || root.Mode().Perm() != 0755 {
+	if err != nil || (runtime.GOOS != "windows" && root.Mode().Perm() != 0755) {
 		t.Fatalf("candidate permissions: %v, %v", root, err)
 	}
 }
