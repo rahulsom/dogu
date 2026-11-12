@@ -12,8 +12,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Run Tests
+  unit:
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -25,33 +25,60 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Run unit tests
+        run: go test -race -cover ./...
+
+  integration:
+    name: Live Integration (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [erd, r, ruby, remaining]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+
       - name: Restore Cachew downloads
         id: cachew-cache
         uses: actions/cache/restore@v6
         with:
           path: build/cachew
-          key: cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: cachew-v2-${{ runner.os }}-${{ runner.arch }}-${{ matrix.shard }}-${{ hashFiles('testdata/cachew.hcl') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-
-            cachew-v1-${{ runner.os }}-${{ runner.arch }}-
+            cachew-v2-${{ runner.os }}-${{ runner.arch }}-${{ matrix.shard }}-${{ hashFiles('testdata/cachew.hcl') }}-
 
       - name: Install prerequisites for documented examples
+        env:
+          SHARD: ${{ matrix.shard }}
         run: |
+          case "$SHARD" in
+            erd) packages=(cabal-install libgmp-dev libnuma-dev libffi-dev libncurses-dev) ;;
+            r) packages=(gfortran libreadline-dev libcurl4-openssl-dev libpcre2-dev zlib1g-dev libbz2-dev liblzma-dev) ;;
+            ruby) packages=(libssl-dev libyaml-dev libreadline-dev zlib1g-dev libffi-dev libgmp-dev) ;;
+            remaining) packages=(libgmp-dev libnuma-dev libffi-dev libncurses-dev libssl-dev libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpng-dev graphviz) ;;
+          esac
           sudo apt-get update
-          sudo apt-get install -y build-essential gfortran cabal-install pkg-config \
-            libgmp-dev libnuma-dev libffi-dev libncurses-dev libreadline-dev libssl-dev \
-            libyaml-dev zlib1g-dev libbz2-dev liblzma-dev libpcre2-dev \
-            libcurl4-openssl-dev libcairo2-dev libpango1.0-dev libjpeg-dev \
-            libgif-dev librsvg2-dev libpng-dev graphviz
-          cabal update
+          sudo apt-get install -y build-essential pkg-config "${packages[@]}"
+          if [[ "$SHARD" == erd ]]; then
+            time cabal update
+          fi
 
-      - name: Run tests through Cachew
+      - name: Run live tests through Cachew
         env:
           CACHEW_GITHUB_TOKEN: ${{ github.token }}
-        run: >-
-          ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox
-          --packages="./..." --rerun-fails=2 --rerun-fails-abort-on-data-race
-          -- -timeout 90m -race -cover
+          DOGU_EXAMPLE_SHARD: ${{ matrix.shard }}
+        run: |
+          tests='TestToolExampleIntegrations'
+          if [[ "$DOGU_EXAMPLE_SHARD" == remaining ]]; then
+            tests+='|TestMirrorIntegration|TestToolIntegrations'
+          fi
+          time ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox \
+            --packages="./pkg/cli" --rerun-fails=2 --rerun-fails-abort-on-data-race \
+            -- -run "^($tests)$" -count=1 -timeout 90m -race -cover
 
       - name: Save Cachew downloads
         if: always() && steps.cachew-cache.outcome == 'success'
@@ -59,6 +86,18 @@ jobs:
         with:
           path: build/cachew
           key: ${{ steps.cachew-cache.outputs.cache-primary-key }}
+
+  test:
+    name: Run Tests
+    if: always()
+    needs: [unit, integration]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all test jobs to pass
+        env:
+          UNIT_RESULT: ${{ needs.unit.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+        run: test "$UNIT_RESULT" = success && test "$INTEGRATION_RESULT" = success
 
   deploy-docs:
     name: Publish Docs to GitHub Pages

@@ -267,6 +267,12 @@ func TestToolExampleIntegrations(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("documentation examples use a POSIX shell")
 	}
+	shard := os.Getenv("DOGU_EXAMPLE_SHARD")
+	switch shard {
+	case "", "erd", "r", "ruby", "remaining":
+	default:
+		t.Fatalf("unknown DOGU_EXAMPLE_SHARD %q", shard)
+	}
 	root := findRepoRoot(t)
 	cachewURL := getOrStartCachew(t, root)
 	binDir := t.TempDir()
@@ -292,6 +298,9 @@ func TestToolExampleIntegrations(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, example := range toolDocExamples {
+		if shard != "" && shard != toolExampleShard(example.tool) {
+			continue
+		}
 		t.Run(example.tool, func(t *testing.T) {
 			work := t.TempDir()
 			for i, command := range example.commands {
@@ -324,6 +333,17 @@ func TestToolExampleIntegrations(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func toolExampleShard(tool string) string {
+	switch tool {
+	case "erd", "r":
+		return tool
+	case "ruby", "barby", "rqrcode":
+		return "ruby"
+	default:
+		return "remaining"
 	}
 }
 

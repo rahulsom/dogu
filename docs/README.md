@@ -31,6 +31,11 @@ exit code and output, and share installations within the suite. sbt and erd retu
 status 1 for help; their cases explicitly record that upstream behavior.
 Each tool gets an empty workspace. No fake tool executables are used.
 
+CI runs the live documentation examples in four parallel shards. To reproduce
+one shard locally, set `DOGU_EXAMPLE_SHARD` to `erd`, `r`, `ruby` (which also
+runs the Barby and RQRCode examples), or `remaining`. Leave it unset to run
+all examples. CI also runs the live tool and mirror tests in the remaining job.
+
 Live tests require Docker (or `CACHEW_URL`), upstream access, and the build
 prerequisites listed in the tool reference. In particular, install Cabal and
 run `cabal update` before testing erd; C/C++ and Fortran compilers, make,
