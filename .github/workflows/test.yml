@@ -1,0 +1,109 @@
+name: Test Suite
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run unit tests with race detection
+        if: runner.os == 'Linux'
+        run: go test -race -cover ./...
+
+      - name: Run unit tests
+        if: runner.os == 'Windows'
+        run: go test -cover ./...
+
+  integration:
+    needs: unit
+    name: Live Integration (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [erd, r, ruby, remaining]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Restore Cachew downloads
+        id: cachew-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: build/cachew
+          key: cachew-v2-${{ runner.os }}-${{ runner.arch }}-${{ matrix.shard }}-${{ hashFiles('testdata/cachew.hcl') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            cachew-v2-${{ runner.os }}-${{ runner.arch }}-${{ matrix.shard }}-${{ hashFiles('testdata/cachew.hcl') }}-
+
+      - name: Install prerequisites for documented examples
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          case "$SHARD" in
+            erd) packages=(cabal-install libgmp-dev libnuma-dev libffi-dev libncurses-dev graphviz) ;;
+            r) packages=(gfortran libreadline-dev libcurl4-openssl-dev libpcre2-dev zlib1g-dev libbz2-dev liblzma-dev) ;;
+            ruby) packages=(libssl-dev libyaml-dev libreadline-dev zlib1g-dev libffi-dev libgmp-dev) ;;
+            remaining) packages=(libgmp-dev libnuma-dev libffi-dev libncurses-dev libreadline-dev libssl-dev libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpng-dev graphviz) ;;
+          esac
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config "${packages[@]}"
+          if [[ "$SHARD" == erd ]]; then
+            time cabal update
+          fi
+
+      - name: Run live tests through Cachew
+        env:
+          CACHEW_GITHUB_TOKEN: ${{ github.token }}
+          DOGU_EXAMPLE_SHARD: ${{ matrix.shard }}
+        run: |
+          tests='TestToolExampleIntegrations'
+          if [[ "$DOGU_EXAMPLE_SHARD" == remaining ]]; then
+            tests+='|TestMirrorIntegration|TestToolIntegrations'
+          fi
+          time ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox \
+            --packages="./pkg/cli" --rerun-fails=2 --rerun-fails-abort-on-data-race \
+            -- -run "^($tests)$" -count=1 -timeout 90m -race -cover
+
+      - name: Save Cachew downloads
+        if: always() && steps.cachew-cache.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: build/cachew
+          key: ${{ steps.cachew-cache.outputs.cache-primary-key }}
+
+  windows-integration:
+    name: Live Integration (Windows)
+    needs: unit
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run Windows installation smoke tests
+        env:
+          DOGU_INTEGRATION: '1'
+        run: go test ./pkg/cli -run '^TestWindowsIntegration$' -v -count=1 -timeout 10m
