@@ -4,7 +4,7 @@
 :stylesheet: style.css
 :icons: font
 :source-highlighter: highlight.js
-:imagesdir:../images
+:imagesdir: ../images
 
 image::toolbox.png[도구 toolbox,width=320]
 
