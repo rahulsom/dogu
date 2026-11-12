@@ -68,7 +68,12 @@ func TestIndexedLanguages(t *testing.T) {
 	for _, name := range []string{"go", "julia"} {
 		t.Run(name, func(t *testing.T) {
 			downloads := 0
-			payload := definitionArchive(t, "release.tar.gz", "release/bin/compiler", []byte("compiler"))
+			extension := "tar.gz"
+			if name == "julia" && runtime.GOOS == "windows" {
+				extension = "zip"
+			}
+			filename := "release." + extension
+			payload := definitionArchive(t, filename, "release/bin/compiler", []byte("compiler"))
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
 				case "/":
@@ -79,11 +84,14 @@ func TestIndexedLanguages(t *testing.T) {
 						arch = "aarch64"
 					}
 					osName := runtime.GOOS
-					if osName == "darwin" {
+					switch osName {
+					case "darwin":
 						osName = "mac"
+					case "windows":
+						osName = "winnt"
 					}
-					fmt.Fprintf(w, `{"1.2.3":{"files":[{"url":"https://julialang-s3.julialang.org/bin/release.tar.gz","os":%q,"arch":%q,"extension":"tar.gz","kind":"archive"}]},"1.9.0":{"files":[{"url":"wrong","os":"wrong","arch":"wrong","extension":"tar.gz"}]}}`, osName, arch)
-				case "/release.tar.gz":
+					fmt.Fprintf(w, `{"1.2.3":{"files":[{"url":%q,"os":%q,"arch":%q,"extension":%q,"kind":"archive"}]},"1.9.0":{"files":[{"url":"wrong","os":"wrong","arch":"wrong","extension":"tar.gz"}]}}`, "https://julialang-s3.julialang.org/bin/"+filename, osName, arch, extension)
+				case "/" + filename:
 					downloads++
 					_, _ = w.Write(payload)
 				default:
