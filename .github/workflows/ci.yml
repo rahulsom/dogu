@@ -97,17 +97,37 @@ jobs:
           path: build/cachew
           key: ${{ steps.cachew-cache.outputs.cache-primary-key }}
 
+  windows-integration:
+    name: Live Integration (Windows)
+    needs: unit
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run Windows installation smoke tests
+        env:
+          DOGU_INTEGRATION: '1'
+        run: go test ./pkg/cli -run '^TestWindowsIntegration$' -v -count=1 -timeout 10m
+
   test:
     name: Run Tests
     if: always()
-    needs: [unit, integration]
+    needs: [unit, integration, windows-integration]
     runs-on: ubuntu-latest
     steps:
       - name: Require all test jobs to pass
         env:
           UNIT_RESULT: ${{ needs.unit.result }}
           INTEGRATION_RESULT: ${{ needs.integration.result }}
-        run: test "$UNIT_RESULT" = success && test "$INTEGRATION_RESULT" = success
+          WINDOWS_RESULT: ${{ needs.windows-integration.result }}
+        run: |
+          test "$UNIT_RESULT" = success &&
+            test "$INTEGRATION_RESULT" = success &&
+            test "$WINDOWS_RESULT" = success
 
   deploy-docs:
     name: Publish Docs to GitHub Pages
