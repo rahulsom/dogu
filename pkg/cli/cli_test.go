@@ -4,13 +4,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestCLIHelpAndToolsList(t *testing.T) {
 	tempDir := t.TempDir()
-	doguBin := filepath.Join(tempDir, "dogu")
+	doguBin := filepath.Join(tempDir, "dogu.exe")
 
 	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
 	if err := buildCmd.Run(); err != nil {
@@ -87,8 +88,11 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 }
 
 func TestCandidateReuseAndForce(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fixtures use POSIX shell executables")
+	}
 	tempDir := t.TempDir()
-	doguBin := filepath.Join(tempDir, "dogu")
+	doguBin := filepath.Join(tempDir, "dogu.exe")
 
 	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
 	if err := buildCmd.Run(); err != nil {
@@ -151,8 +155,11 @@ func TestCandidateReuseAndForce(t *testing.T) {
 }
 
 func TestParallelToolInstallation(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fixtures use POSIX shell executables")
+	}
 	tempDir := t.TempDir()
-	doguBin := filepath.Join(tempDir, "dogu")
+	doguBin := filepath.Join(tempDir, "dogu.exe")
 
 	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
 	if err := buildCmd.Run(); err != nil {
@@ -196,8 +203,11 @@ func TestParallelToolInstallation(t *testing.T) {
 }
 
 func TestVerboseMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fixtures use POSIX shell executables")
+	}
 	tempDir := t.TempDir()
-	doguBin := filepath.Join(tempDir, "dogu")
+	doguBin := filepath.Join(tempDir, "dogu.exe")
 
 	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
 	if err := buildCmd.Run(); err != nil {
@@ -236,7 +246,7 @@ func TestVerboseMode(t *testing.T) {
 
 func TestSelfUpdateNonBinaryDistribution(t *testing.T) {
 	tempDir := t.TempDir()
-	doguBin := filepath.Join(tempDir, "dogu")
+	doguBin := filepath.Join(tempDir, "dogu.exe")
 
 	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
 	if err := buildCmd.Run(); err != nil {

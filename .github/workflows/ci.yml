@@ -12,53 +12,20 @@ permissions:
   contents: read
 
 jobs:
+  suite:
+    name: Test Suite
+    uses: ./.github/workflows/test.yml
+
   test:
     name: Run Tests
+    if: always()
+    needs: suite
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Restore Cachew downloads
-        id: cachew-cache
-        uses: actions/cache/restore@v6
-        with:
-          path: build/cachew
-          key: cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            cachew-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('testdata/cachew.hcl') }}-
-            cachew-v1-${{ runner.os }}-${{ runner.arch }}-
-
-      - name: Install prerequisites for documented examples
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential gfortran cabal-install pkg-config \
-            libgmp-dev libnuma-dev libffi-dev libncurses-dev libreadline-dev libssl-dev \
-            libyaml-dev zlib1g-dev libbz2-dev liblzma-dev libpcre2-dev \
-            libcurl4-openssl-dev libcairo2-dev libpango1.0-dev libjpeg-dev \
-            libgif-dev librsvg2-dev libpng-dev graphviz
-          cabal update
-
-      - name: Run tests through Cachew
+      - name: Require the test suite to pass
         env:
-          CACHEW_GITHUB_TOKEN: ${{ github.token }}
-        run: >-
-          ./scripts/test-with-cachew.sh go run gotest.tools/gotestsum@latest --format testdox
-          --packages="./..." --rerun-fails=2 --rerun-fails-abort-on-data-race
-          -- -timeout 90m -race -cover
-
-      - name: Save Cachew downloads
-        if: always() && steps.cachew-cache.outcome == 'success'
-        uses: actions/cache/save@v6
-        with:
-          path: build/cachew
-          key: ${{ steps.cachew-cache.outputs.cache-primary-key }}
+          SUITE_RESULT: ${{ needs.suite.result }}
+        run: test "$SUITE_RESULT" = success
 
   deploy-docs:
     name: Publish Docs to GitHub Pages

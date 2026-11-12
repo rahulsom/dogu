@@ -31,6 +31,17 @@ exit code and output, and share installations within the suite. sbt and erd retu
 status 1 for help; their cases explicitly record that upstream behavior.
 Each tool gets an empty workspace. No fake tool executables are used.
 
+CI and tagged releases run the same test suite, with live documentation
+examples split across four parallel shards. To reproduce
+one shard locally, set `DOGU_EXAMPLE_SHARD` to `erd`, `r`, `ruby` (which also
+runs the Barby and RQRCode examples), or `remaining`. Leave it unset to run
+all examples. CI also runs the live tool and mirror tests in the remaining job.
+
+The Windows smoke job downloads Go and Maven directly and launches them through
+Dogu. To run it on Windows, set `$env:DOGU_INTEGRATION = '1'` in PowerShell and
+run `go test ./pkg/cli -run '^TestWindowsIntegration$' -v -count=1`. Maven uses
+the JDK in `JAVA_HOME`.
+
 Live tests require Docker (or `CACHEW_URL`), upstream access, and the build
 prerequisites listed in the tool reference. In particular, install Cabal and
 run `cabal update` before testing erd; C/C++ and Fortran compilers, make,
