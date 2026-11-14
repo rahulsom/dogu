@@ -6,7 +6,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -79,6 +81,7 @@ func TestCheckForUpdate(t *testing.T) {
 				Name:    "v1.5.0",
 				Assets: []ReleaseAsset{
 					{Name: "dogu-" + runtime.GOOS + "-" + runtime.GOARCH + armAssetSuffix(), DownloadURL: "http://example.com/dl"},
+					{Name: "checksums.txt", DownloadURL: "http://example.com/checksums"},
 				},
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -111,6 +114,40 @@ func TestCheckForUpdate(t *testing.T) {
 	}
 	if available {
 		t.Errorf("expected update not available for v1.5.0 vs v1.5.0")
+	}
+}
+
+func TestCheckForUpdateRequiresChecksumAsset(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		checksums    *ReleaseAsset
+		wantIsUpdate bool
+	}{
+		{name: "present", checksums: &ReleaseAsset{Name: "checksums.txt", DownloadURL: "http://example.com/checksums"}, wantIsUpdate: true},
+		{name: "missing"},
+		{name: "missing URL", checksums: &ReleaseAsset{Name: "checksums.txt"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assets := []ReleaseAsset{{Name: "dogu-" + runtime.GOOS + "-" + runtime.GOARCH + armAssetSuffix(), DownloadURL: "http://example.com/dl"}}
+			if tt.checksums != nil {
+				assets = append(assets, *tt.checksums)
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				_ = json.NewEncoder(w).Encode(Release{TagName: "v1.5.0", Assets: assets})
+			}))
+			defer server.Close()
+			oldBase := GitHubBaseURL
+			GitHubBaseURL = server.URL
+			defer func() { GitHubBaseURL = oldBase }()
+
+			_, available, err := CheckForUpdate(context.Background(), "v1.0.0", "owner", "repo")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if available != tt.wantIsUpdate {
+				t.Errorf("available = %v; want %v", available, tt.wantIsUpdate)
+			}
+		})
 	}
 }
 
@@ -164,6 +201,138 @@ func TestExtractBinaryFromZip(t *testing.T) {
 	}
 	if out.String() != "mock-binary-zip" {
 		t.Errorf("extracted content = %q; want %q", out.String(), "mock-binary-zip")
+	}
+}
+
+func TestUpdateExecutableVerification(t *testing.T) {
+	tarData := createMockTarGz("dogu", "new binary")
+	zipData := createMockZip("dogu.exe", "new binary")
+	rawData := []byte("new binary")
+	tests := []struct {
+		name           string
+		assetName      string
+		data           []byte
+		manifest       func(string, []byte) string
+		noManifest     bool
+		status         int
+		assetStatus    int
+		failSystemTemp bool
+		wantErr        string
+	}{
+		{
+			name: "tar", assetName: "dogu_linux_amd64.tar.gz", data: tarData,
+			manifest: func(name string, data []byte) string {
+				return fmt.Sprintf("%064x  unrelated.tar.gz\n%X  %s\n", 0, sha256.Sum256(data), name)
+			},
+		},
+		{
+			name: "zip", assetName: "dogu_windows_amd64.zip", data: zipData,
+			manifest: func(name string, data []byte) string {
+				return fmt.Sprintf("%x *%s\n", sha256.Sum256(data), name)
+			},
+		},
+		{
+			name: "binary", assetName: "dogu-linux-amd64", data: rawData,
+			manifest: func(name string, data []byte) string {
+				return fmt.Sprintf("%x  %s\n", sha256.Sum256(data), name)
+			},
+		},
+		{
+			name: "mismatch", assetName: "dogu_linux_amd64.tar.gz", data: tarData,
+			manifest: func(name string, _ []byte) string { return fmt.Sprintf("%064x  %s\n", 0, name) },
+			wantErr:  "checksum verification failed",
+		},
+		{
+			name: "missing entry", assetName: "dogu_linux_amd64.tar.gz", data: tarData,
+			manifest: func(_ string, data []byte) string {
+				return fmt.Sprintf("%x  other.tar.gz\n", sha256.Sum256(data))
+			},
+			wantErr: "no valid checksum",
+		},
+		{
+			name: "invalid digest", assetName: "dogu_linux_amd64.tar.gz", data: tarData,
+			manifest: func(name string, _ []byte) string { return "not-a-sha256  " + name + "\n" },
+			wantErr:  "no valid checksum",
+		},
+		{name: "missing manifest", assetName: "dogu_linux_amd64.tar.gz", data: tarData, noManifest: true, wantErr: "does not include checksums.txt"},
+		{name: "manifest download failure", assetName: "dogu_linux_amd64.tar.gz", data: tarData, status: http.StatusNotFound, wantErr: "download checksums.txt failed"},
+		{
+			name: "asset download failure", assetName: "dogu_linux_amd64.tar.gz", data: tarData,
+			manifest: func(name string, data []byte) string {
+				return fmt.Sprintf("%x  %s\n", sha256.Sum256(data), name)
+			},
+			assetStatus: http.StatusNotFound, wantErr: "download asset failed",
+		},
+		{
+			name: "system temp unavailable", assetName: "dogu_linux_amd64.tar.gz", data: tarData,
+			manifest: func(name string, data []byte) string {
+				return fmt.Sprintf("%x  %s\n", sha256.Sum256(data), name)
+			},
+			failSystemTemp: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.failSystemTemp {
+				invalidTemp := filepath.Join(t.TempDir(), "missing")
+				t.Setenv("TMPDIR", invalidTemp)
+				t.Setenv("TMP", invalidTemp)
+				t.Setenv("TEMP", invalidTemp)
+				t.Setenv("USERPROFILE", invalidTemp)
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/checksums.txt":
+					if tt.status != 0 {
+						w.WriteHeader(tt.status)
+					} else {
+						fmt.Fprint(w, tt.manifest(tt.assetName, tt.data))
+					}
+				case "/asset":
+					if tt.assetStatus != 0 {
+						w.WriteHeader(tt.assetStatus)
+					} else {
+						_, _ = w.Write(tt.data)
+					}
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+
+			asset := ReleaseAsset{Name: tt.assetName, DownloadURL: server.URL + "/asset"}
+			rel := &Release{Assets: []ReleaseAsset{asset}}
+			if !tt.noManifest {
+				rel.Assets = append(rel.Assets, ReleaseAsset{Name: "checksums.txt", DownloadURL: server.URL + "/checksums.txt"})
+			}
+			dir := t.TempDir()
+			exe := filepath.Join(dir, "dogu")
+			if err := os.WriteFile(exe, []byte("current binary"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			err := updateExecutable(context.Background(), rel, &asset, exe)
+			if tt.wantErr == "" && err != nil {
+				t.Fatalf("updateExecutable: %v", err)
+			}
+			if tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)) {
+				t.Fatalf("updateExecutable error = %v; want %q", err, tt.wantErr)
+			}
+			got, err := os.ReadFile(exe)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := "new binary"
+			if tt.wantErr != "" {
+				want = "current binary"
+			}
+			if string(got) != want {
+				t.Errorf("executable = %q; want %q", got, want)
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil || len(entries) != 1 || entries[0].Name() != "dogu" {
+				t.Errorf("unexpected files in executable directory: %v, error: %v", entries, err)
+			}
+		})
 	}
 }
 
