@@ -53,17 +53,22 @@ func PrintUsage(out *os.File) {
 	sb.WriteString("Run commands with the tool versions you need.\n\n")
 	sb.WriteString(headerStyle.Render("Usage:") + "\n")
 	sb.WriteString("  dogu [options] [--<tool> <version> ...] -- <command> [args...]\n")
+	sb.WriteString("  dogu [@args-file] [options] -- <command> [args...]\n")
 	sb.WriteString("  dogu self-update\n")
 	sb.WriteString("  dogu version\n")
 	sb.WriteString("  dogu list-versions <tool> [version-prefix] [--limit N | --all]\n")
 	sb.WriteString("  dogu autocomplete [bash|zsh|fish|powershell]\n")
 	sb.WriteString("  dogu --help\n\n")
 	sb.WriteString("  Tools are downloaded as needed and reused on later runs.\n")
-	sb.WriteString("  Use -- to separate dogu options from the command and its arguments.\n\n")
+	sb.WriteString("  Use -- to separate dogu options from the command and its arguments.\n")
+	sb.WriteString("  dogu.args is read from the current directory or its nearest ancestor;\n")
+	sb.WriteString("  use @args-file to select a different file instead.\n\n")
 
 	sb.WriteString(headerStyle.Render("Examples:") + "\n")
 	for _, example := range []string{
 		"dogu --node 22 -- node --version",
+		"dogu -- ./gradlew test",
+		"dogu @blah.args -- ./gradlew test",
 		"dogu --java= -- java --version",
 		"dogu --java 21 --maven 3.9 -- mvn clean test",
 		"dogu --java 21 --clojure 1.12 -- lein test",
@@ -172,6 +177,14 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 		if arg == "--help" || arg == "-h" {
 			PrintUsage(os.Stdout)
 			return nil
+		}
+	}
+
+	if doubleDashIdx != -1 {
+		var err error
+		flagArgs, err = expandArgsFile(flagArgs)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -353,6 +366,10 @@ func isExecutable(fi os.FileInfo) bool {
 }
 
 func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, bool, *bool, error) {
+	return parseToolSpecsMode(args, false)
+}
+
+func parseToolSpecsMode(args []string, strict bool) ([]tools.Spec, bool, bool, bool, *bool, error) {
 	var specs []tools.Spec
 	force := false
 	offline := false
@@ -390,11 +407,17 @@ func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, bool, *bool, error
 			continue
 		}
 		if arg == "--help" || arg == "-h" {
+			if strict {
+				return nil, false, false, false, nil, fmt.Errorf("help is not supported in an args file")
+			}
 			continue
 		}
 
 		if strings.HasPrefix(arg, "--") {
 			toolName := strings.TrimPrefix(arg, "--")
+			if strict && toolName == "" {
+				return nil, false, false, false, nil, fmt.Errorf("'--' is not supported in an args file")
+			}
 			if strings.Contains(toolName, "=") {
 				parts := strings.SplitN(toolName, "=", 2)
 				specs = append(specs, tools.Spec{Name: parts[0], Version: parts[1]})
@@ -405,6 +428,8 @@ func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, bool, *bool, error
 				specs = append(specs, tools.Spec{Name: toolName, Version: args[i+1]})
 				i++
 			}
+		} else if strict {
+			return nil, false, false, false, nil, fmt.Errorf("unexpected argument %q in args file", arg)
 		}
 	}
 	return specs, force, offline, verbose, includePrerelease, nil

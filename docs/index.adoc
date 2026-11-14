@@ -66,6 +66,33 @@ Run any command prefixed with `dogu` and the desired tool or CLI flags:
 dogu [-v|--verbose] [--force] [--offline] [tools...] -- <command> [args...]
 ----
 
+=== Argument files
+
+For repeated commands, put dogu options and tool versions in `dogu.args`:
+
+[source,text]
+----
+# Project toolchain
+--java 21
+--gradle 8
+----
+
+Then run `dogu -- ./gradlew test`. dogu searches the current directory and
+its ancestors for `dogu.args`, stopping at the first file. If none exists, the
+command runs with only the options supplied on the command line.
+
+Use `dogu @blah.args -- ./gradlew test` to read a specific file instead of
+searching for `dogu.args`. Relative paths are resolved from the current
+directory. Only one explicit file may be specified. File arguments are
+whitespace-separated; lines beginning with `#` (after optional whitespace)
+are comments. Shell quoting, variable expansion, nested files, and `--`
+command separators are not supported in these files.
+
+File options are combined with command-line options: an automatically found
+file comes first, while an explicit file is expanded at its `@` position.
+As with repeated command-line tool flags, multiple versions of the same tool
+are all provisioned and the last one takes precedence in `PATH`.
+
 To update `dogu` itself to the latest released version:
 
 [source,bash]

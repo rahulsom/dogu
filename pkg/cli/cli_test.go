@@ -87,6 +87,51 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 	}
 }
 
+func TestCLIArgsFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fixture uses a POSIX shell executable")
+	}
+	root := t.TempDir()
+	bin := filepath.Join(root, "dogu")
+	if out, err := exec.Command("go", "build", "-o", bin, "github.com/dogu-dev/dogu/cmd/dogu").CombinedOutput(); err != nil {
+		t.Fatalf("build: %v: %s", err, out)
+	}
+	home := filepath.Join(root, "home")
+	for _, version := range []string{"20.1.0", "22.1.0"} {
+		dir := filepath.Join(home, "candidates", "node", version, "bin")
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "node"), []byte("#!/bin/sh\nprintf '%s %s\\n' "+version+" \"$1\"\n"), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	child := filepath.Join(root, "child")
+	if err := os.Mkdir(child, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for name, content := range map[string]string{"dogu.args": "--node 22\n", "other.args": "--node 20\n"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--offline", "--", "node", "@command-arg"}, "22.1.0 @command-arg"},
+		{[]string{"@../other.args", "--offline", "--", "node", "@command-arg"}, "20.1.0 @command-arg"},
+	} {
+		cmd := exec.Command(bin, tc.args...)
+		cmd.Dir = child
+		cmd.Env = append(os.Environ(), "DOGU_HOME="+home)
+		out, err := cmd.CombinedOutput()
+		if err != nil || !strings.Contains(string(out), tc.want) {
+			t.Fatalf("%v: got %q, %v; want %q", tc.args, out, err, tc.want)
+		}
+	}
+}
+
 func TestCandidateReuseAndForce(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fixtures use POSIX shell executables")
