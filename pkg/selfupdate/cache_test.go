@@ -13,12 +13,15 @@ import (
 )
 
 func TestWeeklyUpdateChecks(t *testing.T) {
-	for _, scenario := range []string{"available", "no update", "no assets", "wrong platform", "missing URL", "failed request", "expired", "corrupt"} {
+	for _, scenario := range []string{"available", "no update", "no assets", "wrong platform", "missing URL", "missing checksums", "missing checksums URL", "failed request", "expired", "corrupt"} {
 		t.Run(scenario, func(t *testing.T) {
 			home := t.TempDir()
 			t.Setenv("DOGU_HOME", home)
 			calls := 0
-			rel := Release{TagName: "v1.5.0", Assets: []ReleaseAsset{{Name: "dogu-" + runtime.GOOS + "-" + runtime.GOARCH + armAssetSuffix(), DownloadURL: "https://example.com/dogu"}}}
+			rel := Release{TagName: "v1.5.0", Assets: []ReleaseAsset{
+				{Name: "dogu-" + runtime.GOOS + "-" + runtime.GOARCH + armAssetSuffix(), DownloadURL: "https://example.com/dogu"},
+				{Name: "checksums.txt", DownloadURL: "https://example.com/checksums"},
+			}}
 			switch scenario {
 			case "no update":
 				rel.TagName = "v1.0.0"
@@ -28,6 +31,10 @@ func TestWeeklyUpdateChecks(t *testing.T) {
 				rel.Assets[0].Name = "dogu-unknown-unknown"
 			case "missing URL":
 				rel.Assets[0].DownloadURL = ""
+			case "missing checksums":
+				rel.Assets = rel.Assets[:1]
+			case "missing checksums URL":
+				rel.Assets[1].DownloadURL = ""
 			}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				calls++
