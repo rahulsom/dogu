@@ -29,7 +29,7 @@ jobs:
 
   deploy-docs:
     name: Publish Docs to GitHub Pages
-    needs: test
+    needs: suite
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

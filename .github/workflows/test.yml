@@ -33,7 +33,6 @@ jobs:
         run: go test -cover ./...
 
   integration:
-    needs: unit
     name: Live Integration (${{ matrix.shard }})
     runs-on: ubuntu-latest
     strategy:
@@ -94,7 +93,6 @@ jobs:
 
   windows-integration:
     name: Live Integration (Windows)
-    needs: unit
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
