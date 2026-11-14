@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   test:
-    name: Run Tests
+    name: Tests
     uses: ./.github/workflows/test.yml
 
   release:
     permissions:
       contents: write
-    name: Publish Release Binaries
+    name: Publish Binaries
     needs: test
     runs-on: ubuntu-latest
     steps:

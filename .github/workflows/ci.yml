@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   suite:
-    name: Test Suite
+    name: Tests
     uses: ./.github/workflows/test.yml
 
   test:
@@ -28,8 +28,8 @@ jobs:
         run: test "$SUITE_RESULT" = success
 
   deploy-docs:
-    name: Publish Docs to GitHub Pages
-    needs: test
+    name: Publish Docs
+    needs: suite
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

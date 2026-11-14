@@ -8,12 +8,16 @@ permissions:
 
 jobs:
   unit:
-    name: Unit Tests (${{ matrix.os }})
+    name: Unit ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            label: Linux
+          - os: windows-latest
+            label: Windows
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -33,8 +37,7 @@ jobs:
         run: go test -cover ./...
 
   integration:
-    needs: unit
-    name: Live Integration (${{ matrix.shard }})
+    name: Live ${{ matrix.shard }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -93,8 +96,7 @@ jobs:
           key: ${{ steps.cachew-cache.outputs.cache-primary-key }}
 
   windows-integration:
-    name: Live Integration (Windows)
-    needs: unit
+    name: Live Windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
