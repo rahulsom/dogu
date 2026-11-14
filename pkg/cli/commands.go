@@ -67,7 +67,7 @@ func runInfoCommand(args []string, cfg *config.Config) (bool, error) {
 func writeAutocomplete(out io.Writer, shell string) error {
 	shell = strings.ToLower(strings.TrimSuffix(filepath.Base(shell), ".exe"))
 	names := tools.List()
-	words := "version list-versions autocomplete self-update --help -h --verbose -v --force -f --prerelease --"
+	words := "version list-versions autocomplete self-update --help -h --verbose -v --force -f --offline --prerelease --"
 	for _, name := range names {
 		words += " --" + name
 	}

@@ -164,6 +164,9 @@ func (d diagramTool) Install(ctx context.Context, spec, home, mirror string, opt
 			}
 		}
 	}
+	if opts.Offline {
+		return nil, offlineCandidateError(d.name, spec)
+	}
 	versions, err := d.versions(ctx, mirror)
 	if err != nil {
 		return nil, fmt.Errorf("resolve %s: %w", d.name, err)

@@ -225,6 +225,9 @@ func (*LeiningenTool) Install(ctx context.Context, spec, home, mirror string, op
 			unlock()
 		}
 	}
+	if opts.Offline {
+		return nil, offlineCandidateError("leiningen", spec)
+	}
 
 	version, err := leiningenDefinition.resolveVersion(ctx, spec, mirror, opts.IncludePrerelease)
 	if err != nil {
@@ -318,6 +321,9 @@ func (j *JavaTool) Install(ctx context.Context, versionSpec string, doguHome str
 			defer unlock()
 			return buildJavaResultFromDir(versionSpec, existingDir), nil
 		}
+	}
+	if opts.Offline {
+		return nil, offlineCandidateError("java", versionSpec)
 	}
 
 	ver, dist := parseJavaSpec(versionSpec)

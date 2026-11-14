@@ -78,6 +78,7 @@ func PrintUsage(out *os.File) {
 		{"-h, --help", "Show this help"},
 		{"-v, --verbose", "Show debug logs"},
 		{"-f, --force", "Download tools again, even if already installed"},
+		{"--offline", "Do not download tools; fail if a version is not installed"},
 		{"--prerelease", "Include prereleases when matching partial versions"},
 		{"--no-prerelease", "Exclude prereleases (default)"},
 	} {
@@ -149,11 +150,6 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 		return selfupdate.SelfUpdate(ctx, curVer, selfupdate.DefaultGitHubOwner, selfupdate.DefaultGitHubRepo)
 	}
 
-	// In binary distributions, check for an available update to suggest dogu self-update
-	if version.IsBinaryDistribution() {
-		defer checkAndSuggestUpdate()
-	}
-
 	doubleDashIdx := -1
 	for i, arg := range args {
 		if arg == "--" {
@@ -179,9 +175,16 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 		}
 	}
 
-	specs, force, verbose, cliPrerelease, err := parseToolSpecs(flagArgs)
+	specs, force, offline, verbose, cliPrerelease, err := parseToolSpecs(flagArgs)
 	if err != nil {
 		return err
+	}
+	if offline && force {
+		return fmt.Errorf("--offline cannot be used with --force")
+	}
+	// Offline invocations must not perform background release discovery, either.
+	if !offline && version.IsBinaryDistribution() {
+		defer checkAndSuggestUpdate()
 	}
 
 	log.SetOutput(os.Stderr)
@@ -215,6 +218,7 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 	installOpts := tools.InstallOptions{
 		Force:             force,
 		IncludePrerelease: includePrerelease,
+		Offline:           offline,
 		RewriteRules:      cfg.Rewrite,
 	}
 
@@ -348,9 +352,10 @@ func isExecutable(fi os.FileInfo) bool {
 	return fi.Mode()&0111 != 0
 }
 
-func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, *bool, error) {
+func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, bool, *bool, error) {
 	var specs []tools.Spec
 	force := false
+	offline := false
 	verbose := false
 	var includePrerelease *bool
 
@@ -358,6 +363,10 @@ func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, *bool, error) {
 		arg := args[i]
 		if arg == "--force" || arg == "-f" {
 			force = true
+			continue
+		}
+		if arg == "--offline" {
+			offline = true
 			continue
 		}
 		if arg == "--verbose" || arg == "-v" {
@@ -391,12 +400,12 @@ func parseToolSpecs(args []string) ([]tools.Spec, bool, bool, *bool, error) {
 				specs = append(specs, tools.Spec{Name: parts[0], Version: parts[1]})
 			} else {
 				if i+1 >= len(args) || strings.HasPrefix(args[i+1], "--") {
-					return nil, false, false, nil, fmt.Errorf("flag --%s requires a version argument", toolName)
+					return nil, false, false, false, nil, fmt.Errorf("flag --%s requires a version argument", toolName)
 				}
 				specs = append(specs, tools.Spec{Name: toolName, Version: args[i+1]})
 				i++
 			}
 		}
 	}
-	return specs, force, verbose, includePrerelease, nil
+	return specs, force, offline, verbose, includePrerelease, nil
 }

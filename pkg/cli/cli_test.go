@@ -50,7 +50,7 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 	for _, guidance := range []string{
 		"Use -- to separate", "--<tool>=<version>", "--no-prerelease",
 		"newest matching installed version", "--java 17-zulu", "--buck2 2026-10-15",
-		"--<tool>=", "dogu --java= -- java --version",
+		"--<tool>=", "dogu --java= -- java --version", "--offline",
 	} {
 		if !strings.Contains(output, guidance) {
 			t.Errorf("expected guidance %q in help", guidance)
@@ -122,6 +122,27 @@ func TestCandidateReuseAndForce(t *testing.T) {
 	if !strings.Contains(string(out), "v26.11.0") {
 		t.Errorf("expected reused v26.11.0 output, got: %s", string(out))
 	}
+	cmd = exec.Command(doguBin, "--offline", "--node", "26", "--", "node", "--version")
+	cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+	out, err = cmd.CombinedOutput()
+	if err != nil || !strings.Contains(string(out), "v26.11.0") {
+		t.Fatalf("offline reuse failed: %v, output: %s", err, out)
+	}
+
+	cmd = exec.Command(doguBin, "--offline", "--node", "27", "--", "node", "--version")
+	cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+	out, err = cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "offline mode: no installed node candidate matches version \"27\"") {
+		t.Fatalf("expected offline missing-candidate error, got err=%v, output=%s", err, out)
+	}
+
+	cmd = exec.Command(doguBin, "--offline", "--force", "--node", "26", "--", "node", "--version")
+	cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+	out, err = cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "--offline cannot be used with --force") {
+		t.Fatalf("expected incompatible flag error, got err=%v, output=%s", err, out)
+	}
+
 	for _, flags := range [][]string{{"--node=26"}, {"--node="}} {
 		cmd := exec.Command(doguBin, append(flags, "--", "node", "--version")...)
 		cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
@@ -261,5 +282,30 @@ func TestSelfUpdateNonBinaryDistribution(t *testing.T) {
 	}
 	if !strings.Contains(string(out), "self-update is only available for official binary distributions") {
 		t.Errorf("expected binary distribution error, got: %s", string(out))
+	}
+}
+
+func TestOfflineSkipsAutomaticUpdateCheck(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test command uses POSIX shell")
+	}
+	tempDir := t.TempDir()
+	doguBin := filepath.Join(tempDir, "dogu")
+	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("failed to build dogu binary: %v", err)
+	}
+
+	doguHome := filepath.Join(tempDir, "dogu_home")
+	cmd := exec.Command(doguBin, "--offline", "--", "sh", "-c", "exit 0")
+	cmd.Env = append(os.Environ(),
+		"DOGU_HOME="+doguHome,
+		"DOGU_FORCE_BINARY_DISTRIBUTION=true",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("offline command failed: %v, output: %s", err, out)
+	}
+	if _, err := os.Stat(filepath.Join(doguHome, "update-check.json")); !os.IsNotExist(err) {
+		t.Fatalf("offline command unexpectedly created update cache: stat error=%v", err)
 	}
 }

@@ -41,7 +41,14 @@ func checkExistingCandidate(ctx context.Context, doguHome string, toolName strin
 			return res, true, nil
 		}
 	}
+	if opts.Offline {
+		return nil, false, offlineCandidateError(toolName, versionSpec)
+	}
 	return nil, false, nil
+}
+
+func offlineCandidateError(toolName, versionSpec string) error {
+	return fmt.Errorf("offline mode: no installed %s candidate matches version %q", toolName, versionSpec)
 }
 
 func buildEnvVars(toolName string, versionForMajor string, homeDir string, extraHomeEnv []string, extraEnv map[string]string) map[string]string {

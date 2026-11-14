@@ -21,6 +21,7 @@ type RewriteRule interface {
 type InstallOptions struct {
 	Force             bool
 	IncludePrerelease bool
+	Offline           bool
 	RewriteRules      RewriteRule
 }
 

@@ -63,7 +63,7 @@ Run any command prefixed with `dogu` and the desired tool or CLI flags:
 
 [source,bash]
 ----
-dogu [-v|--verbose] [--force] [tools...] -- <command> [args...]
+dogu [-v|--verbose] [--force] [--offline] [tools...] -- <command> [args...]
 ----
 
 To update `dogu` itself to the latest released version:
@@ -84,6 +84,7 @@ Self-update verifies the downloaded release asset against the release's `checksu
 
 | `-v, --verbose` | Enable verbose logging.
 | `-f, --force` | Force re-downloading candidate versions even if already installed.
+| `--offline` | Do not download tools; fail if a requested version is not installed.
 | `--prerelease` | Include release candidates / pre-releases when resolving partial versions (default is `false`).
 | `-h, --help` | Show usage information.
 |===
@@ -99,6 +100,10 @@ across all major versions, or installs the latest available release if none
 is installed. Only dogu-managed candidates are considered, not tools on the
 system `PATH`. Prereleases are excluded unless `--prerelease` is supplied;
 `--force` skips local reuse and resolves a release online.
+
+Use `--offline` to require all requested tools to already be installed in
+`$DOGU_HOME`; no release discovery or downloads are performed. `--offline` and
+`--force` cannot be combined.
 
 [source,bash]
 ----
