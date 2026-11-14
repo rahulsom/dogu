@@ -125,6 +125,9 @@ func (d toolDefinition) Install(ctx context.Context, spec, doguHome, mirrorURL s
 			return res, nil
 		}
 	}
+	if opts.Offline {
+		return nil, offlineCandidateError(d.name, spec)
+	}
 	var version string
 	var mavenArchive string
 	var mavenDirect bool

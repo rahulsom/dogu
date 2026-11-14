@@ -50,7 +50,7 @@ func TestCLIHelpAndToolsList(t *testing.T) {
 	for _, guidance := range []string{
 		"Use -- to separate", "--<tool>=<version>", "--no-prerelease",
 		"newest matching installed version", "--java 17-zulu", "--buck2 2026-10-15",
-		"--<tool>=", "dogu --java= -- java --version",
+		"--<tool>=", "dogu --java= -- java --version", "--offline",
 	} {
 		if !strings.Contains(output, guidance) {
 			t.Errorf("expected guidance %q in help", guidance)
@@ -122,6 +122,27 @@ func TestCandidateReuseAndForce(t *testing.T) {
 	if !strings.Contains(string(out), "v26.11.0") {
 		t.Errorf("expected reused v26.11.0 output, got: %s", string(out))
 	}
+	cmd = exec.Command(doguBin, "--offline", "--node", "26", "--", "node", "--version")
+	cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+	out, err = cmd.CombinedOutput()
+	if err != nil || !strings.Contains(string(out), "v26.11.0") {
+		t.Fatalf("offline reuse failed: %v, output: %s", err, out)
+	}
+
+	cmd = exec.Command(doguBin, "--offline", "--node", "27", "--", "node", "--version")
+	cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+	out, err = cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "offline mode: no installed node candidate matches version \"27\"") {
+		t.Fatalf("expected offline missing-candidate error, got err=%v, output=%s", err, out)
+	}
+
+	cmd = exec.Command(doguBin, "--offline", "--force", "--node", "26", "--", "node", "--version")
+	cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
+	out, err = cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "--offline cannot be used with --force") {
+		t.Fatalf("expected incompatible flag error, got err=%v, output=%s", err, out)
+	}
+
 	for _, flags := range [][]string{{"--node=26"}, {"--node="}} {
 		cmd := exec.Command(doguBin, append(flags, "--", "node", "--version")...)
 		cmd.Env = append(os.Environ(), "DOGU_HOME="+doguHome)
