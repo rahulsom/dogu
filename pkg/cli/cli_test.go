@@ -284,3 +284,28 @@ func TestSelfUpdateNonBinaryDistribution(t *testing.T) {
 		t.Errorf("expected binary distribution error, got: %s", string(out))
 	}
 }
+
+func TestOfflineSkipsAutomaticUpdateCheck(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test command uses POSIX shell")
+	}
+	tempDir := t.TempDir()
+	doguBin := filepath.Join(tempDir, "dogu")
+	buildCmd := exec.Command("go", "build", "-o", doguBin, "github.com/dogu-dev/dogu/cmd/dogu")
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("failed to build dogu binary: %v", err)
+	}
+
+	doguHome := filepath.Join(tempDir, "dogu_home")
+	cmd := exec.Command(doguBin, "--offline", "--", "sh", "-c", "exit 0")
+	cmd.Env = append(os.Environ(),
+		"DOGU_HOME="+doguHome,
+		"DOGU_FORCE_BINARY_DISTRIBUTION=true",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("offline command failed: %v, output: %s", err, out)
+	}
+	if _, err := os.Stat(filepath.Join(doguHome, "update-check.json")); !os.IsNotExist(err) {
+		t.Fatalf("offline command unexpectedly created update cache: stat error=%v", err)
+	}
+}

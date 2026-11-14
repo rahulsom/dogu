@@ -150,11 +150,6 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 		return selfupdate.SelfUpdate(ctx, curVer, selfupdate.DefaultGitHubOwner, selfupdate.DefaultGitHubRepo)
 	}
 
-	// In binary distributions, check for an available update to suggest dogu self-update
-	if version.IsBinaryDistribution() {
-		defer checkAndSuggestUpdate()
-	}
-
 	doubleDashIdx := -1
 	for i, arg := range args {
 		if arg == "--" {
@@ -186,6 +181,10 @@ func RunWithConfig(args []string, cfg *config.Config) error {
 	}
 	if offline && force {
 		return fmt.Errorf("--offline cannot be used with --force")
+	}
+	// Offline invocations must not perform background release discovery, either.
+	if !offline && version.IsBinaryDistribution() {
+		defer checkAndSuggestUpdate()
 	}
 
 	log.SetOutput(os.Stderr)
